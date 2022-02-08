@@ -1,0 +1,74 @@
+Creative Commons Attribution Non Commercial Share Alike 4.0 International
+CC-BY-NC-SA-4.0
+https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+
+
+Quantum-computing-using-IMP-Presto (c) 2022 by Christian Križan SA6KRZ
+
+Quantum-computing-using-IMP-Presto is licensed under a
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+
+You should have received a copy of the license along with this
+work. If not, see <http://creativecommons.org/licenses/by-nc-sa/4.0/>.
+
+
+Short version:
+-	You may gladly use this code, make changes to it, and integrate it
+	within your own code.
+-	You may make copies of this code and store it where you see fit
+
+IF
+
+BY: You acknowledge that you are using original code from Christian Križan
+NC: You cannot make money on it or its derivatives, see below for details
+SA: You apply these rules to works you make based on this code
+
+
+I invite you to contribute to the repository, and I intend to list you in a
+file denoted "CONTRIBUTORS", "ACKNOWLEDGEMENTS" or similar.
+
+Henceforth, Christian Križan is also denoted "I", "myself", "original author",
+"my" etc.
+
+------------------------------------------------------------------------------
+
+What does Attribution mean?
+
+It means you must attribute the authors. Use my name in all attribution
+instances, and preferably also my HAM identifier where you think this is
+appropriate.
+
+Examples:
+"We thank Christian Križan for sharing instrument control code."
+"Based on code developed by Christian Križan SA6KRZ and code contributors."
+
+Omitting the surname caron above z is appropriate where there are technical
+limitations that prohibit an extended character.
+
+
+
+What does Non Commercial mean?
+
+Non Commercial means that you are not allowed to make money on this code,
+and because of the SA clause, no-one may make money based on derivatives
+of this code. If you want to use derivatives of this work commercially,
+I am open to discussions on commercial licensing and royalty, contact me on
+christian.krizan@gmail.com or look up my details via my registered identifier
+SA6KRZ.
+
+
+
+What does Share Alike mean?
+
+It means that you as an adapter subject to follow Creative Commons' rules
+for applying this license to your derivative work. You cannot copy-paste
+the files, change the name of some variables, and suddenly get full and
+unquestionably exclusive ownership to the copyright as a cheap excuse to
+avoid my terms. See the Creative Commons license link for further details.
+De facto this means that if you copy the code and make changes, you must
+still acknowledge that you are using code originally made by the original
+author. And, you may typically not make money on your copy.
+
+
+Disputes and details as to licensed use of this contract is to be handled
+in a court of law, selected by the original author.
