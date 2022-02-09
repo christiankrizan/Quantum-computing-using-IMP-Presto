@@ -35,6 +35,8 @@ def find_f_ro01_sweep_coupler(
     sampling_duration,
     readout_sampling_delay,
     repetition_delay,
+    integration_window_start,
+    integration_window_stop,
     
     coupler_dc_port,
     added_delay_for_bias_tee,
@@ -347,8 +349,6 @@ def find_f_ro01_sweep_coupler(
         
         # Split fetched_data_arr into repeats:
         # fetched_data_arr SHAPE: num_stores * repeat_count, num_ports, smpls_per_store
-        integration_window_start = 1500 * 1e-9
-        integration_window_stop  = 2000 * 1e-9
         t_span = integration_window_stop - integration_window_start
         
         # Get index corresponding to integration_window_start and integration_window_stop respectively
