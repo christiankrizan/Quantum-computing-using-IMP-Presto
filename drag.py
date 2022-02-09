@@ -51,7 +51,7 @@ def establish_drag_coefficient_alpha(
     
     drag_coefficient_step_size,
     drag_coefficient_min = -1.0,
-    drag_coefficient_max = 1.0,
+    drag_coefficient_max = +1.0,
     
     ):
     ''' Perform single-qubit DRAG tune-up, allowing for biasing one
