@@ -19,6 +19,8 @@ import numpy as np
 from datetime import datetime
 from presto.utils import rotate_opt
 
+import log_browser_exporter
+
 
 def find_f_ro01_sweep_coupler(
     ip_address,
@@ -47,8 +49,9 @@ def find_f_ro01_sweep_coupler(
     num_biases,
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
-    save_complex_data = False,
     
+    save_complex_data = False,
+    use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -276,12 +279,14 @@ def find_f_ro01_sweep_coupler(
             'fetched_data_arr', "FS",
         ]
         
-        # Assert that every key bears a corresponding unit entered above.
+        # Assert that the received keys bear (an even number of) entries,
+        # implying whether a unit is missing.
         number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and ((len(hdf5_singles) % 2) == 0)
+            ((len(hdf5_steps) % 2) == 0) and \
+            ((len(hdf5_singles) % 2) == 0) and \
+            ((len(hdf5_logs) % 2) == 0)
         assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units entered in the portion of the measurement "  + \
-            "script that saves the data. Someone likely forgot a comma."
+            "of keys and units provided. Someone likely forgot a comma."
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -324,92 +329,32 @@ def find_f_ro01_sweep_coupler(
                 log_entry_name = axes['y_name']
             if axes['y_scaler'] != 1.0:
                 # Re-scale the y-axis
-                fetched_data_arr *= axes['y_scaler']   ## NOTE! Direct manipulation of the fetched_data_arr array.
+                ## NOTE! Direct manipulation of the fetched_data_arr array!
+                fetched_data_arr *= axes['y_scaler']   
             if (axes['y_unit']).lower() != 'default':
                 # Change the unit on the y-axis
                 temp_log_unit = axes['y_unit']
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
-        # Get name, file path and time for logfile.
-        path_to_script = os.path.realpath(__file__)  # Full path of current script
-        current_dir, name_of_running_script = os.path.split(path_to_script)
-        year_num    = (datetime.now()).strftime("%Y")
-        month_num   = (datetime.now()).strftime("%m")
-        day_num     = (datetime.now()).strftime("%d")
         
-        # Prepare path names needed for creating the folder tree.
-        path1 = os.path.join(current_dir, year_num)
-        path2 = os.path.join(current_dir, year_num, month_num)
-        path3 = os.path.join(current_dir, year_num, month_num, 'Data_' + day_num)
-        
-        # Make file name and its timestamp.
-        script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-        savefile_string = script_filename + '_' + timestamp  # Name of save file when using the Log Browser database, which adds the file ending automatically (LB bug, likely...)
-        ##savefile_string = script_filename + '_' + timestamp + '.hdf5'  # Name of save file if not using the Log Browser database.
-        
-        # Make the logfile
-        f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = True)
-        ##f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
-        
-        # Set project name, tag, and user in logfile.
-        f.setProject(script_filename)
-        f.setTags('krizan')
-        f.setUser('Christian Križan')
-        
-        # Split fetched_data_arr into repeats:
-        # fetched_data_arr SHAPE: num_stores * repeat_count, num_ports, smpls_per_store
-        t_span = integration_window_stop - integration_window_start
-        
-        # Get index corresponding to integration_window_start and integration_window_stop respectively
-        integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-        integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
-        integr_indices = np.arange(integration_start_index, integration_stop_index)
-        
-        # Construct a matrix, where every row is an integrated sampling
-        # sequence corresponding to exactly one bias point.
-        
-        if(save_complex_data):
-            angles = np.angle(fetched_data_arr[:, 0, integr_indices], deg=False)
-            rows, cols = np.shape(angles)
-            for row in range(rows):
-                for col in range(cols):
-                    #if angles[row][col] < 0.0:
-                    angles[row][col] += (2.0 * np.pi)
-            angles_mean = np.mean(angles, axis=-1)
-            mean_len = len(angles_mean)
-            for row in range(mean_len):
-                angles_mean[row] -= (2.0 * np.pi)
-            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * angles_mean)
-            ##processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
-            ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integr_indices]), axis=-1))
-        else:
-            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1)
-        
-        # Reshape depending on the repeat variable, as well as the inner loop
-        # of the sequencer program.
-        processing_arr.shape = (num_biases, num_freqs)
-        
-        for ts in range(0,len(log_dict_list)):
-            for i in range(num_biases):
-                f.addEntry( {(log_dict_list[ts])['name']: processing_arr[i,:]} )
-        # TODO: "time_matrix does not exist."
-        
-        # Check if the hdf5 file was created in the local directory.
-        # This would happen if you change use_data to False in the
-        # Labber.createLogFile_ForData call. If so, move it to an appropriate
-        # directory. Make directories where necessary.
-        success_message = " in the Log Browser directory!"
-        if os.path.isfile(os.path.join(current_dir, savefile_string)):
-            for lb_path_name in [path1, path2, path3]:
-                if not os.path.exists(lb_path_name):
-                    os.makedirs(lb_path_name)
-            save_path = os.path.join(path3, savefile_string)  # Full save path
-            shutil.move( os.path.join(current_dir,savefile_string) , save_path)
-            success_message = ", see " + save_path
-        
-        # Print final success message.
-        print("Data saved" + success_message) 
+        # Save data!
+        log_browser_exporter.save(
+            ext_keys = ext_keys,
+            log_dict_list = log_dict_list,
+            
+            time_matrix = time_matrix,
+            fetched_data_arr = fetched_data_arr,
+            axes = axes,
+            
+            save_complex_data = save_complex_data,
+            path_to_script = os.path.realpath(__file__),
+            use_log_browser_database = use_log_browser_database,
+            
+            integration_window_start = integration_window_start,
+            integration_window_stop = integration_window_stop,
+            inner_loop_size = num_freqs,
+            outer_loop_size = num_biases
+        )
 
  
 def find_f_ro01_sweep_power(
