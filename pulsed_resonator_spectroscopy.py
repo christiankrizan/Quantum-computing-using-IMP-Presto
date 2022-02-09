@@ -273,7 +273,7 @@ def find_f_ro01_sweep_coupler(
             'coupler_bias_max', "FS",
         ]
         hdf5_logs = [
-            'fetched_data_arr',
+            'fetched_data_arr', "FS",
         ]
         
         # Assert that every key bears a corresponding unit entered above.
@@ -300,7 +300,7 @@ def find_f_ro01_sweep_coupler(
                     if (axes['x_unit']).lower() != 'default':
                         # Change the unit on the x-axis
                         temp_unit = axes['x_unit']
-                elif ii == 4:
+                elif ii == 2:
                     if (axes['z_name']).lower() != 'default':
                         # Replace the z-axis name
                         temp_name = axes['z_name']
@@ -316,8 +316,19 @@ def find_f_ro01_sweep_coupler(
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         log_dict_list = []
-        for kk in range(0,len(hdf5_logs)):
-            log_dict_list.append(dict(name=hdf5_logs[kk], vector=False, complex=save_complex_data))
+        for kk in range(0,len(hdf5_logs),2):
+            log_entry_name = hdf5_logs[kk]
+            temp_log_unit = hdf5_logs[kk+1]
+            if (axes['y_name']).lower() != 'default':
+                # Replace the y-axis name
+                log_entry_name = axes['y_name']
+            if axes['y_scaler'] != 1.0:
+                # Re-scale the y-axis
+                fetched_data_arr *= axes['y_scaler']   ## NOTE! Direct manipulation of the fetched_data_arr array.
+            if (axes['y_unit']).lower() != 'default':
+                # Change the unit on the y-axis
+                temp_log_unit = axes['y_unit']
+            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Get name, file path and time for logfile.
         path_to_script = os.path.realpath(__file__)  # Full path of current script
@@ -326,21 +337,20 @@ def find_f_ro01_sweep_coupler(
         month_num   = (datetime.now()).strftime("%m")
         day_num     = (datetime.now()).strftime("%d")
         
-        # Create folder tree, get save file name, and mkdir what is missing.
+        # Prepare path names needed for creating the folder tree.
         path1 = os.path.join(current_dir, year_num)
         path2 = os.path.join(current_dir, year_num, month_num)
         path3 = os.path.join(current_dir, year_num, month_num, 'Data_' + day_num)
-        for lb_path_name in [path1, path2, path3]:
-            if not os.path.exists(lb_path_name):
-                os.makedirs(lb_path_name)
+        
+        # Make file name and its timestamp.
         script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
         timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-        savefile_string = script_filename + '_' + timestamp + '.hdf5'  # Name of save file
-        save_path = os.path.join(path3, savefile_string)  # Full path of save file
+        savefile_string = script_filename + '_' + timestamp  # Name of save file when using the Log Browser database, which adds the file ending automatically (LB bug, likely...)
+        ##savefile_string = script_filename + '_' + timestamp + '.hdf5'  # Name of save file if not using the Log Browser database.
         
-        # Make logfile
-        ##f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
+        # Make the logfile
         f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = True)
+        ##f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
         
         # Set project name, tag, and user in logfile.
         f.setProject(script_filename)
@@ -380,18 +390,27 @@ def find_f_ro01_sweep_coupler(
         # of the sequencer program.
         processing_arr.shape = (num_biases, num_freqs)
         
-        for i in range(num_biases):
-            f.addEntry( {"fetched_data_arr": processing_arr[i,:]} )
+        for ts in range(0,len(log_dict_list)):
+            for i in range(num_biases):
+                f.addEntry( {(log_dict_list[ts])['name']: processing_arr[i,:]} )
         # TODO: "time_matrix does not exist."
-        #f.addEntry( {"time_matrix": time_matrix} )
         
         # Check if the hdf5 file was created in the local directory.
-        # If so, move it to the 'data' directory.
+        # This would happen if you change use_data to False in the
+        # Labber.createLogFile_ForData call. If so, move it to an appropriate
+        # directory. Make directories where necessary.
+        success_message = " in the Log Browser directory!"
         if os.path.isfile(os.path.join(current_dir, savefile_string)):
-            shutil.move( os.path.join(current_dir, savefile_string) , save_path)
-
+            for lb_path_name in [path1, path2, path3]:
+                if not os.path.exists(lb_path_name):
+                    os.makedirs(lb_path_name)
+            save_path = os.path.join(path3, savefile_string)  # Full save path
+            shutil.move( os.path.join(current_dir,savefile_string) , save_path)
+            success_message = ", see " + save_path
+        
         # Print final success message.
-        print("Data saved, see " + save_path)
+        print("Data saved" + success_message) 
+
  
 def find_f_ro01_sweep_power(
     ip_address,
