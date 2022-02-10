@@ -392,6 +392,8 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
     sampling_duration,
     readout_sampling_delay,
     repetition_delay,
+    integration_window_start,
+    integration_window_stop,
     
     control_port_A,
     control_freq_01_A,
@@ -413,6 +415,20 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
     
     coupler_dc_bias_min = -1.0,
     coupler_dc_bias_max = +1.0,
+    
+    save_complex_data = False,
+    use_log_browser_database = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": 1.0,
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
     ):
     ''' Perform a Rabi oscillation experiment between states |0> and |1>.
         The energy is found by sweeping the amplitude, instead of
@@ -745,97 +761,90 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                 'coupler_dc_bias_max', "FS",
             ]
             hdf5_logs = [
-                'fetched_data_arr',
+                'fetched_data_arr', "FS",
             ]
             
-            print("... building HDF5 keys.")
-            
-            # Assert that every key bears a corresponding unit entered above.
+            # Assert that the received keys bear (an even number of) entries,
+            # implying whether a unit is missing.
             number_of_keyed_elements_is_even = \
-                ((len(hdf5_steps) % 2) == 0) and ((len(hdf5_singles) % 2) == 0)
+                ((len(hdf5_steps) % 2) == 0) and \
+                ((len(hdf5_singles) % 2) == 0) and \
+                ((len(hdf5_logs) % 2) == 0)
             assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-                "of keys and units entered in the portion of the measurement "  + \
-                "script that saves the data. Someone likely forgot a comma."
+                "of keys and units provided. Someone likely forgot a comma."
             
-            # Build step lists and log lists
+            # Build step lists, re-scale and re-unit where necessary.
             ext_keys = []
             for ii in range(0,len(hdf5_steps),2):
-                temp_object = np.array( eval(hdf5_steps[ii]) )
-                ext_keys.append(dict(name=hdf5_steps[ii], unit=hdf5_steps[ii+1], values=temp_object))
+                if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+                    temp_name   = hdf5_steps[ii]
+                    temp_object = np.array( eval(hdf5_steps[ii]) )
+                    temp_unit   = hdf5_steps[ii+1]
+                    if ii == 0:
+                        if (axes['x_name']).lower() != 'default':
+                            # Replace the x-axis name
+                            temp_name = axes['x_name']
+                        if axes['x_scaler'] != 1.0:
+                            # Re-scale the x-axis
+                            temp_object *= axes['x_scaler']
+                        if (axes['x_unit']).lower() != 'default':
+                            # Change the unit on the x-axis
+                            temp_unit = axes['x_unit']
+                    elif ii == 2:
+                        if (axes['z_name']).lower() != 'default':
+                            # Replace the z-axis name
+                            temp_name = axes['z_name']
+                        if axes['z_scaler'] != 1.0:
+                            # Re-scale the z-axis
+                            temp_object *= axes['z_scaler']
+                        if (axes['z_unit']).lower() != 'default':
+                            # Change the unit on the z-axis
+                            temp_unit = axes['z_unit']
+                    ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
             for jj in range(0,len(hdf5_singles),2):
-                temp_object = np.array( [eval(hdf5_singles[jj])] )
-                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+                if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+                    temp_object = np.array( [eval(hdf5_singles[jj])] )
+                    ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
             log_dict_list = []
-            for kk in range(0,len(hdf5_logs)):
-                log_dict_list.append(dict(name=hdf5_logs[kk], vector=False))
-            
-            # Get name and time for logfile.
-            path_to_script = os.path.realpath(__file__)  # Full path of current script
-            current_dir, name_of_running_script = os.path.split(path_to_script)
-            script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
-            timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-            savefile_string = script_filename + '01_sweep_bias_multiplexed_'+str((u)+1)+'_of_2_' + timestamp + '.hdf5'  # Name of save file
-            save_path = os.path.join(current_dir, "data", savefile_string)  # Full path of save file
-            
-            # Make logfile
-            print("... making Log browser logfile.")
-            f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
-            
-            # Set project name, tag, and user in logfile.
-            f.setProject(script_filename)
-            f.setTags('krizan')
-            f.setUser('Christian Križan')
-            
-            print("... processing readout data.")
-            
-            # fetched_data_arr SHAPE: num_stores * repeat_count, num_ports, smpls_per_store
-            integration_window_start = 1500 * 1e-9
-            integration_window_stop  = 2000 * 1e-9
-            
-            # Get index corresponding to integration_window_start and integration_window_stop respectively
-            integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-            integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
-            integr_indices = np.arange(integration_start_index, integration_stop_index)
-            
-            ## Multiplexed readout
-            
-            # Acquire time step needed for returning the DFT sample frequencies.
-            dt = time_matrix[1] - time_matrix[0]
-            nr_samples = len(integr_indices)
-            freq_arr = np.fft.fftfreq(nr_samples, dt)
-            
-            # Execute complex FFT.
-            resp_fft = np.fft.fft(fetched_data_arr[:, 0, integr_indices], axis=-1) / len(integr_indices)
-            
-            # Get new indices for the new processing_arr arrays.
-            integr_indices_1 = np.argmin(np.abs(freq_arr - readout_freq_if_A))
-            integr_indices_2 = np.argmin(np.abs(freq_arr - readout_freq_if_B))
-            
-            # Build new processing_arr arrays.
-            processing_arr_1 = 2 * resp_fft[:, integr_indices_1]
-            processing_arr_2 = 2 * resp_fft[:, integr_indices_2]
-            
-            # Reshape the data to account for repeats.
-            processing_arr_1.shape = (num_biases, num_amplitudes)
-            processing_arr_2.shape = (num_biases, num_amplitudes)
-            
-            # Take the absolute value of the data.
-            processing_arr_1 = np.abs(processing_arr_1)
-            processing_arr_2 = np.abs(processing_arr_2)
-            
-            print("... storing processed data into the HDF5 file.")
+            for kk in range(0,len(hdf5_logs),2):
+                log_entry_name = hdf5_logs[kk]
+                temp_log_unit = hdf5_logs[kk+1]
+                if (axes['y_name']).lower() != 'default':
+                    # Replace the y-axis name
+                    log_entry_name = axes['y_name']
+                if axes['y_scaler'] != 1.0:
+                    # Re-scale the y-axis
+                    ## NOTE! Direct manipulation of the fetched_data_arr array!
+                    fetched_data_arr *= axes['y_scaler']   
+                if (axes['y_unit']).lower() != 'default':
+                    # Change the unit on the y-axis
+                    temp_log_unit = axes['y_unit']
+                log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
             
             
-            # Check if the hdf5 file was created in the local directory.
-            # If so, move it to the 'data' directory.
-            if os.path.isfile(os.path.join(current_dir, savefile_string)):
-                shutil.move( os.path.join(current_dir, savefile_string) , os.path.join(current_dir, "data", savefile_string))
-
-            # Print final success message.
-            print("Data saved, see " + save_path)
-
-
-
+            # Save data!
+            log_browser_exporter.save(
+                ext_keys = ext_keys,
+                log_dict_list = log_dict_list,
+                
+                time_matrix = time_matrix,
+                fetched_data_arr = fetched_data_arr,
+                resonator_frequencies_to_fft = [readout_freq_if_A, readout_freq_if_B],
+                axes = axes,
+                
+                path_to_script = os.path.realpath(__file__),
+                use_log_browser_database = use_log_browser_database,
+                
+                integration_window_start = integration_window_start,
+                integration_window_stop = integration_window_stop,
+                inner_loop_size = num_amplitudes,
+                outer_loop_size = num_biases,
+                
+                save_complex_data = save_complex_data,
+                append_to_log_name_before_timestamp = '01_sweep_bias_multiplexed_',
+                append_to_log_name_after_timestamp  = '_'+str(u)+'_of_2',
+            )
+            
 
 def oscillation01(
     ip_address,

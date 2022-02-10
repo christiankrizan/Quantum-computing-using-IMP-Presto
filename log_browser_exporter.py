@@ -26,12 +26,15 @@ def save(
     integration_window_stop,
     axes,
     
-    save_complex_data,
     path_to_script,
     use_log_browser_database,
     
     inner_loop_size,
     outer_loop_size,
+    
+    save_complex_data = True,
+    append_to_log_name_before_timestamp = '',
+    append_to_log_name_after_timestamp  = '',
     ):
     ''' Function for saving an IMP Presto measurement in an HDF5-format
         that is compatible with Labber's Log Browser.
@@ -55,9 +58,10 @@ def save(
     # Create the log file. Note that the Log Browser API is bugged,
     # and adds a duplicate '.hdf5' file ending when using the database.
     if use_log_browser_database:
-        savefile_string = script_filename + '_' + timestamp
+        savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + '_' + append_to_log_name_after_timestamp
     else:
-        savefile_string = script_filename + '_' + timestamp + '.hdf5'
+        savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + '_' + append_to_log_name_after_timestamp + '.hdf5'
+    print("... building HDF5 log file: " + savefile_string)
     f = Labber.createLogFile_ForData(
         savefile_string,
         log_dict_list,
@@ -137,7 +141,8 @@ def save(
         for mm in range(len(processing_volume[:])):
             fetch = processing_volume[mm]
             fetch.shape = (outer_loop_size, inner_loop_size)
-            processing_volume[mm] = np.abs(fetch) # TODO: Take the absolute value of the data; perhaps this should be remade?
+            # TODO: perhaps this absolute-value step should be remade?
+            processing_volume[mm] = np.abs(fetch)
     
     # For every row in processing arr:
     print("... storing processed data into the HDF5 file.")

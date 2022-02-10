@@ -347,14 +347,17 @@ def find_f_ro01_sweep_coupler(
             resonator_frequencies_to_fft = [],
             axes = axes,
             
-            save_complex_data = save_complex_data,
             path_to_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
             inner_loop_size = num_freqs,
-            outer_loop_size = num_biases
+            outer_loop_size = num_biases,
+            
+            save_complex_data = save_complex_data,
+            append_to_log_name_before_timestamp = '',
+            append_to_log_name_after_timestamp  = '',
         )
 
  
