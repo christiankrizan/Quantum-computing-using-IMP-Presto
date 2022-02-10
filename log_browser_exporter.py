@@ -109,6 +109,9 @@ def save(
         # Reshape depending on the repeat variable, as well as the inner loop
         # of the sequencer program.
         processing_arr.shape = (outer_loop_size, inner_loop_size)
+        
+        # Put the array into the processing list.
+        processing_volume.append( processing_arr )
     
     else:
         # Multiplexed readout.
@@ -126,22 +129,25 @@ def save(
             integr_indices_list.append( np.argmin(np.abs(freq_arr - _ro_freq_if)) )
         
         # Build new processing_arr arrays.
-        processing_arr = np.array([])
+        processing_volume = np.array([])
         for _item in integr_indices_list:
-            processing_arr.append( 2 * resp_fft[:, _item] )
+            processing_volume.append( 2 * resp_fft[:, _item] )
         
         # Reshape the data to account for repeats.
-        for mm in range(len(processing_arr[:])):
-            fetch = processing_arr[mm]
+        for mm in range(len(processing_volume[:])):
+            fetch = processing_volume[mm]
             fetch.shape = (outer_loop_size, inner_loop_size)
-            processing_arr[mm] = np.abs(fetch) # TODO: Take the absolute value of the data; perhaps this should be remade?
+            processing_volume[mm] = np.abs(fetch) # TODO: Take the absolute value of the data; perhaps this should be remade?
     
     # For every row in processing arr:
     print("... storing processed data into the HDF5 file.")
-    for i in range(len(processing_arr[:])):
+    for log_i in range(len(processing_volume[:])):
     
-        # Add an entry in the log browser file.
-        f.addEntry( {(log_dict_list[i])['name']: processing_arr[i,:]} )
+        # ... and for every entry that is to be stored in this log:
+        for outer_loop_i in range(outer_loop_size):
+    
+            # Add an entry in the log browser file.
+            f.addEntry( {(log_dict_list[log_i])['name']: (processing_volume[log_i])[outer_loop_i, :]
     
     
     # Check if the hdf5 file was created in the local directory.
