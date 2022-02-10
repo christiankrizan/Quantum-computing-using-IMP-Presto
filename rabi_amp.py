@@ -19,8 +19,7 @@ import numpy as np
 from datetime import datetime
 from presto.utils import rotate_opt
 from scipy.optimize import curve_fit
-
-import load_rabi_amp
+from log_browser_exporter import save
 
 def oscillation01_with_coupler_bias(
     ip_address,
@@ -714,6 +713,9 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Get timestamp for Log Browser exporter.
+        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
+        
         # This save is done in a loop, due to quirks with Labber's log browser.
         arrays_in_loop = [
             'control_amp_arr_A',
@@ -773,6 +775,21 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
             assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
                 "of keys and units provided. Someone likely forgot a comma."
             
+            # Stylistically rework underscored characters in the axes dict.
+            for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
+                axes[axis] = axes[axis].replace('/2','/₂')
+                axes[axis] = axes[axis].replace('/3','/₃')
+                axes[axis] = axes[axis].replace('_01','₀₁')
+                axes[axis] = axes[axis].replace('_02','₀₂')
+                axes[axis] = axes[axis].replace('_03','₀₃')
+                axes[axis] = axes[axis].replace('_12','₁₂')
+                axes[axis] = axes[axis].replace('_13','₁₃')
+                axes[axis] = axes[axis].replace('_23','₂₃')
+                axes[axis] = axes[axis].replace('_0','₀')
+                axes[axis] = axes[axis].replace('_1','₁')
+                axes[axis] = axes[axis].replace('_2','₂')
+                axes[axis] = axes[axis].replace('_3','₃')
+            
             # Build step lists, re-scale and re-unit where necessary.
             ext_keys = []
             for ii in range(0,len(hdf5_steps),2):
@@ -821,16 +838,15 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                     temp_log_unit = axes['y_unit']
                 log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
             
-            
             # Save data!
-            log_browser_exporter.save(
+            save(
+                timestamp = timestamp,
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
                 
                 time_matrix = time_matrix,
                 fetched_data_arr = fetched_data_arr,
-                resonator_frequencies_to_fft = [readout_freq_if_A, readout_freq_if_B],
-                axes = axes,
+                resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
                 
                 path_to_script = os.path.realpath(__file__),
                 use_log_browser_database = use_log_browser_database,
@@ -841,8 +857,9 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                 outer_loop_size = num_biases,
                 
                 save_complex_data = save_complex_data,
-                append_to_log_name_before_timestamp = '01_sweep_bias_multiplexed_',
-                append_to_log_name_after_timestamp  = '_'+str(u)+'_of_2',
+                append_to_log_name_before_timestamp = '01_sweep_bias_multiplexed',
+                append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
+                select_resonator_for_single_log_export = str(u),
             )
             
 

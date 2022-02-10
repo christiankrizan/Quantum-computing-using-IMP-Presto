@@ -16,6 +16,7 @@ from datetime import datetime
 from presto.utils import rotate_opt
 
 def save(
+    timestamp,
     ext_keys,
     log_dict_list,
     
@@ -24,7 +25,6 @@ def save(
     resonator_freq_if_arrays_to_fft,
     integration_window_start,
     integration_window_stop,
-    axes,
     
     path_to_script,
     use_log_browser_database,
@@ -35,9 +35,18 @@ def save(
     save_complex_data = True,
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp  = '',
+    select_resonator_for_single_log_export = '',
     ):
     ''' Function for saving an IMP Presto measurement in an HDF5-format
         that is compatible with Labber's Log Browser.
+        
+        Please note that the timestamp *should* really be fed into this routine
+        as an argument, because there is an option to select resonators
+        for single log exports. If the timestamp is fetched inside this
+        very save routine in this very file, then the exported files
+        will bear different timestamps, and be sorted weirdly
+        when viewed in folders. This has happened. So don't change how
+        the timestamp is fed into this routine.
     '''
     
     # Get name, file path and time for logfile.
@@ -51,9 +60,8 @@ def save(
     path2 = os.path.join(current_dir, year_num, month_num)
     path3 = os.path.join(current_dir, year_num, month_num, 'Data_' + day_num)
     
-    # Make file name and its timestamp.
+    # Make file name.
     script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
-    timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
     
     # Create the log file. Note that the Log Browser API is bugged,
     # and adds a duplicate '.hdf5' file ending when using the database.
@@ -88,6 +96,7 @@ def save(
                 should be made compatible for multiplexed readout!
                 Aka. move it out of this if case, and/or simply
                 omit the if case and always make the analysis FFT-based.'''
+    processing_volume = [] # Declare the processing volume (tensor)
     if len(resonator_freq_if_arrays_to_fft) < 2:
     
         # Construct a matrix, where every row is an integrated sampling
@@ -128,12 +137,11 @@ def save(
         resp_fft = np.fft.fft(fetched_data_arr[:, 0, integr_indices], axis=-1) / len(integr_indices)
         
         # Get new indices for the new processing_arr arrays.
-        integr_indices_list = np.array([])
+        integr_indices_list = []
         for _ro_freq_if in resonator_freq_if_arrays_to_fft:
             integr_indices_list.append( np.argmin(np.abs(freq_arr - _ro_freq_if)) )
         
         # Build new processing_arr arrays.
-        processing_volume = np.array([])
         for _item in integr_indices_list:
             processing_volume.append( 2 * resp_fft[:, _item] )
         
@@ -144,16 +152,20 @@ def save(
             # TODO: perhaps this absolute-value step should be remade?
             processing_volume[mm] = np.abs(fetch)
     
-    # For every row in processing arr:
+    # For every row in processing volume:
     print("... storing processed data into the HDF5 file.")
-    for log_i in range(len(processing_volume[:])):
-    
-        # ... and for every entry that is to be stored in this log:
+    for log_i in range(len(log_dict_list[:])):
+        
+        # ... and for every loop entry that is to be stored in this log:
         for outer_loop_i in range(outer_loop_size):
-    
-            # Add an entry in the log browser file.
-            f.addEntry( {(log_dict_list[log_i])['name']: (processing_volume[log_i])[outer_loop_i, :]
-    
+        
+            # Add an entry in the log browser file, unless the calling
+            # script wants a specific entry exported into a single file.
+            if select_resonator_for_single_log_export == '':
+                f.addEntry( {(log_dict_list[log_i])['name']: (processing_volume[log_i])[outer_loop_i, :]} )
+            else:
+                f.addEntry( {(log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[outer_loop_i, :]} )
+
     
     # Check if the hdf5 file was created in the local directory.
     # This would happen if you change use_data to False in the

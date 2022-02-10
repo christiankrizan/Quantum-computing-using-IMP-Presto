@@ -18,9 +18,7 @@ import shutil
 import numpy as np
 from datetime import datetime
 from presto.utils import rotate_opt
-
-import log_browser_exporter
-
+from log_browser_exporter import save
 
 def find_f_ro01_sweep_coupler(
     ip_address,
@@ -251,6 +249,9 @@ def find_f_ro01_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Get timestamp for Log Browser exporter.
+        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
+        
         # Data to be stored.
         hdf5_steps = [
             'readout_pulse_freq_arr', "Hz",
@@ -287,6 +288,21 @@ def find_f_ro01_sweep_coupler(
             ((len(hdf5_logs) % 2) == 0)
         assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
             "of keys and units provided. Someone likely forgot a comma."
+        
+        # Stylistically rework underscored characters in the axes dict.
+        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
+            axes[axis] = axes[axis].replace('/2','/₂')
+            axes[axis] = axes[axis].replace('/3','/₃')
+            axes[axis] = axes[axis].replace('_01','₀₁')
+            axes[axis] = axes[axis].replace('_02','₀₂')
+            axes[axis] = axes[axis].replace('_03','₀₃')
+            axes[axis] = axes[axis].replace('_12','₁₂')
+            axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_23','₂₃')
+            axes[axis] = axes[axis].replace('_0','₀')
+            axes[axis] = axes[axis].replace('_1','₁')
+            axes[axis] = axes[axis].replace('_2','₂')
+            axes[axis] = axes[axis].replace('_3','₃')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -336,16 +352,15 @@ def find_f_ro01_sweep_coupler(
                 temp_log_unit = axes['y_unit']
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
-        
         # Save data!
-        log_browser_exporter.save(
+        save(
+            timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
             resonator_freq_if_arrays_to_fft = [],
-            axes = axes,
             
             path_to_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -358,6 +373,7 @@ def find_f_ro01_sweep_coupler(
             save_complex_data = save_complex_data,
             append_to_log_name_before_timestamp = '',
             append_to_log_name_after_timestamp  = '',
+            select_resonator_for_single_log_export = '',
         )
 
  
