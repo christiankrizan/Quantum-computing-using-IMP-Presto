@@ -21,6 +21,7 @@ def save(
     
     time_matrix,
     fetched_data_arr,
+    resonator_freq_if_arrays_to_fft,
     integration_window_start,
     integration_window_stop,
     axes,
@@ -78,38 +79,70 @@ def save(
     integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
     integr_indices = np.arange(integration_start_index, integration_stop_index)
     
-    # Construct a matrix, where every row is an integrated sampling
-    # sequence corresponding to exactly one bias point.
+    # Is the readout non-multiplexed? (Will there be no FFT involved?)
+    ''' TODO:   The complex data storage routine
+                should be made compatible for multiplexed readout!
+                Aka. move it out of this if case, and/or simply
+                omit the if case and always make the analysis FFT-based.'''
+    if len(resonator_freq_if_arrays_to_fft) < 2:
     
-    if(save_complex_data):
-        angles = np.angle(fetched_data_arr[:, 0, integr_indices], deg=False)
-        rows, cols = np.shape(angles)
-        for row in range(rows):
-            for col in range(cols):
-                #if angles[row][col] < 0.0:
-                angles[row][col] += (2.0 * np.pi)
-        angles_mean = np.mean(angles, axis=-1)
-        mean_len = len(angles_mean)
-        for row in range(mean_len):
-            angles_mean[row] -= (2.0 * np.pi)
-        processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * angles_mean)
-        ##processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
-        ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integr_indices]), axis=-1))
-    else:
-        processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1)
-    
-    # Reshape depending on the repeat variable, as well as the inner loop
-    # of the sequencer program.
-    processing_arr.shape = (outer_loop_size, inner_loop_size)
-    
-    # For every array stored as log traces:
-    for ts in range(0,len(log_dict_list)):
-    
-        # For every row in processing arr:
-        for i in range(len(processing_arr[:])):
+        # Construct a matrix, where every row is an integrated sampling
+        # sequence corresponding to exactly one bias point.
         
-            # Add an entry in the log browser file.
-            f.addEntry( {(log_dict_list[ts])['name']: processing_arr[i,:]} )
+        if(save_complex_data):
+            angles = np.angle(fetched_data_arr[:, 0, integr_indices], deg=False)
+            rows, cols = np.shape(angles)
+            for row in range(rows):
+                for col in range(cols):
+                    #if angles[row][col] < 0.0:
+                    angles[row][col] += (2.0 * np.pi)
+            angles_mean = np.mean(angles, axis=-1)
+            mean_len = len(angles_mean)
+            for row in range(mean_len):
+                angles_mean[row] -= (2.0 * np.pi)
+            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * angles_mean)
+            ##processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
+            ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integr_indices]), axis=-1))
+        else:
+            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1)
+        
+        # Reshape depending on the repeat variable, as well as the inner loop
+        # of the sequencer program.
+        processing_arr.shape = (outer_loop_size, inner_loop_size)
+    
+    else:
+        # Multiplexed readout.
+        # Acquire time step needed for returning the DFT sample frequencies.
+        dt = time_matrix[1] - time_matrix[0]
+        nr_samples = len(integr_indices)
+        freq_arr = np.fft.fftfreq(nr_samples, dt)
+        
+        # Execute complex FFT.
+        resp_fft = np.fft.fft(fetched_data_arr[:, 0, integr_indices], axis=-1) / len(integr_indices)
+        
+        # Get new indices for the new processing_arr arrays.
+        integr_indices_list = np.array([])
+        for _ro_freq_if in resonator_freq_if_arrays_to_fft:
+            integr_indices_list.append( np.argmin(np.abs(freq_arr - _ro_freq_if)) )
+        
+        # Build new processing_arr arrays.
+        processing_arr = np.array([])
+        for _item in integr_indices_list:
+            processing_arr.append( 2 * resp_fft[:, _item] )
+        
+        # Reshape the data to account for repeats.
+        for mm in range(len(processing_arr[:])):
+            fetch = processing_arr[mm]
+            fetch.shape = (outer_loop_size, inner_loop_size)
+            processing_arr[mm] = np.abs(fetch) # TODO: Take the absolute value of the data; perhaps this should be remade?
+    
+    # For every row in processing arr:
+    print("... storing processed data into the HDF5 file.")
+    for i in range(len(processing_arr[:])):
+    
+        # Add an entry in the log browser file.
+        f.addEntry( {(log_dict_list[i])['name']: processing_arr[i,:]} )
+    
     
     # Check if the hdf5 file was created in the local directory.
     # This would happen if you change use_data to False in the
