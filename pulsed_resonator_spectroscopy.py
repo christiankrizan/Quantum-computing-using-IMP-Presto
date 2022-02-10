@@ -344,7 +344,7 @@ def find_f_ro01_sweep_coupler(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
-            resonator_frequencies_to_fft = [],
+            resonator_freq_if_arrays_to_fft = [],
             axes = axes,
             
             path_to_script = os.path.realpath(__file__),
