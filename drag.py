@@ -21,7 +21,7 @@ from presto.utils import rotate_opt
 from log_browser_exporter import save
 
 
-def establish_minus_drag_coefficient_over_anharmonicity(
+def find_drag_coefficient_lambda_over_anharmonicity(
     ip_address,
     ext_clk_present,
     
@@ -53,9 +53,9 @@ def establish_minus_drag_coefficient_over_anharmonicity(
     num_unitary_pulse_pairs_step_size,
     
     qubit_anharmonicity,
-    drag_parameter_lambda_min = -1.0,
-    drag_parameter_lambda_max = +1.0,
-    drag_parameter_lambda_step_size = 0.1,
+    drag_coefficient_lambda_min = -1.0,
+    drag_coefficient_lambda_max = +1.0,
+    drag_coefficient_lambda_step_size = 0.1,
     
     save_complex_data = False,
     use_log_browser_database = True,
@@ -86,8 +86,8 @@ def establish_minus_drag_coefficient_over_anharmonicity(
     
     # Declare array bearing the DRAG coefficients, with a resolution
     # as given by user input.
-    drag_parameter_lambda_arr = np.arange(drag_parameter_lambda_min, drag_parameter_lambda_max, drag_parameter_lambda_step_size)
-    num_drag_lambdas = len(drag_parameter_lambda_arr)
+    drag_coefficient_lambda_arr = np.arange(drag_coefficient_lambda_min, drag_coefficient_lambda_max, drag_coefficient_lambda_step_size)
+    num_drag_lambdas = len(drag_coefficient_lambda_arr)
     
     print("Instantiating interface")
     
@@ -157,7 +157,7 @@ def establish_minus_drag_coefficient_over_anharmonicity(
         pls.setup_scale_lut(
             output_ports    = control_port,
             group           = 1,
-            scales          = control_amp_01 * drag_parameter_lambda_arr / qubit_anharmonicity,
+            scales          = control_amp_01 * drag_coefficient_lambda_arr / qubit_anharmonicity,
         )
         # Coupler port amplitudes
         pls.setup_scale_lut(
@@ -215,14 +215,14 @@ def establish_minus_drag_coefficient_over_anharmonicity(
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = [0.0, 0.0],
             phases       = [0.0, np.pi], # Two options:
             phases_q     = [0.0, np.pi], # Either normal or inverted phase.
         )
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 1,
-            frequencies  = 0.0,
+            frequencies  = [0.0, 0.0],
             phases       = [0.0, np.pi], # Two options:
             phases_q     = [0.0, np.pi], # Either normal, or inverted phase.
         )
@@ -340,7 +340,7 @@ def establish_minus_drag_coefficient_over_anharmonicity(
         # Data to be stored.
         hdf5_steps = [
             'num_unitary_pairs_arr',"",
-            'drag_parameter_lambda_arr', "",
+            'drag_coefficient_lambda_arr', "",
         ]
         hdf5_singles = [
             'readout_stimulus_port',"",
@@ -368,8 +368,8 @@ def establish_minus_drag_coefficient_over_anharmonicity(
             'num_unitary_pulse_pairs_min',"",
             'num_unitary_pulse_pairs_max',"",
             'num_unitary_pulse_pairs_step_size',"",
-            'drag_parameter_lambda_min',"",
-            'drag_parameter_lambda_max',"",
+            'drag_coefficient_lambda_min',"",
+            'drag_coefficient_lambda_max',"",
             
         ]
         hdf5_logs = [
