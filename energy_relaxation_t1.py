@@ -32,6 +32,8 @@ def t1_sweep_flux(
     sampling_duration,
     readout_sampling_delay,
     repetition_delay,
+    integration_window_start,
+    integration_window_stop,
     
     control_port,
     control_amp_01,

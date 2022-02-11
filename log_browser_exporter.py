@@ -65,10 +65,12 @@ def save(
     
     # Create the log file. Note that the Log Browser API is bugged,
     # and adds a duplicate '.hdf5' file ending when using the database.
+    if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
+        append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
     if use_log_browser_database:
-        savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + '_' + append_to_log_name_after_timestamp
+        savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + append_to_log_name_after_timestamp
     else:
-        savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + '_' + append_to_log_name_after_timestamp + '.hdf5'
+        savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + append_to_log_name_after_timestamp + '.hdf5'
     print("... building HDF5 log file: " + savefile_string)
     f = Labber.createLogFile_ForData(
         savefile_string,
@@ -114,7 +116,7 @@ def save(
             for row in range(mean_len):
                 angles_mean[row] -= (2.0 * np.pi)
             processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * angles_mean)
-            ##processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
+            ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
             ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integr_indices]), axis=-1))
         else:
             processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1)

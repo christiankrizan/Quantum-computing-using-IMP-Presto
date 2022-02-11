@@ -771,7 +771,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
             repeat_count        =   num_biases,
             num_averages        =   num_averages,
             print_time          =   True,
-            enable_compression  = True # Experimental feature!
+            #enable_compression  = True # Experimental feature! TODO: Update, bugged and does not work in this script.
         )
         
         
