@@ -70,7 +70,7 @@ def iswap_sweep_duration_and_detuning(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -622,7 +622,7 @@ def iswap_sweep_duration_and_amplitude(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -1174,7 +1174,7 @@ def iswap_sweep_amplitude_and_detuning(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

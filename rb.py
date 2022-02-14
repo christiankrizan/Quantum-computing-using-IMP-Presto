@@ -144,7 +144,7 @@ def randomised_benchmarking_01_single_qubit(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

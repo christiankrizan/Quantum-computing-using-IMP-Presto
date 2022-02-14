@@ -42,7 +42,7 @@ def outputSingleWave(
 
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         address     = ip_address,
         ext_ref_clk = ext_clk_present,

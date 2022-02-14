@@ -61,7 +61,7 @@ def ramsey01_readout0(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -448,7 +448,7 @@ def ramsey01_multiplexed_ro(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

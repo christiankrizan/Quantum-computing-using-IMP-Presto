@@ -76,7 +76,7 @@ def pulsed01_flux_sweep(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -501,12 +501,34 @@ def pulsed01_flux_sweep_multiplexed_ro(
         function.
     '''
     
+    ## Input sanitisation
+    
+    # Acquire legal values regarding the coupler port settings.
+    first_msg  = ''
+    second_msg = ''
+    if num_biases < 1:
+        num_biases = 1
+        print("Note: num_biases was less than 1, and was thus set to 1.")
+        if coupler_bias_min != 0.0:
+            print("Note: the coupler bias was thus set to 0.")
+            coupler_bias_min = 0.0
+    elif coupler_dc_port == []:
+        if num_biases != 1:
+            num_biases = 1
+            print("Note: num_biases was set to 1, since the coupler_port array was empty.")
+        if coupler_bias_min != 0.0:
+            print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+            coupler_bias_min = 0.0
+    
+    
+    ## Initial array declaration
+    
     # Declare amplitude array for the coupler to be swept
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -530,8 +552,9 @@ def pulsed01_flux_sweep_multiplexed_ro(
         pls.hardware.set_inv_sinc(control_port_B, 0)
         
         # Coupler port
-        pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-        pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        if coupler_dc_port != []:
+            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
+            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
         
         
         ''' Setup mixers '''
@@ -555,14 +578,15 @@ def pulsed01_flux_sweep_multiplexed_ro(
         pls.hardware.configure_mixer(
             freq      = control_freq_01_B_nco,
             out_ports = control_port_B,
-            sync      = False,
+            sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
-        pls.hardware.configure_mixer(
-            freq      = 0.0,
-            out_ports = coupler_dc_port,
-            sync      = True,  # Sync here
-        )
+        if coupler_dc_port != []:
+            pls.hardware.configure_mixer(
+                freq      = 0.0,
+                out_ports = coupler_dc_port,
+                sync      = True,
+            )
         
         
         ''' Setup scale LUTs '''
@@ -590,11 +614,12 @@ def pulsed01_flux_sweep_multiplexed_ro(
             scales          = control_amp_01_B,
         )
         # Coupler port amplitude (the bias to be swept)
-        pls.setup_scale_lut(
-            output_ports    = coupler_dc_port,
-            group           = 0,
-            scales          = coupler_amp_arr,
-        )
+        if coupler_dc_port != []:
+            pls.setup_scale_lut(
+                output_ports    = coupler_dc_port,
+                group           = 0,
+                scales          = coupler_amp_arr,
+            )
         
         
         ### Setup readout pulses ###
@@ -687,25 +712,25 @@ def pulsed01_flux_sweep_multiplexed_ro(
         )
         
         ### Setup pulse "coupler_bias_tone" ###
-
-        # Setup the coupler tone bias.
-        coupler_bias_tone = [pls.setup_long_drive(
-            output_port = _port,
-            group       = 0,
-            duration    = added_delay_for_bias_tee,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
-        ) for _port in coupler_dc_port]
-        # Setup coupler bias tone "carrier"
-        pls.setup_freq_lut(
-            output_ports = coupler_dc_port,
-            group        = 0,
-            frequencies  = 0.0,
-            phases       = 0.0,
-            phases_q     = 0.0,
-        )
+        if coupler_dc_port != []:
+            # Setup the coupler tone bias.
+            coupler_bias_tone = [pls.setup_long_drive(
+                output_port = _port,
+                group       = 0,
+                duration    = added_delay_for_bias_tee,
+                amplitude   = 1.0,
+                amplitude_q = 1.0,
+                rise_time   = 0e-9,
+                fall_time   = 0e-9
+            ) for _port in coupler_dc_port]
+            # Setup coupler bias tone "carrier"
+            pls.setup_freq_lut(
+                output_ports = coupler_dc_port,
+                group        = 0,
+                frequencies  = 0.0,
+                phases       = 0.0,
+                phases_q     = 0.0,
+            )
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
@@ -720,20 +745,22 @@ def pulsed01_flux_sweep_multiplexed_ro(
         T = 0.0  # s
 
         # Charge the bias tee.
-        pls.reset_phase(T, coupler_dc_port)
-        pls.output_pulse(T, coupler_bias_tone)
-        T += added_delay_for_bias_tee
+        if coupler_dc_port != []:
+            pls.reset_phase(T, coupler_dc_port)
+            pls.output_pulse(T, coupler_bias_tone)
+            T += added_delay_for_bias_tee
         
-        # Redefine the coupler DC pulse duration for repeated playback
-        # once one tee risetime has passed.
-        for bias_tone in coupler_bias_tone:
-            bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
+            # Redefine the coupler DC pulse duration for repeated playback
+            # once one tee risetime has passed.
+            for bias_tone in coupler_bias_tone:
+                bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
         
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
             
             # Re-apply the coupler bias tone.
-            pls.output_pulse(T, coupler_bias_tone)
+            if coupler_dc_port != []:
+                pls.output_pulse(T, coupler_bias_tone)
             
             # Apply the frequency-swept pi01 pulses.
             pls.reset_phase(T, [control_port_A, control_port_B])
@@ -755,7 +782,8 @@ def pulsed01_flux_sweep_multiplexed_ro(
         
         
         # Increment the coupler port's DC bias.
-        pls.next_scale(T, coupler_dc_port)
+        if coupler_dc_port != []:
+            pls.next_scale(T, coupler_dc_port)
         
         # Move to next iteration.
         T += repetition_delay
@@ -768,10 +796,10 @@ def pulsed01_flux_sweep_multiplexed_ro(
         # Average the measurement over 'num_averages' averages
         pls.run(
             period              =   T,
-            repeat_count        =   num_biases,
+            repeat_count        =   num_biases, # Note: input sanitisation took care of illegal values here, see beginning of def.
             num_averages        =   num_averages,
             print_time          =   True,
-            #enable_compression  = True # Experimental feature! TODO: Update, bugged and does not work in this script.
+            #enable_compression  = True # Experimental feature! TODO: bugged in the API and does not work in this script.
         )
         
         
@@ -970,12 +998,13 @@ def pulsed01_power_sweep(
         while sweeping the applied qubit power.
     '''
     
-    # Declare amplitude array for the coupler to be swept
+    
+    # Declare amplitude array for the control pulse to be swept
     control_amp_01_arr = np.linspace(control_amp_01_min, control_amp_01_max, num_amplitudes)
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

@@ -66,7 +66,7 @@ def oscillation01_with_coupler_bias(
 
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -446,7 +446,7 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
 
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -897,7 +897,7 @@ def oscillation01(
 
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

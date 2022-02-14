@@ -91,7 +91,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
