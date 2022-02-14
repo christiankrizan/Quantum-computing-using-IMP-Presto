@@ -69,27 +69,23 @@ def find_f_ro01_sweep_coupler(
     
     ## Input sanitisation
     
-    # Sanitise time arguments    
-    plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
-    readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
-    sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
-    readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-    repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
-    added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
-    
     # Acquire legal values regarding the coupler port settings.
+    first_msg  = ''
+    second_msg = ''
     if num_biases < 1:
-        coupler_bias_min = 0.0
         num_biases = 1
-        print("Note: num_biases was less than 1, and was thus set to 1. And, the coupler bias was set to 0.")
+        print("Note: num_biases was less than 1, and was thus set to 1.")
+        if coupler_bias_min != 0.0:
+            print("Note: the coupler bias was thus set to 0.")
+            coupler_bias_min = 0.0
     elif coupler_dc_port == []:
-        coupler_bias_min = 0.0
         if num_biases != 1:
             num_biases = 1
-            print("Note: num_biases was set to 1, since the coupler_port array was empty. And, coupler bias was set to 0.")
-        else:
-            print("Note: since the coupler_port array was empty, the coupler bias was set to 0.")
-
+            print("Note: num_biases was set to 1, since the coupler_port array was empty.")
+        if coupler_bias_min != 0.0:
+            print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+            coupler_bias_min = 0.0
+    
     
     ## Initial array declaration
     
@@ -98,7 +94,7 @@ def find_f_ro01_sweep_coupler(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -119,6 +115,15 @@ def find_f_ro01_sweep_coupler(
         if coupler_dc_port != []:
             pls.hardware.set_dac_current(coupler_dc_port, 40_500)
             pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
         
         ''' Setup mixers '''
@@ -423,24 +428,42 @@ def find_f_ro01_sweep_power(
     sampling_duration,
     readout_sampling_delay,
     repetition_delay,
-
+    integration_window_start,
+    integration_window_stop,
+    
     num_freqs,
     num_averages,
     
     num_amplitudes,
     readout_amp_min = -1.0,
     readout_amp_max = +1.0,
+    
     save_complex_data = False,
+    use_log_browser_database = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": 1.0,
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
+        
     ):
     ''' Plot the readout frequency versus swept readout amplitude, pulsed.
     '''
+    
+    ## Initial array declaration
     
     # Declare amplitude array for sweeping the power
     readout_amp_arr = np.linspace(readout_amp_min, readout_amp_max, num_amplitudes)
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -456,6 +479,15 @@ def find_f_ro01_sweep_power(
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
         pls.hardware.set_dac_current(readout_stimulus_port, 40_500)
         pls.hardware.set_inv_sinc(readout_stimulus_port, 0)      
+        
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        
         
         ''' Setup mixers '''
         
@@ -564,6 +596,9 @@ def find_f_ro01_sweep_power(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Get timestamp for Log Browser exporter.
+        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
+        
         # Data to be stored.
         hdf5_steps = [
             'readout_pulse_freq_arr', "Hz",
@@ -588,89 +623,105 @@ def find_f_ro01_sweep_power(
             'readout_amp_min', "FS",
             'readout_amp_max', "FS",
         ]
+        hdf5_logs = [
+            'fetched_data_arr', "FS",
+        ]
         
-        # Assert that every key bears a corresponding unit entered above.
+        # Assert that the received keys bear (an even number of) entries,
+        # implying whether a unit is missing.
         number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and ((len(hdf5_singles) % 2) == 0)
+            ((len(hdf5_steps) % 2) == 0) and \
+            ((len(hdf5_singles) % 2) == 0) and \
+            ((len(hdf5_logs) % 2) == 0)
         assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units entered in the portion of the measurement "  + \
-            "script that saves the data. Someone likely forgot a comma."
+            "of keys and units provided. Someone likely forgot a comma."
         
-        # Build step lists
+        # Stylistically rework underscored characters in the axes dict.
+        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
+            axes[axis] = axes[axis].replace('/2','/₂')
+            axes[axis] = axes[axis].replace('/3','/₃')
+            axes[axis] = axes[axis].replace('_01','₀₁')
+            axes[axis] = axes[axis].replace('_02','₀₂')
+            axes[axis] = axes[axis].replace('_03','₀₃')
+            axes[axis] = axes[axis].replace('_12','₁₂')
+            axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_23','₂₃')
+            axes[axis] = axes[axis].replace('_0','₀')
+            axes[axis] = axes[axis].replace('_1','₁')
+            axes[axis] = axes[axis].replace('_2','₂')
+            axes[axis] = axes[axis].replace('_3','₃')
+        
+        # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
             if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+                temp_name   = hdf5_steps[ii]
                 temp_object = np.array( eval(hdf5_steps[ii]) )
-                ext_keys.append(dict(name=hdf5_steps[ii], unit=hdf5_steps[ii+1], values=temp_object))
+                temp_unit   = hdf5_steps[ii+1]
+                if ii == 0:
+                    if (axes['x_name']).lower() != 'default':
+                        # Replace the x-axis name
+                        temp_name = axes['x_name']
+                    if axes['x_scaler'] != 1.0:
+                        # Re-scale the x-axis
+                        temp_object *= axes['x_scaler']
+                    if (axes['x_unit']).lower() != 'default':
+                        # Change the unit on the x-axis
+                        temp_unit = axes['x_unit']
+                elif ii == 2:
+                    if (axes['z_name']).lower() != 'default':
+                        # Replace the z-axis name
+                        temp_name = axes['z_name']
+                    if axes['z_scaler'] != 1.0:
+                        # Re-scale the z-axis
+                        temp_object *= axes['z_scaler']
+                    if (axes['z_unit']).lower() != 'default':
+                        # Change the unit on the z-axis
+                        temp_unit = axes['z_unit']
+                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
             if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+        log_dict_list = []
+        for kk in range(0,len(hdf5_logs),2):
+            log_entry_name = hdf5_logs[kk]
+            temp_log_unit = hdf5_logs[kk+1]
+            if (axes['y_name']).lower() != 'default':
+                # Replace the y-axis name
+                log_entry_name = axes['y_name']
+            if axes['y_scaler'] != 1.0:
+                # Re-scale the y-axis
+                ## NOTE! Direct manipulation of the fetched_data_arr array!
+                fetched_data_arr *= axes['y_scaler']   
+            if (axes['y_unit']).lower() != 'default':
+                # Change the unit on the y-axis
+                temp_log_unit = axes['y_unit']
+            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
-        # Get name and time for logfile.
-        path_to_script = os.path.realpath(__file__)  # Full path of current script
-        current_dir, name_of_running_script = os.path.split(path_to_script)
-        script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-        savefile_string = script_filename + '_power_sweep_' + timestamp + '.hdf5'  # Name of save file
-        save_path = os.path.join(current_dir, "data", savefile_string)  # Full path of save file
-        
-        # Make logfile
-        log_dict_list = [dict(name='fetched_data_arr', vector=False, complex=save_complex_data)]# , dict(name='time_matrix', vector=True)]
-        f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
-        
-        # Set project name, tag, and user in logfile.
-        f.setProject(script_filename)
-        f.setTags('krizan')
-        f.setUser('Christian Križan')
-        
-        # Split fetched_data_arr into repeats:
-        # fetched_data_arr SHAPE: num_stores * repeat_count, num_ports, smpls_per_store
-        integration_window_start = 1500 * 1e-9
-        integration_window_stop  = 2000 * 1e-9
-        t_span = integration_window_stop - integration_window_start
-        
-        # Get index corresponding to integration_window_start and integration_window_stop respectively
-        integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-        integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
-        integr_indices = np.arange(integration_start_index, integration_stop_index)
-        
-        # Construct a matrix, where every row is an integrated sampling
-        # sequence corresponding to exactly one bias point.
-        
-        if(save_complex_data):
-            angles = np.angle(fetched_data_arr[:, 0, integr_indices], deg=False)
-            rows, cols = np.shape(angles)
-            for row in range(rows):
-                for col in range(cols):
-                    #if angles[row][col] < 0.0:
-                    angles[row][col] += (2.0 * np.pi)
-            angles_mean = np.mean(angles, axis=-1)
-            mean_len = len(angles_mean)
-            for row in range(mean_len):
-                angles_mean[row] -= (2.0 * np.pi)
-            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * angles_mean)
-            ##processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
-            ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integr_indices]), axis=-1))
-        else:
-            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1)
-        
-        # Reshape depending on the repeat variable, as well as the inner loop
-        # of the sequencer program.
-        processing_arr.shape = (num_amplitudes, num_freqs)
-        
-        for i in range(num_amplitudes):
-            f.addEntry( {"fetched_data_arr": processing_arr[i,:]} )
-        # TODO: "time_matrix does not exist."
-        #f.addEntry( {"time_matrix": time_matrix} )
-        
-        # Check if the hdf5 file was created in the local directory.
-        # If so, move it to the 'data' directory.
-        if os.path.isfile(os.path.join(current_dir, savefile_string)):
-            shutil.move( os.path.join(current_dir, savefile_string) , os.path.join(current_dir, "data", savefile_string))
-
-        # Print final success message.
-        print("Data saved, see " + save_path)
+        # Save data!
+        save(
+            timestamp = timestamp,
+            ext_keys = ext_keys,
+            log_dict_list = log_dict_list,
+            
+            time_matrix = time_matrix,
+            fetched_data_arr = fetched_data_arr,
+            resonator_freq_if_arrays_to_fft = [],
+            
+            path_to_script = os.path.realpath(__file__),
+            use_log_browser_database = use_log_browser_database,
+            
+            integration_window_start = integration_window_start,
+            integration_window_stop = integration_window_stop,
+            inner_loop_size = num_freqs,
+            outer_loop_size = num_amplitudes,
+            
+            save_complex_data = save_complex_data,
+            append_to_log_name_before_timestamp = 'power_sweep',
+            append_to_log_name_after_timestamp  = '',
+            select_resonator_for_single_log_export = '',
+        )
         
         
 def find_f_ro12_sweep_coupler(
@@ -714,7 +765,7 @@ def find_f_ro12_sweep_coupler(
     
     
     # Instantiate the interface
-    print("Instantiating interface")
+    print("\nInstantiating interface!")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
