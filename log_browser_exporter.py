@@ -65,7 +65,7 @@ def save(
     
     # Create the log file. Note that the Log Browser API is bugged,
     # and adds a duplicate '.hdf5' file ending when using the database.
-    if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
+    if (not append_to_log_name_after_timestamp.startswith('_')) and (not append_to_log_name_after_timestamp != ''):
         append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
     if use_log_browser_database:
         savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + append_to_log_name_after_timestamp
