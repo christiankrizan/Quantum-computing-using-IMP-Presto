@@ -67,10 +67,10 @@ def iswap_sweep_duration_and_detuning(
         a tuneable coupler, by fixing the gate amplitude and gate bias.
         Thus, the gate duration and detuning is swept.
     '''
-        
-    print("Instantiating interface")
+    
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -620,9 +620,9 @@ def iswap_sweep_duration_and_amplitude(
     # Declare amplitude array for the AC coupler tone to be swept
     coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -1172,9 +1172,9 @@ def iswap_sweep_amplitude_and_detuning(
     # Declare amplitude array for the AC coupler tone to be swept
     coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

@@ -59,9 +59,9 @@ def ramsey01_readout0(
     # Declare time delay array for saving time data.
     delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -446,9 +446,9 @@ def ramsey01_multiplexed_ro(
     # Declare time delay array for saving time data.
     delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

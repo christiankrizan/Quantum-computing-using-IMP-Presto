@@ -89,9 +89,9 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     drag_coefficient_lambda_arr = np.arange(drag_coefficient_lambda_min, drag_coefficient_lambda_max, drag_coefficient_lambda_step_size)
     num_drag_lambdas = len(drag_coefficient_lambda_arr)
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

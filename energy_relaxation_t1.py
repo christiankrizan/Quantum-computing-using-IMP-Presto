@@ -60,9 +60,9 @@ def t1_sweep_flux(
     # Declare amplitude array for the coupler to be swept
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
     
-    print("Instantiating interface")
     
-    # Instantiate the interface class
+    # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -402,9 +402,9 @@ def t1_sweep_flux_multiplexed_ro(
     # Declare amplitude array for the coupler to be swept
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
     
-    print("Instantiating interface")
     
-    # Instantiate the interface class
+    # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

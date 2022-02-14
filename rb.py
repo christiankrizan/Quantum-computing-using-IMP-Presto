@@ -142,9 +142,9 @@ def randomised_benchmarking_01_single_qubit(
             while (state_coordinates_deg[uic])[tf] < 0:
                 (state_coordinates_deg[uic])[tf] += 360
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

@@ -66,8 +66,18 @@ def find_f_ro01_sweep_coupler(
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         as a function of a swept pairwise coupler bias.
     '''
-
-    # Input sanitisation
+    
+    ## Input sanitisation
+    
+    # Sanitise time arguments    
+    plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+    readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+    sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+    readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+    repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+    added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
+    
+    # Acquire legal values regarding the coupler port settings.
     if num_biases <= 0:
         print("Note: num_biases was less than 1, and was thus set to 1. Also, coupler_bias_min was also set to 0.")
         num_biases = 1
@@ -76,13 +86,16 @@ def find_f_ro01_sweep_coupler(
         print("Note: num_biases was set to 1, since the coupler_port array was empty. Also, coupler_bias_min was also set to 0.")
         num_biases = 1
         coupler_bias_min = 0.0
+
+    
+    ## Initial array declaration
     
     # Declare amplitude array for the coupler to be swept.
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -422,9 +435,9 @@ def find_f_ro01_sweep_power(
     # Declare amplitude array for sweeping the power
     readout_amp_arr = np.linspace(readout_amp_min, readout_amp_max, num_amplitudes)
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -696,9 +709,9 @@ def find_f_ro12_sweep_coupler(
     # Declare amplitude array for the coupler to be swept
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
     
-    print("Instantiating interface")
     
     # Instantiate the interface
+    print("Instantiating interface")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,

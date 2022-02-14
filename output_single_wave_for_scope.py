@@ -40,9 +40,9 @@ def outputSingleWave(
     # Declare amplitude array for the Rabi experiment
     control_amp_arr = np.linspace(control_amp_min, control_amp_max, num_amplitudes)
 
+    
+    # Instantiate the interface
     print("Instantiating interface")
-
-    # Instantiate interface class
     with pulsed.Pulsed(
         address     = ip_address,
         ext_ref_clk = ext_clk_present,

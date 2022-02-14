@@ -64,9 +64,9 @@ def oscillation01_with_coupler_bias(
     # Declare amplitude array for the coupler sweep.
     coupler_amp_arr = np.linspace(coupler_dc_bias_min, coupler_dc_bias_max, num_biases)
 
+    
+    # Instantiate the interface
     print("Instantiating interface")
-
-    # Instantiate interface class
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -444,9 +444,9 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
     # Declare amplitude array for the coupler sweep.
     coupler_amp_arr = np.linspace(coupler_dc_bias_min, coupler_dc_bias_max, num_biases)
 
+    
+    # Instantiate the interface
     print("Instantiating interface")
-
-    # Instantiate interface class
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -895,9 +895,9 @@ def oscillation01(
     # Declare amplitude array for the Rabi experiment
     control_amp_arr = np.linspace(control_amp_01_min, control_amp_01_max, num_amplitudes)
 
+    
+    # Instantiate the interface
     print("Instantiating interface")
-
-    # Instantiate interface class
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
