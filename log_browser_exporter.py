@@ -65,12 +65,16 @@ def save(
     
     # Create the log file. Note that the Log Browser API is bugged,
     # and adds a duplicate '.hdf5' file ending when using the database.
-    if (not append_to_log_name_after_timestamp.startswith('_')) and (not append_to_log_name_after_timestamp != ''):
+    if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
         append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
+    if (not append_to_log_name_before_timestamp.startswith('_')) and (append_to_log_name_before_timestamp != ''):
+        append_to_log_name_before_timestamp = '_' + append_to_log_name_before_timestamp
+    if (not timestamp.startswith('_')) and (timestamp != ''):
+        timestamp = '_' + timestamp
     if use_log_browser_database:
-        savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + append_to_log_name_after_timestamp
+        savefile_string = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp
     else:
-        savefile_string = script_filename + '_' + append_to_log_name_before_timestamp + '_' + timestamp + append_to_log_name_after_timestamp + '.hdf5'
+        savefile_string = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.hdf5'
     print("... building HDF5 log file: " + savefile_string)
     f = Labber.createLogFile_ForData(
         savefile_string,
