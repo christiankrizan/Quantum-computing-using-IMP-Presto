@@ -78,14 +78,17 @@ def find_f_ro01_sweep_coupler(
     added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
     
     # Acquire legal values regarding the coupler port settings.
-    if num_biases <= 0:
-        print("Note: num_biases was less than 1, and was thus set to 1. Also, coupler_bias_min was also set to 0.")
-        num_biases = 1
+    if num_biases < 1:
         coupler_bias_min = 0.0
+        num_biases = 1
+        print("Note: num_biases was less than 1, and was thus set to 1. And, the coupler bias was set to 0.")
     elif coupler_dc_port == []:
-        print("Note: num_biases was set to 1, since the coupler_port array was empty. Also, coupler_bias_min was also set to 0.")
-        num_biases = 1
         coupler_bias_min = 0.0
+        if num_biases != 1:
+            num_biases = 1
+            print("Note: num_biases was set to 1, since the coupler_port array was empty. And, coupler bias was set to 0.")
+        else:
+            print("Note: since the coupler_port array was empty, the coupler bias was set to 0.")
 
     
     ## Initial array declaration
