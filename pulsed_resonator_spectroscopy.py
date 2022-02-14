@@ -66,8 +66,18 @@ def find_f_ro01_sweep_coupler(
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         as a function of a swept pairwise coupler bias.
     '''
+
+    # Input sanitisation
+    if num_biases <= 0:
+        print("Note: num_biases was less than 1, and was thus set to 1. Also, coupler_bias_min was also set to 0.")
+        num_biases = 1
+        coupler_bias_min = 0.0
+    elif coupler_dc_port == []:
+        print("Note: num_biases was set to 1, since the coupler_port array was empty. Also, coupler_bias_min was also set to 0.")
+        num_biases = 1
+        coupler_bias_min = 0.0
     
-    # Declare amplitude array for the coupler to be swept
+    # Declare amplitude array for the coupler to be swept.
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
     
     print("Instantiating interface")
@@ -90,8 +100,9 @@ def find_f_ro01_sweep_coupler(
         pls.hardware.set_inv_sinc(readout_stimulus_port, 0)
         
         # Coupler port
-        pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-        pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        if coupler_dc_port != []:
+            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
+            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
         
         
         ''' Setup mixers '''
@@ -101,14 +112,15 @@ def find_f_ro01_sweep_coupler(
             freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
-            sync      = False, # Sync at next call
+            sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
-        pls.hardware.configure_mixer(
-            freq      = 0.0,
-            out_ports = coupler_dc_port,
-            sync      = True,  # Sync here
-        )
+        if coupler_dc_port != []:
+            pls.hardware.configure_mixer(
+                freq      = 0.0,
+                out_ports = coupler_dc_port,
+                sync      = True,  # Sync here
+            )
         
         
         ''' Setup scale LUTs '''
@@ -120,11 +132,12 @@ def find_f_ro01_sweep_coupler(
             scales          = readout_amp,
         )
         # Coupler bias amplitude (to be swept)
-        pls.setup_scale_lut(
-            output_ports    = coupler_dc_port,
-            group           = 0,
-            scales          = coupler_amp_arr,
-        )
+        if coupler_dc_port != []:
+            pls.setup_scale_lut(
+                output_ports    = coupler_dc_port,
+                group           = 0,
+                scales          = coupler_amp_arr,
+            )
         
         
         ### Setup readout pulse ###
@@ -139,7 +152,7 @@ def find_f_ro01_sweep_coupler(
             rise_time   =   0e-9,
             fall_time   =   0e-9
         )
-
+        
         # Setup readout carrier, this tone will be swept in frequency.
         # The user provides an intended span.
         f_start = readout_freq_center_if - readout_freq_span / 2
@@ -159,25 +172,25 @@ def find_f_ro01_sweep_coupler(
         )
         
         ### Setup pulse "coupler_bias_tone" ###
-
-        # Setup the coupler tone bias.
-        coupler_bias_tone = [pls.setup_long_drive(
-            output_port = _port,
-            group       = 0,
-            duration    = added_delay_for_bias_tee,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
-        ) for _port in coupler_dc_port]
-        # Setup coupler bias tone "carrier"
-        pls.setup_freq_lut(
-            output_ports = coupler_dc_port,
-            group        = 0,
-            frequencies  = 0.0,
-            phases       = 0.0,
-            phases_q     = 0.0,
-        )
+        if coupler_dc_port != []:
+            # Setup the coupler tone bias.
+            coupler_bias_tone = [pls.setup_long_drive(
+                output_port = _port,
+                group       = 0,
+                duration    = added_delay_for_bias_tee,
+                amplitude   = 1.0,
+                amplitude_q = 1.0,
+                rise_time   = 0e-9,
+                fall_time   = 0e-9
+            ) for _port in coupler_dc_port]
+            # Setup coupler bias tone "carrier"
+            pls.setup_freq_lut(
+                output_ports = coupler_dc_port,
+                group        = 0,
+                frequencies  = 0.0,
+                phases       = 0.0,
+                phases_q     = 0.0,
+            )
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
@@ -192,20 +205,22 @@ def find_f_ro01_sweep_coupler(
         T = 0.0  # s
 
         # Charge the bias tee.
-        pls.reset_phase(T, coupler_dc_port)
-        pls.output_pulse(T, coupler_bias_tone)
-        T += added_delay_for_bias_tee
-        
-        # Redefine the coupler DC pulse duration for repeated playback
-        # once one tee risetime has passed.
-        for bias_tone in coupler_bias_tone:
-            bias_tone.set_total_duration(readout_duration + repetition_delay)
+        if coupler_dc_port != []:
+            pls.reset_phase(T, coupler_dc_port)
+            pls.output_pulse(T, coupler_bias_tone)
+            T += added_delay_for_bias_tee
+            
+            # Redefine the coupler DC pulse duration for repeated playback
+            # once one tee risetime has passed.
+            for bias_tone in coupler_bias_tone:
+                bias_tone.set_total_duration(readout_duration + repetition_delay)
         
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
 
             # Re-apply the coupler bias tone.
-            pls.output_pulse(T, coupler_bias_tone)
+            if coupler_dc_port != []:
+                pls.output_pulse(T, coupler_bias_tone)
             
             # Commence readout, swept in frequency.
             pls.reset_phase(T, readout_stimulus_port)
@@ -221,7 +236,8 @@ def find_f_ro01_sweep_coupler(
             T += repetition_delay
         
         # Increment the coupler port's DC bias.
-        pls.next_scale(T, coupler_dc_port)
+        if coupler_dc_port != []:
+            pls.next_scale(T, coupler_dc_port)
         
         # Move to next iteration.
         T += repetition_delay
@@ -235,7 +251,7 @@ def find_f_ro01_sweep_coupler(
         # Average the measurement over 'num_averages' averages
         pls.run(
             period          =   T,
-            repeat_count    =   num_biases,
+            repeat_count    =   num_biases, # Note: input sanitisation took care of illegal values here, see beginning of def.
             num_averages    =   num_averages,
             print_time      =   True,
         )
