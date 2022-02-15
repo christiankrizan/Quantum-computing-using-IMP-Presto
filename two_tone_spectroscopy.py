@@ -74,8 +74,6 @@ def pulsed01_flux_sweep(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
-    first_msg  = ''
-    second_msg = ''
     if num_biases < 1:
         num_biases = 1
         print("Note: num_biases was less than 1, and was thus set to 1.")
@@ -123,6 +121,15 @@ def pulsed01_flux_sweep(
         if coupler_dc_port != []:
             pls.hardware.set_dac_current(coupler_dc_port, 40_500)
             pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
+        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
         
         
@@ -532,8 +539,6 @@ def pulsed01_flux_sweep_multiplexed_ro(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
-    first_msg  = ''
-    second_msg = ''
     if num_biases < 1:
         num_biases = 1
         print("Note: num_biases was less than 1, and was thus set to 1.")
@@ -583,6 +588,15 @@ def pulsed01_flux_sweep_multiplexed_ro(
         if coupler_dc_port != []:
             pls.hardware.set_dac_current(coupler_dc_port, 40_500)
             pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
+        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
         
         ''' Setup mixers '''

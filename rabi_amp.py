@@ -440,8 +440,6 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
-    first_msg  = ''
-    second_msg = ''
     if num_biases < 1:
         num_biases = 1
         print("Note: num_biases was less than 1, and was thus set to 1.")
