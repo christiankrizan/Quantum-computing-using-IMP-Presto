@@ -49,8 +49,8 @@ def oscillation01_with_coupler_bias(
     control_amp_01_min = 0.0,
     control_amp_01_max = 1.0,
     
-    coupler_dc_bias_min = 0.0,
-    coupler_dc_bias_max = 1.0,
+    coupler_bias_min = 0.0,
+    coupler_bias_max = 1.0,
     ):
     ''' Perform a Rabi oscillation experiment between states |0> and |1>.
         The energy is found by sweeping the amplitude, instead of
@@ -62,7 +62,7 @@ def oscillation01_with_coupler_bias(
     control_amp_arr = np.linspace(control_amp_01_min, control_amp_01_max, num_amplitudes)
     
     # Declare amplitude array for the coupler sweep.
-    coupler_amp_arr = np.linspace(coupler_dc_bias_min, coupler_dc_bias_max, num_biases)
+    coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
 
     
     # Instantiate the interface
@@ -306,8 +306,8 @@ def oscillation01_with_coupler_bias(
             'control_amp_01_min', "FS",
             'control_amp_01_max', "FS",
             
-            'coupler_dc_bias_min', "FS",
-            'coupler_dc_bias_max', "FS",
+            'coupler_bias_min', "FS",
+            'coupler_bias_max', "FS",
         ]
         hdf5_logs = [
             'fetched_data_arr',
@@ -412,8 +412,8 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
     control_amp_01_B_min = -1.0,
     control_amp_01_B_max = +1.0,
     
-    coupler_dc_bias_min = -1.0,
-    coupler_dc_bias_max = +1.0,
+    coupler_bias_min = -1.0,
+    coupler_bias_max = +1.0,
     
     save_complex_data = False,
     use_log_browser_database = True,
@@ -436,13 +436,35 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
         
         The readout is multiplexed between two pairwise-coupled transmons.
     '''
+    
+    ## Input sanitisation
+    
+    # Acquire legal values regarding the coupler port settings.
+    first_msg  = ''
+    second_msg = ''
+    if num_biases < 1:
+        num_biases = 1
+        print("Note: num_biases was less than 1, and was thus set to 1.")
+        if coupler_bias_min != 0.0:
+            print("Note: the coupler bias was thus set to 0.")
+            coupler_bias_min = 0.0
+    elif coupler_dc_port == []:
+        if num_biases != 1:
+            num_biases = 1
+            print("Note: num_biases was set to 1, since the coupler_port array was empty.")
+        if coupler_bias_min != 0.0:
+            print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+            coupler_bias_min = 0.0
+    
+    
+    ## Initial array declaration
 
     # Declare amplitude arrays for the Rabi experiment.
     control_amp_arr_A = np.linspace(control_amp_01_A_min, control_amp_01_A_max, num_amplitudes)
     control_amp_arr_B = np.linspace(control_amp_01_B_min, control_amp_01_B_max, num_amplitudes)
     
     # Declare amplitude array for the coupler sweep.
-    coupler_amp_arr = np.linspace(coupler_dc_bias_min, coupler_dc_bias_max, num_biases)
+    coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
 
     
     # Instantiate the interface
@@ -469,10 +491,20 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
         pls.hardware.set_dac_current(control_port_B, 40_500)
         pls.hardware.set_inv_sinc(control_port_B, 0)
         
-        # Coupler port(s)
-        pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-        pls.hardware.set_inv_sinc(coupler_dc_port, 0)
-
+        # Coupler port
+        if coupler_dc_port != []:
+            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
+            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
+        
 
         ''' Setup mixers '''
         
@@ -495,14 +527,15 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
         pls.hardware.configure_mixer(
             freq      = control_freq_01_B,
             out_ports = control_port_B,
-            sync      = False,
+            sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
-        pls.hardware.configure_mixer(
-            freq      = 0.0,
-            out_ports = coupler_dc_port,
-            sync      = True,  # Sync here
-        )
+        if coupler_dc_port != []:
+            pls.hardware.configure_mixer(
+                freq      = 0.0,
+                out_ports = coupler_dc_port,
+                sync      = True,  # Sync here
+            )
         
 
         ''' Setup scale LUTs '''
@@ -529,12 +562,13 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
             group           = 0,
             scales          = control_amp_arr_B,
         )
-        # Coupler port amplitude (to be swept)
-        pls.setup_scale_lut(
-            output_ports    = coupler_dc_port,
-            group           = 0,
-            scales          = coupler_amp_arr,
-        )
+        # Coupler bias amplitude (to be swept)
+        if coupler_dc_port != []:
+            pls.setup_scale_lut(
+                output_ports    = coupler_dc_port,
+                group           = 0,
+                scales          = coupler_amp_arr,
+            )
         
 
         ### Setup readout pulse ###
@@ -615,25 +649,25 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
         
         
         ### Setup pulse "coupler_bias_tone" ###
-
-        # Setup the coupler tone bias.
-        coupler_bias_tone = [pls.setup_long_drive(
-            output_port = _port,
-            group       = 0,
-            duration    = added_delay_for_bias_tee,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
-        ) for _port in coupler_dc_port]
-        # Setup coupler bias tone "carrier"
-        pls.setup_freq_lut(
-            output_ports = coupler_dc_port,
-            group        = 0,
-            frequencies  = 0.0,
-            phases       = 0.0,
-            phases_q     = 0.0,
-        )
+        if coupler_dc_port != []:
+            # Setup the coupler tone bias.
+            coupler_bias_tone = [pls.setup_long_drive(
+                output_port = _port,
+                group       = 0,
+                duration    = added_delay_for_bias_tee,
+                amplitude   = 1.0,
+                amplitude_q = 1.0,
+                rise_time   = 0e-9,
+                fall_time   = 0e-9
+            ) for _port in coupler_dc_port]
+            # Setup coupler bias tone "carrier"
+            pls.setup_freq_lut(
+                output_ports = coupler_dc_port,
+                group        = 0,
+                frequencies  = 0.0,
+                phases       = 0.0,
+                phases_q     = 0.0,
+            )
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
@@ -648,20 +682,22 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
         T = 0.0 # s
         
         # Charge the bias tee.
-        pls.reset_phase(T, coupler_dc_port)
-        pls.output_pulse(T, coupler_bias_tone)
-        T += added_delay_for_bias_tee
+        if coupler_dc_port != []:
+            pls.reset_phase(T, coupler_dc_port)
+            pls.output_pulse(T, coupler_bias_tone)
+            T += added_delay_for_bias_tee
         
-        # Redefine the coupler DC pulse duration for repeated playback
-        # once one tee risetime has passed.
-        for bias_tone in coupler_bias_tone:
-            bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
-        
+            # Redefine the coupler DC pulse duration for repeated playback
+            # once one tee risetime has passed.
+            for bias_tone in coupler_bias_tone:
+                bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
+            
         # For all amplitudes to sweep over:
         for ii in range(num_amplitudes):
             
-            # Re-apply the coupler DC pulse once one tee risetime has passed.
-            pls.output_pulse(T, coupler_bias_tone)
+            # Re-apply the coupler bias tone.
+            if coupler_dc_port != []:
+                pls.output_pulse(T, coupler_bias_tone)
             
             # Output the pi01-pulses to be characterised
             pls.reset_phase(T, [control_port_A, control_port_B])
@@ -681,7 +717,8 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
             T += repetition_delay
         
         # Increment the coupler port's DC bias.
-        pls.next_scale(T, coupler_dc_port)
+        if coupler_dc_port != []:
+            pls.next_scale(T, coupler_dc_port)
         
         # Move to next iteration.
         T += repetition_delay
@@ -759,8 +796,8 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                 'control_amp_01_B_min', "FS",
                 'control_amp_01_B_max', "FS",
                 
-                'coupler_dc_bias_min', "FS",
-                'coupler_dc_bias_max', "FS",
+                'coupler_bias_min', "FS",
+                'coupler_bias_max', "FS",
             ]
             hdf5_logs = [
                 'fetched_data_arr', "FS",
@@ -1050,4 +1087,4 @@ def oscillation01(
         assert 1 == 0, "Error: H5PY save method deprecated. Change to Log Browser"
         
         
-
+        
