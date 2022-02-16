@@ -19,7 +19,7 @@ import numpy as np
 from datetime import datetime
 from presto.utils import rotate_opt
 from scipy.optimize import curve_fit
-
+from log_browser_exporter import save
 
 def ramsey01_readout0(
     ip_address,
@@ -34,6 +34,8 @@ def ramsey01_readout0(
     sampling_duration,
     readout_sampling_delay,
     repetition_delay,
+    integration_window_start,
+    integration_window_stop,
     
     control_port,
     control_amp_01,
@@ -73,19 +75,9 @@ def ramsey01_readout0(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
-    if num_biases < 1:
-        num_biases = 1
-        print("Note: num_biases was less than 1, and was thus set to 1.")
-        if coupler_bias_min != 0.0:
-            print("Note: the coupler bias was thus set to 0.")
-            coupler_bias_min = 0.0
-    elif coupler_dc_port == []:
-        if num_biases != 1:
-            num_biases = 1
-            print("Note: num_biases was set to 1, since the coupler_port array was empty.")
-        if coupler_bias_min != 0.0:
-            print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-            coupler_bias_min = 0.0
+    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
+        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+        coupler_dc_bias = 0.0
     
     
     ## Initial array declaration
@@ -341,6 +333,9 @@ def ramsey01_readout0(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Get timestamp for Log Browser exporter.
+        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
+        
         # Data to be stored.
         hdf5_steps = [
             'delay_arr', "s",
@@ -375,7 +370,7 @@ def ramsey01_readout0(
             'dt_per_ramsey_iteration', "s",
         ]
         hdf5_logs = [
-            'fetched_data_arr',
+            'fetched_data_arr', "FS",
         ]
         
         # Assert that the received keys bear (an even number of) entries,
@@ -403,76 +398,76 @@ def ramsey01_readout0(
             axes[axis] = axes[axis].replace('_3','₃')
         
         # Build step lists, re-scale and re-unit where necessary.
-            ext_keys = []
-            for ii in range(0,len(hdf5_steps),2):
-                if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
-                    temp_name   = hdf5_steps[ii]
-                    temp_object = np.array( eval(hdf5_steps[ii]) )
-                    temp_unit   = hdf5_steps[ii+1]
-                    if ii == 0:
-                        if (axes['x_name']).lower() != 'default':
-                            # Replace the x-axis name
-                            temp_name = axes['x_name']
-                        if axes['x_scaler'] != 1.0:
-                            # Re-scale the x-axis
-                            temp_object *= axes['x_scaler']
-                        if (axes['x_unit']).lower() != 'default':
-                            # Change the unit on the x-axis
-                            temp_unit = axes['x_unit']
-                    elif ii == 2:
-                        if (axes['z_name']).lower() != 'default':
-                            # Replace the z-axis name
-                            temp_name = axes['z_name']
-                        if axes['z_scaler'] != 1.0:
-                            # Re-scale the z-axis
-                            temp_object *= axes['z_scaler']
-                        if (axes['z_unit']).lower() != 'default':
-                            # Change the unit on the z-axis
-                            temp_unit = axes['z_unit']
-                    ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
-            for jj in range(0,len(hdf5_singles),2):
-                if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
-                    temp_object = np.array( [eval(hdf5_singles[jj])] )
-                    ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
-            log_dict_list = []
-            for kk in range(0,len(hdf5_logs),2):
-                log_entry_name = hdf5_logs[kk]
-                temp_log_unit = hdf5_logs[kk+1]
-                if (axes['y_name']).lower() != 'default':
-                    # Replace the y-axis name
-                    log_entry_name = axes['y_name']
-                if axes['y_scaler'] != 1.0:
-                    # Re-scale the y-axis
-                    ## NOTE! Direct manipulation of the fetched_data_arr array!
-                    fetched_data_arr *= axes['y_scaler']   
-                if (axes['y_unit']).lower() != 'default':
-                    # Change the unit on the y-axis
-                    temp_log_unit = axes['y_unit']
-                log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
+        ext_keys = []
+        for ii in range(0,len(hdf5_steps),2):
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+                temp_name   = hdf5_steps[ii]
+                temp_object = np.array( eval(hdf5_steps[ii]) )
+                temp_unit   = hdf5_steps[ii+1]
+                if ii == 0:
+                    if (axes['x_name']).lower() != 'default':
+                        # Replace the x-axis name
+                        temp_name = axes['x_name']
+                    if axes['x_scaler'] != 1.0:
+                        # Re-scale the x-axis
+                        temp_object *= axes['x_scaler']
+                    if (axes['x_unit']).lower() != 'default':
+                        # Change the unit on the x-axis
+                        temp_unit = axes['x_unit']
+                elif ii == 2:
+                    if (axes['z_name']).lower() != 'default':
+                        # Replace the z-axis name
+                        temp_name = axes['z_name']
+                    if axes['z_scaler'] != 1.0:
+                        # Re-scale the z-axis
+                        temp_object *= axes['z_scaler']
+                    if (axes['z_unit']).lower() != 'default':
+                        # Change the unit on the z-axis
+                        temp_unit = axes['z_unit']
+                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
+        for jj in range(0,len(hdf5_singles),2):
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+                temp_object = np.array( [eval(hdf5_singles[jj])] )
+                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+        log_dict_list = []
+        for kk in range(0,len(hdf5_logs),2):
+            log_entry_name = hdf5_logs[kk]
+            temp_log_unit = hdf5_logs[kk+1]
+            if (axes['y_name']).lower() != 'default':
+                # Replace the y-axis name
+                log_entry_name = axes['y_name']
+            if axes['y_scaler'] != 1.0:
+                # Re-scale the y-axis
+                ## NOTE! Direct manipulation of the fetched_data_arr array!
+                fetched_data_arr *= axes['y_scaler']   
+            if (axes['y_unit']).lower() != 'default':
+                # Change the unit on the y-axis
+                temp_log_unit = axes['y_unit']
+            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
+        
+        # Save data!
+        save(
+            timestamp = timestamp,
+            ext_keys = ext_keys,
+            log_dict_list = log_dict_list,
             
-            # Save data!
-            save(
-                timestamp = timestamp,
-                ext_keys = ext_keys,
-                log_dict_list = log_dict_list,
-                
-                time_matrix = time_matrix,
-                fetched_data_arr = fetched_data_arr,
-                resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
-                
-                path_to_script = os.path.realpath(__file__),
-                use_log_browser_database = use_log_browser_database,
-                
-                integration_window_start = integration_window_start,
-                integration_window_stop = integration_window_stop,
-                inner_loop_size = num_delays,
-                outer_loop_size = num_freqs,
-                
-                save_complex_data = save_complex_data,
-                append_to_log_name_before_timestamp = '01_with_bias',
-                append_to_log_name_after_timestamp  = '',
-                select_resonator_for_single_log_export = '',
-            )
+            time_matrix = time_matrix,
+            fetched_data_arr = fetched_data_arr,
+            resonator_freq_if_arrays_to_fft = [],
+            
+            path_to_script = os.path.realpath(__file__),
+            use_log_browser_database = use_log_browser_database,
+            
+            integration_window_start = integration_window_start,
+            integration_window_stop = integration_window_stop,
+            inner_loop_size = num_delays,
+            outer_loop_size = num_freqs,
+            
+            save_complex_data = save_complex_data,
+            append_to_log_name_before_timestamp = '01_with_bias',
+            append_to_log_name_after_timestamp  = '',
+            select_resonator_for_single_log_export = '',
+        )
 
 def ramsey01_multiplexed_ro(
     ip_address,
@@ -619,7 +614,7 @@ def ramsey01_multiplexed_ro(
         )
         
         
-        ### Setup readout pulse ###
+        ### Setup readout pulses ###
         
         # Setup readout pulse envelopes
         readout_pulse_A = pls.setup_long_drive(
@@ -815,6 +810,9 @@ def ramsey01_multiplexed_ro(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Get timestamp for Log Browser exporter.
+        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
+        
         # This save is done in a loop, due to quirks with Labber's log browser.
         arrays_in_loop = [
             'control_pulse_01_A_freq_arr',
@@ -863,7 +861,7 @@ def ramsey01_multiplexed_ro(
                 'dt_per_ramsey_iteration', "s",
             ]
             hdf5_logs = [
-                'fetched_data_arr',
+                'fetched_data_arr', "FS",
             ]
             
             print("... building HDF5 keys.")
@@ -892,7 +890,7 @@ def ramsey01_multiplexed_ro(
             current_dir, name_of_running_script = os.path.split(path_to_script)
             script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
             timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-            savefile_string = script_filename + '01_with_bias_'+str((u)+1)'+_of_2_' + timestamp + '.hdf5'  # Name of save file
+            savefile_string = script_filename + '01_with_bias_'+str((u)+1)+'_of_2_' + timestamp + '.hdf5'  # Name of save file
             save_path = os.path.join(current_dir, "data", savefile_string)  # Full path of save file
             
             # Make logfile
