@@ -391,17 +391,6 @@ def pulsed01_flux_sweep(
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
         
-        # Build step lists
-        ext_keys = []
-        for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
-                temp_object = np.array( eval(hdf5_steps[ii]) )
-                ext_keys.append(dict(name=hdf5_steps[ii], unit=hdf5_steps[ii+1], values=temp_object))
-        for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
-                temp_object = np.array( [eval(hdf5_singles[jj])] )
-                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
-        
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
@@ -931,7 +920,6 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 axes[axis] = axes[axis].replace('_1','₁')
                 axes[axis] = axes[axis].replace('_2','₂')
                 axes[axis] = axes[axis].replace('_3','₃')
-            
             
             # Build step lists, re-scale and re-unit where necessary.
             ext_keys = []
