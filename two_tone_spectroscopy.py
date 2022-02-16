@@ -6,18 +6,16 @@
 #####################################################################################
 
 from presto import pulsed
-from presto.utils import sin2
+from presto.utils import sin2, get_sourcecode
 from presto.hardware import AdcFSample, AdcMode, DacFSample, DacMode
 
 import os
 import sys
 import time
-import h5py
 import Labber
 import shutil
 import numpy as np
 from datetime import datetime
-from presto.utils import rotate_opt
 from log_browser_exporter import save
 
 def pulsed01_flux_sweep(

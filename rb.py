@@ -6,21 +6,18 @@
 #####################################################################################
 
 from presto import pulsed
-from presto.utils import sin2
+from presto.utils import sin2, get_sourcecode
 from presto.hardware import AdcFSample, AdcMode, DacFSample, DacMode
 
 import os
 import sys
 import time
-import h5py
 import math
 import Labber
 import shutil
 import random
 import numpy as np
 from datetime import datetime
-from presto.utils import rotate_opt
-
 
 def get_theta_phi_of_next_pulse(i_am_here = [0,0], going_here = [0,0]):
     ''' Figures out how many degrees to apply onto

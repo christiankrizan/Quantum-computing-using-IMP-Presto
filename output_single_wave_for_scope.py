@@ -8,11 +8,10 @@
 import os
 import time
 
-import h5py
 import numpy as np
 
 from presto import pulsed
-from presto.utils import get_sourcecode, sin2
+from presto.utils import sin2, get_sourcecode
 from presto.hardware import AdcFSample, AdcMode, DacFSample, DacMode
 
 def outputSingleWave(

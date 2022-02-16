@@ -6,13 +6,12 @@
 #####################################################################################
 
 from presto import pulsed
-from presto.utils import sin2
+from presto.utils import sin2, get_sourcecode
 from presto.hardware import AdcFSample, AdcMode, DacFSample, DacMode
 
 import os
 import sys
 import time
-import h5py
 import Labber
 import shutil
 import numpy as np
@@ -56,6 +55,12 @@ def t1_sweep_flux(
     ''' Characterises the energy relaxation time T1 as a function of applied
         coupler bias.
     '''
+    
+    # TODO.
+    print("WARNING! The energy_relaxation_t1 functions rely on rotate_opt,"  +\
+          " an analysis tool that should not be put in this script. Instead,"+\
+          " this tool should be moved to whatever file that analyses the"    +\
+          " data produced by this script.")
     
     # Declare amplitude array for the coupler to be swept
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
