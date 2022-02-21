@@ -16,6 +16,7 @@ import Labber
 import shutil
 import numpy as np
 from datetime import datetime
+from log_browser_exporter import save
 
 def iswap_sweep_duration_and_detuning(
     ip_address,
@@ -1003,7 +1004,7 @@ def iswap_sweep_duration_and_amplitude(
             'control_freq_01_B', "Hz",
             'control_duration_01', "s",
             
-            'coupler_dc_port', "",
+            #'coupler_dc_port', "",
             'coupler_dc_bias', "FS",
             'added_delay_for_bias_tee', "s",
             
@@ -1125,15 +1126,17 @@ def iswap_sweep_amplitude_and_detuning(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_duration,
     readout_freq_A,
     readout_amp_A,
     readout_freq_B,
     readout_amp_B,
+    readout_duration,
     
     sampling_duration,
     readout_sampling_delay,
     repetition_delay,
+    integration_window_start,
+    integration_window_stop,
     
     control_port_A,
     control_amp_01_A,
@@ -1161,10 +1164,34 @@ def iswap_sweep_amplitude_and_detuning(
     num_averages,
     num_amplitudes,
     
+    save_complex_data = False,
+    use_log_browser_database = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": 1.0,
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
+    
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler.
     '''
+    
+    ## Input sanitisation
+    
+    # Acquire legal values regarding the coupler port settings.
+    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
+        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+        coupler_dc_bias = 0.0
+    
+    
+    ## Initial array declaration
     
     # Declare amplitude array for the AC coupler tone to be swept
     coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)
@@ -1195,24 +1222,30 @@ def iswap_sweep_amplitude_and_detuning(
         pls.hardware.set_inv_sinc(control_port_B, 0)
         
         # Coupler port(s)
-        pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-        pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        if coupler_dc_port != []:
+            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
+            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
         pls.hardware.set_dac_current(coupler_ac_port, 40_500)
         pls.hardware.set_inv_sinc(coupler_ac_port, 0)
         
-        
-        ''' Make the user-set time variables representable '''
-        
-        ## TODO This should be done with the XY-pulses as well.
+        # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
+        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap = int(round(coupler_ac_plateau_duration_iswap / plo_clk_T)) * plo_clk_T
+        
         
         ''' Setup mixers '''
         
         # Readout port, multiplexed, calculate an optimal NCO frequency.
-        ##TODO readout_freq_nco = (np.abs(readout_freq_A) + np.abs(readout_freq_B))/2
-        readout_freq_nco = readout_freq_A
+        high_res  = max( [readout_freq_A, readout_freq_B] )
+        low_res   = min( [readout_freq_A, readout_freq_B] )
+        readout_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
@@ -1234,13 +1267,14 @@ def iswap_sweep_amplitude_and_detuning(
         pls.hardware.configure_mixer(
             freq      = coupler_ac_freq_iswap_nco,
             out_ports = coupler_ac_port,
-            sync      = False,
+            sync      = (coupler_dc_port == []),
         )
-        pls.hardware.configure_mixer(
-            freq      = 0.0,
-            out_ports = coupler_dc_port,
-            sync      = True,  # Sync here
-        )
+        if coupler_dc_port != []:
+            pls.hardware.configure_mixer(
+                freq      = 0.0,
+                out_ports = coupler_dc_port,
+                sync      = True,  # Sync here
+            )
         
         
         ''' Setup scale LUTs '''
@@ -1273,17 +1307,18 @@ def iswap_sweep_amplitude_and_detuning(
             group           = 0,
             scales          = coupler_ac_amp_arr, # This value will be swept!
         )
-        pls.setup_scale_lut(
-            output_ports    = coupler_dc_port,
-            group           = 0,
-            scales          = coupler_dc_bias,
-        )
+        if coupler_dc_port != []:
+            pls.setup_scale_lut(
+                output_ports    = coupler_dc_port,
+                group           = 0,
+                scales          = coupler_dc_bias,
+            )
         
         
         
-        ### Setup readout pulses ###
+        ### Setup readout pulse ###
         
-        # Setup readout pulse envelope
+        # Setup readout pulse envelopes
         readout_pulse_A = pls.setup_long_drive(
             output_port = readout_stimulus_port,
             group       = 0,
@@ -1308,17 +1343,18 @@ def iswap_sweep_amplitude_and_detuning(
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_A, ## TODO
+            frequencies  = readout_freq_if_A,
             phases       = np.full_like(readout_freq_if_A, 0.0),
-            phases_q     = np.full_like(readout_freq_if_A, -np.pi/2),##+np.pi/2), # LSB
+            phases_q     = np.full_like(readout_freq_if_A, -np.pi/2), # USB !  ##+np.pi/2, # LSB
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
-            frequencies  = readout_freq_if_B, ## TODO
+            frequencies  = readout_freq_if_B,
             phases       = np.full_like(readout_freq_if_B, 0.0),
             phases_q     = np.full_like(readout_freq_if_B, -np.pi/2), # USB!  ##+np.pi/2, # LSB
         )
+        
 
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
         
@@ -1362,7 +1398,7 @@ def iswap_sweep_amplitude_and_detuning(
         # The initially set duration will not be swept by the sequencer
         # program.
         coupler_ac_duration_iswap = \
-            2*coupler_ac_single_edge_time_iswap + \
+            2 * coupler_ac_single_edge_time_iswap + \
             coupler_ac_plateau_duration_iswap
         coupler_ac_pulse_iswap = pls.setup_long_drive(
             output_port = coupler_ac_port,
@@ -1395,25 +1431,25 @@ def iswap_sweep_amplitude_and_detuning(
         
         
         ### Setup pulse "coupler_bias_tone" ###
-
-        # Setup the coupler tone bias.
-        coupler_bias_tone = pls.setup_long_drive(
-            output_port = coupler_dc_port,
-            group       = 0,
-            duration    = added_delay_for_bias_tee,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
-        )
-        # Setup coupler bias tone "carrier"
-        pls.setup_freq_lut(
-            output_ports = coupler_dc_port,
-            group        = 0,
-            frequencies  = 0.0,
-            phases       = 0.0,
-            phases_q     = 0.0,
-        )
+        if coupler_dc_port != []:
+            # Setup the coupler tone bias.
+            coupler_bias_tone = [pls.setup_long_drive(
+                output_port = _port,
+                group       = 0,
+                duration    = added_delay_for_bias_tee,
+                amplitude   = 1.0,
+                amplitude_q = 1.0,
+                rise_time   = 0e-9,
+                fall_time   = 0e-9
+            ) for _port in coupler_dc_port]
+            # Setup coupler bias tone "carrier"
+            pls.setup_freq_lut(
+                output_ports = coupler_dc_port,
+                group        = 0,
+                frequencies  = 0.0,
+                phases       = 0.0,
+                phases_q     = 0.0,
+            )
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
@@ -1423,29 +1459,31 @@ def iswap_sweep_amplitude_and_detuning(
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
         #################################
-
+        
         # Start of sequence
         T = 0.0  # s
 
         # Charge the bias tee.
-        pls.reset_phase(T, coupler_dc_port)
-        pls.output_pulse(T, coupler_bias_tone)
-        T += added_delay_for_bias_tee
+        if coupler_dc_port != []:
+            pls.reset_phase(T, coupler_dc_port)
+            pls.output_pulse(T, coupler_bias_tone)
+            T += added_delay_for_bias_tee
         
-        # Redefine the coupler DC pulse duration for repeated playback
-        # once one tee risetime has passed.
-        coupler_bias_tone.set_total_duration(
-            control_duration_01 + \
-            coupler_ac_duration_iswap + \
-            readout_duration + \
-            repetition_delay \
-        )
+            # Redefine the coupler DC pulse duration for repeated playback
+            # once one tee risetime has passed.
+            coupler_bias_tone.set_total_duration(
+                control_duration_01 + \
+                coupler_ac_duration_iswap + \
+                readout_duration + \
+                repetition_delay \
+            )
         
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
 
             # Re-apply the coupler bias tone.
-            pls.output_pulse(T, coupler_bias_tone)
+            if coupler_dc_port != []:
+                pls.output_pulse(T, coupler_bias_tone)
             
             # Put the system into state |01> or |10> with pi01 pulse(s)
             pls.reset_phase(T, [control_port_A, control_port_B])
@@ -1501,6 +1539,10 @@ def iswap_sweep_amplitude_and_detuning(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Get timestamp for Log Browser exporter.
+        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
+        
+        ## TODO! Is still still true after implementing the log browser exported?
         # Data to be stored.
         # Note that typically, the variable that matches "the inner loop"
         # would be listed first. This specific subroutine is making an
@@ -1533,7 +1575,7 @@ def iswap_sweep_amplitude_and_detuning(
             'control_freq_01_B', "Hz",
             'control_duration_01', "s",
             
-            'coupler_dc_port', "",
+            #'coupler_dc_port', "",
             'coupler_dc_bias', "FS",
             'added_delay_for_bias_tee', "s",
             
@@ -1551,98 +1593,109 @@ def iswap_sweep_amplitude_and_detuning(
             'num_amplitudes', "",
         ]
         hdf5_logs = [
-            'fetched_data_arr_1',
-            'fetched_data_arr_2',
+            'fetched_data_arr_1', "FS",
+            'fetched_data_arr_2', "FS",
         ]
         
-        print("... building HDF5 keys.")
-        
-        # Assert that every key bears a corresponding unit entered above.
+        # Assert that the received keys bear (an even number of) entries,
+        # implying whether a unit is missing.
         number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and ((len(hdf5_singles) % 2) == 0)
+            ((len(hdf5_steps) % 2) == 0) and \
+            ((len(hdf5_singles) % 2) == 0) and \
+            ((len(hdf5_logs) % 2) == 0)
         assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units entered in the portion of the measurement "  + \
-            "script that saves the data. Someone likely forgot a comma."
+            "of keys and units provided. Someone likely forgot a comma."
         
-        # Build step lists and log lists
+        # Stylistically rework underscored characters in the axes dict.
+        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
+            axes[axis] = axes[axis].replace('/2','/₂')
+            axes[axis] = axes[axis].replace('/3','/₃')
+            axes[axis] = axes[axis].replace('_01','₀₁')
+            axes[axis] = axes[axis].replace('_02','₀₂')
+            axes[axis] = axes[axis].replace('_03','₀₃')
+            axes[axis] = axes[axis].replace('_12','₁₂')
+            axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_23','₂₃')
+            axes[axis] = axes[axis].replace('_0','₀')
+            axes[axis] = axes[axis].replace('_1','₁')
+            axes[axis] = axes[axis].replace('_2','₂')
+            axes[axis] = axes[axis].replace('_3','₃')
+        
+        # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            temp_object = np.array( eval(hdf5_steps[ii]) )
-            ext_keys.append(dict(name=hdf5_steps[ii], unit=hdf5_steps[ii+1], values=temp_object))
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+                temp_name   = hdf5_steps[ii]
+                temp_object = np.array( eval(hdf5_steps[ii]) )
+                temp_unit   = hdf5_steps[ii+1]
+                if ii == 0:
+                    if (axes['x_name']).lower() != 'default':
+                        # Replace the x-axis name
+                        temp_name = axes['x_name']
+                    if axes['x_scaler'] != 1.0:
+                        # Re-scale the x-axis
+                        temp_object *= axes['x_scaler']
+                    if (axes['x_unit']).lower() != 'default':
+                        # Change the unit on the x-axis
+                        temp_unit = axes['x_unit']
+                elif ii == 2:
+                    if (axes['z_name']).lower() != 'default':
+                        # Replace the z-axis name
+                        temp_name = axes['z_name']
+                    if axes['z_scaler'] != 1.0:
+                        # Re-scale the z-axis
+                        temp_object *= axes['z_scaler']
+                    if (axes['z_unit']).lower() != 'default':
+                        # Change the unit on the z-axis
+                        temp_unit = axes['z_unit']
+                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
-            temp_object = np.array( [eval(hdf5_singles[jj])] )
-            ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+                temp_object = np.array( [eval(hdf5_singles[jj])] )
+                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+        
         log_dict_list = []
-        for kk in range(0,len(hdf5_logs)):
-            log_dict_list.append(dict(name=hdf5_logs[kk], vector=False))
+        if axes['y_scaler'] != 1.0:
+            # Re-scale the y-axis. Note that this happens outside of the loop,
+            # to allow for multiplexed readout.
+            ## NOTE! Direct manipulation of the fetched_data_arr array!
+            fetched_data_arr *= axes['y_scaler']
+        if (axes['y_unit']).lower() != 'default':
+            # Change the unit on the y-axis
+            temp_log_unit = axes['y_unit']
+        for kk in range(0,len(hdf5_logs),2):
+            log_entry_name = hdf5_logs[kk]
+            temp_log_unit = hdf5_logs[kk+1]
+            if (axes['y_name']).lower() != 'default':
+                # Replace the y-axis name
+                log_entry_name = axes['y_name']
+                if len(hdf5_logs)/2 > 1:
+                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
-        # Get name and time for logfile.
-        path_to_script = os.path.realpath(__file__)  # Full path of current script
-        current_dir, name_of_running_script = os.path.split(path_to_script)
-        script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-        savefile_string = script_filename + '_sweep_amplitude_and_detuning_' + timestamp + '.hdf5'  # Name of save file
-        save_path = os.path.join(current_dir, "data", savefile_string)  # Full path of save file
+        # Save data!
+        save(
+            timestamp = timestamp,
+            ext_keys = ext_keys,
+            log_dict_list = log_dict_list,
+            
+            time_matrix = time_matrix,
+            fetched_data_arr = fetched_data_arr,
+            resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
+            
+            path_to_script = os.path.realpath(__file__),
+            use_log_browser_database = use_log_browser_database,
+            
+            integration_window_start = integration_window_start,
+            integration_window_stop = integration_window_stop,
+            inner_loop_size = num_freqs,
+            outer_loop_size = num_amplitudes,
+            
+            save_complex_data = save_complex_data,
+            source_code_of_executing_file = '', #get_sourcecode(__file__),
+            append_to_log_name_before_timestamp = 'sweep_amplitude_and_detuning',
+            append_to_log_name_after_timestamp  = '',
+            select_resonator_for_single_log_export = '',
+            hdf5_steps_order_is_flipped = True,
+        )
         
-        # Make logfile
-        print("... making Log browser logfile.")
-        f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
-        
-        # Set project name, tag, and user in logfile.
-        f.setProject(script_filename)
-        f.setTags('krizan')
-        f.setUser('Christian Križan')
-        
-        print("... processing multiplexed readout data.")
-        
-        # fetched_data_arr SHAPE: num_stores * repeat_count, num_ports, smpls_per_store
-        integration_window_start = 1500 * 1e-9
-        integration_window_stop  = 2000 * 1e-9
-        
-        # Get index corresponding to integration_window_start and integration_window_stop respectively
-        integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-        integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
-        integr_indices = np.arange(integration_start_index, integration_stop_index)
-        
-        ## Multiplexed readout
-        
-        # Acquire time step needed for returning the DFT sample frequencies.
-        dt = time_matrix[1] - time_matrix[0]
-        nr_samples = len(integr_indices)
-        freq_arr = np.fft.fftfreq(nr_samples, dt)
-        
-        # Execute complex FFT.
-        resp_fft = np.fft.fft(fetched_data_arr[:, 0, integr_indices], axis=-1) / len(integr_indices)
-        
-        # Get new indices for the new processing_arr arrays.
-        integr_indices_1 = np.argmin(np.abs(freq_arr - readout_freq_if_A))
-        integr_indices_2 = np.argmin(np.abs(freq_arr - readout_freq_if_B))
-        
-        # Build new processing_arr arrays.
-        processing_arr_1 = 2 * resp_fft[:, integr_indices_1]
-        processing_arr_2 = 2 * resp_fft[:, integr_indices_2]
-        
-        # Reshape the data to account for repeats.
-        processing_arr_1.shape = (num_amplitudes, num_freqs)
-        processing_arr_2.shape = (num_amplitudes, num_freqs)
-        
-        # Take the absolute value of the data.
-        processing_arr_1 = np.abs(processing_arr_1)
-        processing_arr_2 = np.abs(processing_arr_2)
-        
-        print("... storing processed data into the HDF5 file.")
-        
-        ## NOTE! For this specific routine, the order of storing
-        ## arrays vs. columns has been reversed, in order to put frequency
-        ## on the 2D Y-axis.
-        for i in range(num_freqs):
-            f.addEntry( {"fetched_data_arr_1": processing_arr_1[:,i], "fetched_data_arr_2": processing_arr_2[:,i] } )
-            ## TODO Storing several arrays would likely need some sort of string making followed by evil Python evals.
-        
-        # Check if the hdf5 file was created in the local directory.
-        # If so, move it to the 'data' directory.
-        if os.path.isfile(os.path.join(current_dir, savefile_string)):
-            shutil.move( os.path.join(current_dir, savefile_string) , os.path.join(current_dir, "data", savefile_string))
-
-        # Print final success message.
-        print("Data saved, see " + save_path)
