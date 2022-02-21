@@ -9,7 +9,6 @@ import os
 import sys
 import time
 import h5py
-import Labber
 import shutil
 import numpy as np
 from datetime import datetime
@@ -33,6 +32,7 @@ def save(
     outer_loop_size,
     
     save_complex_data = True,
+    source_code_of_executing_file = '',
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp  = '',
     select_resonator_for_single_log_export = '',
@@ -56,136 +56,191 @@ def save(
     day_num     = (datetime.now()).strftime("%d")
     
     # Prepare path names needed for creating the folder tree.
-    path1 = os.path.join(current_dir, year_num)
-    path2 = os.path.join(current_dir, year_num, month_num)
-    path3 = os.path.join(current_dir, year_num, month_num, 'Data_' + day_num)
+    # First, find the root directory of whatever is executing the calling script.
+    if not ('QPU interfaces' in current_dir):
+        raise OSError("The log browser export was called from a script not residing within a QPU interfaces folder. The save action was halted before finishing.")    
+    call_root = current_dir.split('QPU interfaces',1)[0]
+    data_folder_path = os.path.join(call_root, 'Data output folder')
+    path1 = os.path.join(data_folder_path, year_num)
+    path2 = os.path.join(data_folder_path, year_num, month_num)
+    path3 = os.path.join(data_folder_path, year_num, month_num, 'Data_' + day_num)
+    for lb_path_name in [path1, path2, path3]:
+        if not os.path.exists(lb_path_name):
+            os.makedirs(lb_path_name)
     
-    # Make file name.
-    script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
+    # Get file name of calling script.
+    script_filename = os.path.splitext(name_of_running_script)[0]
     
-    # Create the log file. Note that the Log Browser API is bugged,
-    # and adds a duplicate '.hdf5' file ending when using the database.
+    # Touch up on user-input strings in the calling script.
     if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
         append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
     if (not append_to_log_name_before_timestamp.startswith('_')) and (append_to_log_name_before_timestamp != ''):
         append_to_log_name_before_timestamp = '_' + append_to_log_name_before_timestamp
     if (not timestamp.startswith('_')) and (timestamp != ''):
         timestamp = '_' + timestamp
-    if use_log_browser_database:
-        savefile_string = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp
-    else:
-        savefile_string = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.hdf5'
-    print("... building HDF5 log file: " + savefile_string)
-    f = Labber.createLogFile_ForData(
-        savefile_string,
-        log_dict_list,
-        step_channels = ext_keys,
-        use_database  = use_log_browser_database
-    )
     
-    # Set project name, tag, and user in logfile.
-    f.setProject(script_filename)
-    f.setTags('krizan')
-    f.setUser('Christian Križan')
-    
-    # Split fetched_data_arr into repeats:
-    # fetched_data_arr SHAPE: num_stores * repeat_count, num_ports, smpls_per_store
-    t_span = integration_window_stop - integration_window_start
+    # Get a preliminary name for the H5PY savefile-string.
+    # Depending on the state of the Log Browser export, this string may change.
+    savefile_string_h5py = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.h5'
     
     # Get index corresponding to integration_window_start and integration_window_stop respectively
+    t_span = integration_window_stop - integration_window_start
     integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
     integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
     integr_indices = np.arange(integration_start_index, integration_stop_index)
     
-    # Is the readout non-multiplexed? (Will there be no FFT involved?)
-    ''' TODO:   The complex data storage routine
-                should be made compatible for multiplexed readout!
-                Aka. move it out of this if case, and/or simply
-                omit the if case and always make the analysis FFT-based.'''
-    processing_volume = [] # Declare the processing volume (tensor)
-    if len(resonator_freq_if_arrays_to_fft) < 2:
-    
-        # Construct a matrix, where every row is an integrated sampling
-        # sequence corresponding to exactly one bias point.
-        
-        if(save_complex_data):
-            angles = np.angle(fetched_data_arr[:, 0, integr_indices], deg=False)
-            rows, cols = np.shape(angles)
-            for row in range(rows):
-                for col in range(cols):
-                    #if angles[row][col] < 0.0:
-                    angles[row][col] += (2.0 * np.pi)
-            angles_mean = np.mean(angles, axis=-1)
-            mean_len = len(angles_mean)
-            for row in range(mean_len):
-                angles_mean[row] -= (2.0 * np.pi)
-            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * angles_mean)
-            ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
-            ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integr_indices]), axis=-1))
+    # Attempt an export to Labber's Log Browser!
+    labber_import_worked = False
+    try:
+        import Labber
+        labber_import_worked = True
+    except:
+        print("Could not import the Labber library; " + \
+              "no data was saved in the Log Browser compatible format")
+    if labber_import_worked:
+        # Create the log file. Note that the Log Browser API is bugged,
+        # and adds a duplicate '.hdf5' file ending when using the database.
+        if use_log_browser_database:
+            savefile_string = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp
+            savefile_string_h5py = savefile_string + '.h5'
         else:
-            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1)
+            savefile_string = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.hdf5'
+            savefile_string_h5py = savefile_string.replace('.hdf5','.h5')
+        print("... building Log Browser-compatible .HDF5 log file: " + savefile_string)
+        f = Labber.createLogFile_ForData(
+            savefile_string,
+            log_dict_list,
+            step_channels = ext_keys,
+            use_database  = use_log_browser_database
+        )
         
-        # Reshape depending on the repeat variable, as well as the inner loop
-        # of the sequencer program.
-        processing_arr.shape = (outer_loop_size, inner_loop_size)
+        # Set project name, tag, and user in logfile.
+        f.setProject(script_filename)
+        f.setTags('krizan')
+        f.setUser('Christian Križan')
         
-        # Put the array into the processing list.
-        processing_volume.append( processing_arr )
-    
-    else:
-        # Multiplexed readout.
-        # Acquire time step needed for returning the DFT sample frequencies.
-        dt = time_matrix[1] - time_matrix[0]
-        nr_samples = len(integr_indices)
-        freq_arr = np.fft.fftfreq(nr_samples, dt)
+        # Get index corresponding to integration_window_start and integration_window_stop respectively
+        #t_span = integration_window_stop - integration_window_start
+        #integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
+        #integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
+        #integr_indices = np.arange(integration_start_index, integration_stop_index)
         
-        # Execute complex FFT.
-        resp_fft = np.fft.fft(fetched_data_arr[:, 0, integr_indices], axis=-1) / len(integr_indices)
+        # Is the readout non-multiplexed? (Will there be no FFT involved?)
+        ''' TODO:   The complex data storage routine
+                    should be made compatible for multiplexed readout!
+                    Aka. move it out of this if case, and/or simply
+                    omit the if case and always make the analysis FFT-based.'''
+        processing_volume = [] # Declare the processing volume (tensor)
+        if len(resonator_freq_if_arrays_to_fft) < 2:
         
-        # Get new indices for the new processing_arr arrays.
-        integr_indices_list = []
-        for _ro_freq_if in resonator_freq_if_arrays_to_fft:
-            integr_indices_list.append( np.argmin(np.abs(freq_arr - _ro_freq_if)) )
-        
-        # Build new processing_arr arrays.
-        for _item in integr_indices_list:
-            processing_volume.append( 2 * resp_fft[:, _item] )
-        
-        # Reshape the data to account for repeats.
-        for mm in range(len(processing_volume[:])):
-            fetch = processing_volume[mm]
-            fetch.shape = (outer_loop_size, inner_loop_size)
-            # TODO: perhaps this absolute-value step should be remade?
-            processing_volume[mm] = np.abs(fetch)
-    
-    # For every row in processing volume:
-    print("... storing processed data into the HDF5 file.")
-    for log_i in range(len(log_dict_list[:])):
-        
-        # ... and for every loop entry that is to be stored in this log:
-        for outer_loop_i in range(outer_loop_size):
-        
-            # Add an entry in the log browser file, unless the calling
-            # script wants a specific entry exported into a single file.
-            if select_resonator_for_single_log_export == '':
-                f.addEntry( {(log_dict_list[log_i])['name']: (processing_volume[log_i])[outer_loop_i, :]} )
+            # Construct a matrix, where every row is an integrated sampling
+            # sequence corresponding to exactly one bias point.
+            
+            if(save_complex_data):
+                angles = np.angle(fetched_data_arr[:, 0, integr_indices], deg=False)
+                rows, cols = np.shape(angles)
+                for row in range(rows):
+                    for col in range(cols):
+                        #if angles[row][col] < 0.0:
+                        angles[row][col] += (2.0 * np.pi)
+                angles_mean = np.mean(angles, axis=-1)
+                mean_len = len(angles_mean)
+                for row in range(mean_len):
+                    angles_mean[row] -= (2.0 * np.pi)
+                processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * angles_mean)
+                ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
+                ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integr_indices]), axis=-1))
             else:
-                f.addEntry( {(log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[outer_loop_i, :]} )
+                processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1)
+            
+            # Reshape depending on the repeat variable, as well as the inner loop
+            # of the sequencer program.
+            processing_arr.shape = (outer_loop_size, inner_loop_size)
+            
+            # Put the array into the processing list.
+            processing_volume.append( processing_arr )
+        
+        else:
+            # Multiplexed readout.
+            # Acquire time step needed for returning the DFT sample frequencies.
+            dt = time_matrix[1] - time_matrix[0]
+            nr_samples = len(integr_indices)
+            freq_arr = np.fft.fftfreq(nr_samples, dt)
+            
+            # Execute complex FFT.
+            resp_fft = np.fft.fft(fetched_data_arr[:, 0, integr_indices], axis=-1) / len(integr_indices)
+            
+            # Get new indices for the new processing_arr arrays.
+            integr_indices_list = []
+            for _ro_freq_if in resonator_freq_if_arrays_to_fft:
+                integr_indices_list.append( np.argmin(np.abs(freq_arr - _ro_freq_if)) )
+            
+            # Build new processing_arr arrays.
+            for _item in integr_indices_list:
+                processing_volume.append( 2 * resp_fft[:, _item] )
+            
+            # Reshape the data to account for repeats.
+            for mm in range(len(processing_volume[:])):
+                fetch = processing_volume[mm]
+                fetch.shape = (outer_loop_size, inner_loop_size)
+                # TODO: perhaps this absolute-value step should be remade?
+                processing_volume[mm] = np.abs(fetch)
+        
+        # For every row in processing volume:
+        print("... storing processed data into the .HDF5 file.")
+        
+        # TODO! This part should cover an arbitrary number of fetched_data_arr arrays!
+        if select_resonator_for_single_log_export == '':
+            # Then store multiplexed!
+            # For every loop entry that is to be stored in this log:
+            for outer_loop_i in range(outer_loop_size):
+                f.addEntry({
+                    (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :],
+                    (log_dict_list[1])['name']: (processing_volume[1])[outer_loop_i, :]
+                })
+        else:
+            # TODO  I think there is no usage case where this for-loop should be here.
+            #       It should be removed.
+            for log_i in range(len(log_dict_list[:])):
+            
+                # ... and for every loop entry that is to be stored in this log:
+                for outer_loop_i in range(outer_loop_size):
+                    f.addEntry({
+                        (log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[outer_loop_i, :]
+                    })
 
-    
-    # Check if the hdf5 file was created in the local directory.
-    # This would happen if you change use_data to False in the
-    # Labber.createLogFile_ForData call. If so, move it to an appropriate
-    # directory. Make directories where necessary.
-    success_message = " in the Log Browser directory!"
-    if os.path.isfile(os.path.join(current_dir, savefile_string)):
-        for lb_path_name in [path1, path2, path3]:
-            if not os.path.exists(lb_path_name):
-                os.makedirs(lb_path_name)
+        
+        # Check if the hdf5 file was created in the local directory.
+        # This would happen if you change use_data to False in the
+        # Labber.createLogFile_ForData call. If so, move it to an appropriate
+        # directory. Make directories where necessary.
+        success_message = " in the Log Browser directory!"
         save_path = os.path.join(path3, savefile_string)  # Full save path
-        shutil.move( os.path.join(current_dir, savefile_string) , save_path)
-        success_message = ", see " + save_path
+        if os.path.isfile(os.path.join(current_dir, savefile_string)):
+            shutil.move( os.path.join(current_dir, savefile_string) , save_path)
+            success_message = ", see " + save_path
+        
+        # Print success message.
+        print("Data saved" + success_message)
     
-    # Print final success message.
-    print("Data saved" + success_message)
     
+    """# Whether or not the Labber Log Browser export worked,
+    # we still want to save the data in the H5PY format.
+    # Since, the data can then be sent to automated processes.
+    
+    ####################################
+    ''' SAVE AS H5PY-COMPATIBLE HDF5 '''
+    ####################################
+    
+    # Full save path to the .h5 file to be made.
+    save_path_h5py = os.path.join(path3, savefile_string_h5py)
+    
+    with h5py.File(save_path_h5py, "w") as h5py_file:
+        if source_code_of_executing_file != '':
+            datatype = h5py.string_dtype(encoding='utf-8')
+            dataset  = h5py_file.create_dataset("source_code", (len(source_code_of_executing_file), ), datatype)
+            for ii, line in enumerate(source_code_of_executing_file):
+                dataset[ii] = line
+        
+        TODO work in progress.
+        """    

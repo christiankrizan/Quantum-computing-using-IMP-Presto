@@ -66,7 +66,7 @@ def ramsey01_readout0(
         "z_unit":   'default',
         }
     ):
-    ''' Perform a Rasey spectroscopy on a given qubit with a connected
+    ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator.
     '''
     
@@ -427,20 +427,24 @@ def ramsey01_readout0(
             if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+        
         log_dict_list = []
+        if axes['y_scaler'] != 1.0:
+            # Re-scale the y-axis. Note that this happens outside of the loop,
+            # to allow for multiplexed readout.
+            ## NOTE! Direct manipulation of the fetched_data_arr array!
+            fetched_data_arr *= axes['y_scaler']
+        if (axes['y_unit']).lower() != 'default':
+            # Change the unit on the y-axis
+            temp_log_unit = axes['y_unit']
         for kk in range(0,len(hdf5_logs),2):
             log_entry_name = hdf5_logs[kk]
             temp_log_unit = hdf5_logs[kk+1]
             if (axes['y_name']).lower() != 'default':
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
-            if axes['y_scaler'] != 1.0:
-                # Re-scale the y-axis
-                ## NOTE! Direct manipulation of the fetched_data_arr array!
-                fetched_data_arr *= axes['y_scaler']   
-            if (axes['y_unit']).lower() != 'default':
-                # Change the unit on the y-axis
-                temp_log_unit = axes['y_unit']
+                if len(hdf5_logs)/2 > 1:
+                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
@@ -507,7 +511,7 @@ def ramsey01_multiplexed_ro(
     num_delays,
     dt_per_ramsey_iteration,
     ):
-    ''' Perform a Rasey spectroscopy on two qubits connected by a
+    ''' Perform a Ramsey spectroscopy on two qubits connected by a
         DC-tunable SQUID coupler. Readout is multiplexed on both qubits.
     '''
     
@@ -983,7 +987,7 @@ def ramsey12_readout1(
     control_duration_01,
     
     control_amp_12,
-    control_freq_12_center_if,
+    control_freq_12,
     control_freq_12_span,
     control_duration_12,
     
@@ -1011,8 +1015,8 @@ def ramsey12_readout1(
         "z_unit":   'default',
         }
     ):
-    ''' Perform a Rasey spectroscopy on a given qubit with a connected
-        resonator.
+    ''' Perform a Ramsey_12 spectroscopy on a given qubit with a connected
+        resonator. Readout occurs in the excited state.
     '''
     
     ## Input sanitisation
@@ -1079,8 +1083,11 @@ def ramsey12_readout1(
             sync      = False,
         )
         # Control port mixer
+        high_res  = max( [control_freq_01, control_freq_12] )
+        low_res   = min( [control_freq_01, control_freq_12] )
+        control_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
-            freq      = control_freq_01, # The _freq_01 is set as the NCO!
+            freq      = control_freq_nco,
             out_ports = control_port,
             sync      = (coupler_dc_port == []),
         )
@@ -1105,12 +1112,12 @@ def ramsey12_readout1(
         pls.setup_scale_lut(
             output_ports    = control_port,
             group           = 0,
-            scales          = control_amp_01,
+            scales          = 1.0,
         )
         pls.setup_scale_lut(
             output_ports    = control_port,
             group           = 1,
-            scales          = control_amp_12,
+            scales          = 1.0,
         )
         # Coupler port amplitude (the bias)
         if coupler_dc_port != []:
@@ -1124,7 +1131,7 @@ def ramsey12_readout1(
         ### Setup readout pulse ###
         
         # Setup readout pulse envelope
-        readout_pulse = pls.setup_long_drive(
+        readout_pulse_excited = pls.setup_long_drive(
             output_port = readout_stimulus_port,
             group       = 0,
             duration    = readout_duration,
@@ -1151,17 +1158,18 @@ def ramsey12_readout1(
         control_pulse_pi_01 = pls.setup_template(
             output_port = control_port,
             group       = 0,
-            template    = control_envelope_01,
-            template_q  = control_envelope_01,
+            template    = control_envelope_01 * control_amp_01,
+            template_q  = control_envelope_01 * control_amp_01,
             envelope    = True,
         )
         # Setup control_pulse_pi_01 carrier, considering the digital mixer.
+        control_freq_if_01 = np.abs(control_freq_nco - control_freq_01)
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = control_freq_if_01,
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = -np.pi/2, # USB!
         )
         
         # Setup control_pulse_pi_12_half pulse envelope.
@@ -1170,19 +1178,18 @@ def ramsey12_readout1(
         control_pulse_pi_12_half = pls.setup_template(
             output_port = control_port,
             group       = 1,
-            template    = control_envelope_12 / 2, # Note:
-            template_q  = control_envelope_12 / 2, # Halved!
+            template    = (control_envelope_12 / 2) * control_amp_12, # Note:
+            template_q  = (control_envelope_12 / 2) * control_amp_12, # Halved!
             envelope    = True,
         )
-        
-        # Setup control pulse carrier, this tone will be swept in frequency.
-        f_start = control_freq_12_center_if - control_freq_12_span / 2
-        f_stop = control_freq_12_center_if + control_freq_12_span / 2
+        # Setup control_pulse_pi_12_half carrier, this tone will be swept in frequency.
+        control_freq_if_12 = np.abs(control_freq_nco - control_freq_12)
+        f_start = control_freq_if_12 - control_freq_12_span / 2
+        f_stop  = control_freq_if_12 + control_freq_12_span / 2
         control_freq_12_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
-        ## NOTE! The _01 frequency is the NCO!
-        control_pulse_12_half_freq_arr = control_freq_01 - control_freq_12_if_arr
+        # Use the upper sideband. Note the plus sign!
+        control_pulse_12_half_freq_arr = control_freq_nco + control_freq_12_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -1190,7 +1197,7 @@ def ramsey12_readout1(
             group           = 1,
             frequencies     = control_freq_12_if_arr,
             phases          = np.full_like(control_freq_12_if_arr, 0.0),
-            phases_q        = np.full_like(control_freq_12_if_arr, +np.pi / 2),  # +pi/2 for LSB!
+            phases_q        = np.full_like(control_freq_12_if_arr, -np.pi / 2),  # -pi/2 for USB!
         )
         
         
@@ -1240,7 +1247,7 @@ def ramsey12_readout1(
             # Redefine the coupler DC pulse duration to keep on playing once
             # the bias tee has charged.
             if coupler_dc_port != []:
-                for bias_tone in coupler_bias_tone:    
+                for bias_tone in coupler_bias_tone:
                     bias_tone.set_total_duration(
                         control_duration_01 + \
                         control_duration_12 + \
@@ -1271,7 +1278,7 @@ def ramsey12_readout1(
             
             # Commence readout
             pls.reset_phase(T, readout_stimulus_port)
-            pls.output_pulse(T, readout_pulse)
+            pls.output_pulse(T, readout_pulse_excited)
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
@@ -1291,10 +1298,10 @@ def ramsey12_readout1(
         
         # Average the measurement over 'num_averages' averages
         pls.run(
-            period          =   T,
-            repeat_count    =   num_freqs,
-            num_averages    =   num_averages,
-            print_time      =   True,
+            period       = T,
+            repeat_count = num_freqs,
+            num_averages = num_averages,
+            print_time   = True,
         )
         
     
@@ -1334,7 +1341,7 @@ def ramsey12_readout1(
             'control_duration_01', "s",
             
             'control_amp_12', "FS",
-            'control_freq_12_center_if', "Hz",
+            'control_freq_12', "Hz",
             'control_freq_12_span', "Hz",
             'control_duration_12', "s",
             
@@ -1408,20 +1415,24 @@ def ramsey12_readout1(
             if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+        
         log_dict_list = []
+        if axes['y_scaler'] != 1.0:
+            # Re-scale the y-axis. Note that this happens outside of the loop,
+            # to allow for multiplexed readout.
+            ## NOTE! Direct manipulation of the fetched_data_arr array!
+            fetched_data_arr *= axes['y_scaler']
+        if (axes['y_unit']).lower() != 'default':
+            # Change the unit on the y-axis
+            temp_log_unit = axes['y_unit']
         for kk in range(0,len(hdf5_logs),2):
             log_entry_name = hdf5_logs[kk]
             temp_log_unit = hdf5_logs[kk+1]
             if (axes['y_name']).lower() != 'default':
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
-            if axes['y_scaler'] != 1.0:
-                # Re-scale the y-axis
-                ## NOTE! Direct manipulation of the fetched_data_arr array!
-                fetched_data_arr *= axes['y_scaler']   
-            if (axes['y_unit']).lower() != 'default':
-                # Change the unit on the y-axis
-                temp_log_unit = axes['y_unit']
+                if len(hdf5_logs)/2 > 1:
+                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!

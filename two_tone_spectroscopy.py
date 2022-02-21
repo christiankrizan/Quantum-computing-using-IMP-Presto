@@ -421,20 +421,24 @@ def pulsed01_flux_sweep(
             if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+        
         log_dict_list = []
+        if axes['y_scaler'] != 1.0:
+            # Re-scale the y-axis. Note that this happens outside of the loop,
+            # to allow for multiplexed readout.
+            ## NOTE! Direct manipulation of the fetched_data_arr array!
+            fetched_data_arr *= axes['y_scaler']
+        if (axes['y_unit']).lower() != 'default':
+            # Change the unit on the y-axis
+            temp_log_unit = axes['y_unit']
         for kk in range(0,len(hdf5_logs),2):
             log_entry_name = hdf5_logs[kk]
             temp_log_unit = hdf5_logs[kk+1]
             if (axes['y_name']).lower() != 'default':
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
-            if axes['y_scaler'] != 1.0:
-                # Re-scale the y-axis
-                ## NOTE! Direct manipulation of the fetched_data_arr array!
-                fetched_data_arr *= axes['y_scaler']   
-            if (axes['y_unit']).lower() != 'default':
-                # Change the unit on the y-axis
-                temp_log_unit = axes['y_unit']
+                if len(hdf5_logs)/2 > 1:
+                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
@@ -680,7 +684,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
             group        = 0,
             frequencies  = readout_freq_if_A,
             phases       = np.full_like(readout_freq_if_A, 0.0),
-            phases_q     = np.full_like(readout_freq_if_A, -np.pi/2), # USB !  ##+np.pi/2, # LSB
+            phases_q     = np.full_like(readout_freq_if_A, -np.pi/2), # USB ! ##+np.pi/2, # LSB
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
@@ -951,20 +955,24 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
                     temp_object = np.array( [eval(hdf5_singles[jj])] )
                     ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
+            
             log_dict_list = []
+            if axes['y_scaler'] != 1.0:
+                # Re-scale the y-axis. Note that this happens outside of the loop,
+                # to allow for multiplexed readout.
+                ## NOTE! Direct manipulation of the fetched_data_arr array!
+                fetched_data_arr *= axes['y_scaler']
+            if (axes['y_unit']).lower() != 'default':
+                # Change the unit on the y-axis
+                temp_log_unit = axes['y_unit']
             for kk in range(0,len(hdf5_logs),2):
                 log_entry_name = hdf5_logs[kk]
                 temp_log_unit = hdf5_logs[kk+1]
                 if (axes['y_name']).lower() != 'default':
                     # Replace the y-axis name
                     log_entry_name = axes['y_name']
-                if axes['y_scaler'] != 1.0:
-                    # Re-scale the y-axis
-                    ## NOTE! Direct manipulation of the fetched_data_arr array!
-                    fetched_data_arr *= axes['y_scaler']   
-                if (axes['y_unit']).lower() != 'default':
-                    # Change the unit on the y-axis
-                    temp_log_unit = axes['y_unit']
+                    if len(hdf5_logs)/2 > 1:
+                        log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
                 log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
             
             # Save data!
