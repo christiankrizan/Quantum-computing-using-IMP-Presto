@@ -83,6 +83,17 @@ def save(
     # Depending on the state of the Log Browser export, this string may change.
     savefile_string_h5py = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.h5'
     
+    # Has the user set up the calling script so that the X and Z axes are
+    # reversed? I.e. "the graph is rotated -90° in the Log Browser."
+    if (len(ext_keys) > 1) and (inner_loop_size != outer_loop_size):
+        first_dict  = ext_keys[0]
+        second_dict = ext_keys[1]
+        if (len(first_dict.get('values')) == outer_loop_size) and (len(second_dict.get('values')) == inner_loop_size):
+            print("Detected external key reversal. Will flip axes "+first_dict.get('name')+" and "+second_dict.get('name')+".")
+            tempflip = inner_loop_size
+            inner_loop_size = outer_loop_size
+            outer_loop_size = tempflip
+    
     # Get index corresponding to integration_window_start and integration_window_stop respectively
     t_span = integration_window_stop - integration_window_start
     integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
@@ -224,23 +235,5 @@ def save(
         print("Data saved" + success_message)
     
     
-    """# Whether or not the Labber Log Browser export worked,
-    # we still want to save the data in the H5PY format.
-    # Since, the data can then be sent to automated processes.
     
-    ####################################
-    ''' SAVE AS H5PY-COMPATIBLE HDF5 '''
-    ####################################
     
-    # Full save path to the .h5 file to be made.
-    save_path_h5py = os.path.join(path3, savefile_string_h5py)
-    
-    with h5py.File(save_path_h5py, "w") as h5py_file:
-        if source_code_of_executing_file != '':
-            datatype = h5py.string_dtype(encoding='utf-8')
-            dataset  = h5py_file.create_dataset("source_code", (len(source_code_of_executing_file), ), datatype)
-            for ii, line in enumerate(source_code_of_executing_file):
-                dataset[ii] = line
-        
-        TODO work in progress.
-        """    

@@ -1696,6 +1696,5 @@ def iswap_sweep_amplitude_and_detuning(
             append_to_log_name_before_timestamp = 'sweep_amplitude_and_detuning',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-            hdf5_steps_order_is_flipped = True,
         )
         
