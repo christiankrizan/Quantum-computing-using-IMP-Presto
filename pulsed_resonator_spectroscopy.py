@@ -386,7 +386,7 @@ def find_f_ro01_sweep_coupler(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
@@ -700,7 +700,7 @@ def find_f_ro01_sweep_power(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
@@ -1151,7 +1151,7 @@ def find_f_ro12_sweep_coupler(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!

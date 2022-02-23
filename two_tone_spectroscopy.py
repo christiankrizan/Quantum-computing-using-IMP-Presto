@@ -438,7 +438,7 @@ def pulsed01_flux_sweep(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
@@ -972,7 +972,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
                     # Replace the y-axis name
                     log_entry_name = axes['y_name']
                     if len(hdf5_logs)/2 > 1:
-                        log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                        log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
                 log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
             
             # Save data!
@@ -1012,6 +1012,8 @@ def pulsed01_power_sweep(
     sampling_duration,
     readout_sampling_delay,
     repetition_delay,
+    integration_window_start,
+    integration_window_stop,
 
     control_port,
     control_duration_01,
@@ -1029,12 +1031,35 @@ def pulsed01_power_sweep(
     num_amplitudes,
     control_amp_01_min = -1.0,
     control_amp_01_max = +1.0,
+    
+    save_complex_data = False,
+    use_log_browser_database = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": 1.0,
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         while sweeping the applied qubit power.
     '''
     
+    ## Input sanitisation
     
+    # Acquire legal values regarding the coupler port settings.
+    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
+        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+        coupler_dc_bias = 0.0
+    
+    
+    ## Initial array declaration
+
     # Declare amplitude array for the control pulse to be swept
     control_amp_01_arr = np.linspace(control_amp_01_min, control_amp_01_max, num_amplitudes)
     
@@ -1061,9 +1086,19 @@ def pulsed01_power_sweep(
         pls.hardware.set_dac_current(control_port, 40_500)
         pls.hardware.set_inv_sinc(control_port, 0)
         
-        # Coupler port
-        pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-        pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        # Coupler port(s)
+        if coupler_dc_port != []:
+            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
+            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
+        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
         
         ''' Setup mixers '''
@@ -1079,14 +1114,15 @@ def pulsed01_power_sweep(
         pls.hardware.configure_mixer(
             freq      = control_freq_01_nco,
             out_ports = control_port,
-            sync      = False,
+            sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
-        pls.hardware.configure_mixer(
-            freq      = 0.0,
-            out_ports = coupler_dc_port,
-            sync      = True,  # Sync here
-        )
+        if coupler_dc_port != []:
+            pls.hardware.configure_mixer(
+                freq      = 0.0,
+                out_ports = coupler_dc_port,
+                sync      = True,
+            )
         
         
         ''' Setup scale LUTs '''
@@ -1097,18 +1133,19 @@ def pulsed01_power_sweep(
             group           = 0,
             scales          = readout_amp,
         )
-        # Control port amplitude
+        # Control port amplitudes
         pls.setup_scale_lut(
             output_ports    = control_port,
             group           = 0,
             scales          = control_amp_01_arr,
         )
-        # Coupler port amplitude (the bias to be swept)
-        pls.setup_scale_lut(
-            output_ports    = coupler_dc_port,
-            group           = 0,
-            scales          = coupler_dc_bias,
-        )
+        # Coupler port amplitudes
+        if coupler_dc_port != []:
+            pls.setup_scale_lut(
+                output_ports    = coupler_dc_port,
+                group           = 0,
+                scales          = coupler_dc_bias,
+            )
         
         
         ### Setup readout pulse ###
@@ -1281,7 +1318,7 @@ def pulsed01_power_sweep(
             'control_freq_01_center_if', "Hz",
             'control_freq_01_span', "Hz",
             
-            'coupler_dc_port', "",
+            #'coupler_dc_port', "",
             'added_delay_for_bias_tee', "s",
             
             'num_freqs', "",
