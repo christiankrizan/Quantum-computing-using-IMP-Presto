@@ -75,7 +75,6 @@ def iswap_sweep_duration_and_detuning(
         "z_scaler": 1.0,
         "z_unit":   'default',
         }
-    
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler, by fixing the gate amplitude and gate bias.
@@ -225,7 +224,7 @@ def iswap_sweep_duration_and_detuning(
             group           = 0,
             scales          = coupler_ac_amp,
         )
-        if coupler_dc_port != []:        
+        if coupler_dc_port != []:
             pls.setup_scale_lut(
                 output_ports    = coupler_dc_port,
                 group           = 0,
