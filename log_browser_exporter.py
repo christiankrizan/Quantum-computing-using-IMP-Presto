@@ -113,11 +113,9 @@ def save(
         # and adds a duplicate '.hdf5' file ending when using the database.
         if use_log_browser_database:
             savefile_string = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp
-            savefile_string_h5py = savefile_string + '.h5'
         else:
             savefile_string = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.hdf5'
-            savefile_string_h5py = savefile_string.replace('.hdf5','.h5')
-        print("... building Log Browser-compatible .HDF5 log file: " + savefile_string)
+        print("... assembling Log Browser-compatible .HDF5 log file: " + savefile_string)
         f = Labber.createLogFile_ForData(
             savefile_string,
             log_dict_list,
@@ -201,14 +199,21 @@ def save(
         print("... storing processed data into the .HDF5 file.")
         
         # TODO! This part should cover an arbitrary number of fetched_data_arr arrays!
-        if select_resonator_for_single_log_export == '':
-            # Then store multiplexed!
-            # For every loop entry that is to be stored in this log:
-            for outer_loop_i in range(outer_loop_size):
-                f.addEntry({
-                    (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :],
-                    (log_dict_list[1])['name']: (processing_volume[1])[outer_loop_i, :]
-                })
+        ## TODO This subroutine is a mess, and should be made fully generic.
+        if (select_resonator_for_single_log_export == ''):
+            if (len(resonator_freq_if_arrays_to_fft) > 1):
+                # Then store multiplexed!
+                # For every loop entry that is to be stored in this log:
+                for outer_loop_i in range(outer_loop_size):
+                    f.addEntry({
+                        (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :],
+                        (log_dict_list[1])['name']: (processing_volume[1])[outer_loop_i, :]
+                    })
+            else:
+                for outer_loop_i in range(outer_loop_size):
+                    f.addEntry({
+                        (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :]
+                    })
         else:
             # TODO  I think there is no usage case where this for-loop should be here.
             #       It should be removed.
@@ -235,5 +240,32 @@ def save(
         print("Data saved" + success_message)
     
     
+    # Whether or not the Labber Log Browser export worked,
+    # we still want to save the data in the H5PY format.
+    # Since, the data can then be sent to automated processes.
     
+    ####################################
+    ''' SAVE AS H5PY-COMPATIBLE HDF5 '''
+    ####################################
+    
+    # Full save path to the .h5 file to be made.
+    save_path_h5py = os.path.join(path3, savefile_string_h5py)
+    
+    # Create a H5PY-styled hdf5 file.
+    with h5py.File(save_path_h5py, "w") as h5f:
+        if source_code_of_executing_file != '':
+            datatype = h5py.string_dtype(encoding='utf-8')
+            dataset  = h5f.create_dataset("saved_source_code", (len(source_code_of_executing_file), ), datatype)
+            for kk, sourcecode_line in enumerate(source_code_of_executing_file):
+                dataset[kk] = sourcecode_line
+        for ff in range(len(ext_keys)):
+            if (np.array((ext_keys[ff])['values'])).shape == (1,):
+                h5f.attrs[(ext_keys[ff])['name']] = (ext_keys[ff])['values']
+            else:
+                h5f.create_dataset( (ext_keys[ff])['name'] , data = (ext_keys[ff])['values'] )
+        
+        h5f.create_dataset("time_matrix",  data = time_matrix)
+        h5f.create_dataset("fetched_data", data = fetched_data_arr)
+        
+        print("Data saved using H5PY, see " + save_path_h5py)
     
