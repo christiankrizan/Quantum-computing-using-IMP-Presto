@@ -579,7 +579,7 @@ def iswap_sweep_duration_and_detuning(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        return save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1182,7 +1182,7 @@ def iswap_sweep_duration_and_amplitude(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        return save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1759,7 +1759,7 @@ def iswap_sweep_amplitude_and_detuning(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        return save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,

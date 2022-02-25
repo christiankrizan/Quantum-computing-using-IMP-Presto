@@ -47,6 +47,8 @@ def save(
         will bear different timestamps, and be sorted weirdly
         when viewed in folders. This has happened. So don't change how
         the timestamp is fed into this routine.
+        
+        Returns: save path to calling script (string)
     '''
     
     # Get name, file path and time for logfile.
@@ -268,4 +270,7 @@ def save(
         h5f.create_dataset("fetched_data", data = fetched_data_arr)
         
         print("Data saved using H5PY, see " + save_path_h5py)
+    
+    # Return save path to the calling script
+    return save_path_h5py
     

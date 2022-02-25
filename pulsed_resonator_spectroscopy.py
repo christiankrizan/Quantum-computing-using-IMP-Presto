@@ -390,7 +390,7 @@ def find_f_ro01_sweep_coupler(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        return save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -408,7 +408,7 @@ def find_f_ro01_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = '',
+            append_to_log_name_before_timestamp = '01_sweep_bias',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
@@ -704,7 +704,7 @@ def find_f_ro01_sweep_power(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        return save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1155,7 +1155,7 @@ def find_f_ro12_sweep_coupler(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        return save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,

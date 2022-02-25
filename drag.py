@@ -447,11 +447,11 @@ def find_drag_coefficient_lambda_over_anharmonicity(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        return save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
