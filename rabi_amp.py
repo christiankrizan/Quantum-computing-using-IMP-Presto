@@ -16,7 +16,6 @@ import Labber
 import shutil
 import numpy as np
 from datetime import datetime
-from scipy.optimize import curve_fit
 from log_browser_exporter import save
 
 def oscillation01_with_coupler_bias(
@@ -260,15 +259,13 @@ def oscillation01_with_coupler_bias(
             print_time   = True,
         )
     
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
-        
-        ## TODO: Do not save as h5py-HDF5. Instead, run a Rabi fit on
-        ##       every row of the arr.shape(bla, bla).
-        ##       Save all of this data in a vector of the log browser-styled
-        ##       hdf5.
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -372,7 +369,9 @@ def oscillation01_with_coupler_bias(
 
         # Print final success message.
         print("Data saved, see " + save_path)
-
+    
+    return string_arr_to_return
+    
 
 def oscillation01_with_coupler_bias_multiplexed_ro(
     ip_address,
@@ -733,15 +732,13 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
             print_time   = True,
         )
     
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
-
-        ## TODO: Do not save as h5py-HDF5. Instead, run a Rabi fit on
-        ##       every row of the arr.shape(bla, bla).
-        ##       Save all of this data in a vector of the log browser-styled
-        ##       hdf5.
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -873,11 +870,11 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                     # Replace the y-axis name
                     log_entry_name = axes['y_name']
                     if len(hdf5_logs)/2 > 1:
-                        log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                        log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
                 log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
             
             # Save data!
-            save(
+            string_arr_to_return += save(
                 timestamp = timestamp,
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
@@ -900,199 +897,9 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
             )
-            
-            
-            
-            
-
-def oscillation01(
-    ip_address,
-    ext_clk_present,
     
-    readout_stimulus_port,
-    readout_sampling_port,
-    readout_freq,
-    readout_amp,
-    readout_duration,
-    sampling_duration,
+    return string_arr_to_return
     
-    readout_sampling_delay,
-    repetition_delay,
-    
-    control_port,
-    control_freq_01,
-    control_duration_01,
-    
-    num_amplitudes,
-    num_averages,
-    
-    control_amp_01_min = 0.0,
-    control_amp_01_max = 1.0,
-    ):
-    ''' Perform a Rabi oscillation experiment between states |0> and |1>.
-        The energy is found by sweeping the amplitude, instead of
-        sweeping the pulse duration.
-    '''
-
-    # Declare amplitude array for the Rabi experiment
-    control_amp_arr = np.linspace(control_amp_01_min, control_amp_01_max, num_amplitudes)
-
-    
-    # Instantiate the interface
-    print("\nInstantiating interface!")
-    with pulsed.Pulsed(
-        force_reload =   True,
-        address      =   ip_address,
-        ext_ref_clk  =   ext_clk_present,
-        adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
-        adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
-    ) as pls:
-        
-        # Readout output and input ports
-        pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
-        pls.hardware.set_dac_current(readout_stimulus_port, 40_500)
-        pls.hardware.set_inv_sinc(readout_stimulus_port, 0)
-        
-        # Control ports
-        pls.hardware.set_dac_current(control_port, 40_500)
-        pls.hardware.set_inv_sinc(control_port, 0)
-
-
-        ''' Setup mixers '''
-        
-        # Readout mixer
-        pls.hardware.configure_mixer(
-            freq      = readout_freq,
-            in_ports  = readout_sampling_port,
-            out_ports = readout_stimulus_port,
-            sync      = False, # Sync at next call
-        )
-        # Control port mixer
-        pls.hardware.configure_mixer(
-            freq      = control_freq_01,  # Note that the 01 transition freq. is set as the mixer NCO
-            out_ports = control_port,
-            sync      = True,  # Sync here
-        )
-        
-
-        ''' Setup scale LUTs '''
-        
-        # Readout amplitude
-        pls.setup_scale_lut(
-            output_ports=readout_stimulus_port,
-            group=0,
-            scales=readout_amp,
-        )
-        # Control port amplitude sweep for pi_01
-        pls.setup_scale_lut(
-            output_ports=control_port,
-            group=1,
-            scales=control_amp_arr,
-        )
-        
-
-        ### Setup readout pulse ###
-        
-        # Setup readout pulse envelope
-        readout_pulse = pls.setup_long_drive(
-            output_port =   readout_stimulus_port,
-            group       =   0,
-            duration    =   readout_duration,
-            amplitude   =   1.0,
-            amplitude_q =   1.0,
-            rise_time   =   0e-9,
-            fall_time   =   0e-9
-        )
-        # Setup readout carrier, considering that there is a digital mixer
-        pls.setup_freq_lut(
-            output_ports =  readout_stimulus_port,
-            group        =  0,
-            frequencies  =  0.0,
-            phases       =  0.0,
-            phases_q     =  0.0,
-        )
-        
-        
-        ### Setup pulse "control_pulse_pi_01" ###
-
-        # Setup control_pulse_pi_01 pulse envelope
-        control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template
-        control_envelope_01 = sin2(control_ns_01)
-        control_pulse_pi_01 = pls.setup_template(
-            output_port = control_port,
-            group       = 1,
-            template    = control_envelope_01,
-            template_q  = control_envelope_01,
-            envelope    = True,
-        )
-        
-        # Setup control_pulse_pi_01 carrier tone, considering that there is a digital mixer
-        pls.setup_freq_lut(
-            output_ports = control_port,
-            group        = 1,
-            frequencies  = 0.0,
-            phases       = 0.0,
-            phases_q     = 0.0,
-        )
-        
-        ### Setup sampling window ###
-        pls.set_store_ports(readout_sampling_port)
-        pls.set_store_duration(sampling_duration)
-        
-
-        #################################
-        ''' PULSE SEQUENCE STARTS HERE'''
-        #################################
-        
-        # Start of sequence
-        T = 0.0  # s
-        
-        # Pi_01 pulse to be characterised
-        pls.reset_phase(T, control_port)
-        pls.output_pulse(T, control_pulse_pi_01)
-        T += control_duration_01
-        
-        # Readout pulse starts right after control pulse
-        pls.reset_phase(T, readout_stimulus_port)
-        pls.output_pulse(T, readout_pulse)
-        pls.store(T + readout_sampling_delay) # Sampling window
-        
-        # Move to next Rabi amplitude
-        pls.next_scale(T, control_port)
-        
-        # Wait for decay
-        T += repetition_delay
-        
-        ################################
-        ''' EXPERIMENT EXECUTES HERE '''
-        ################################
-        
-        # Repeat the whole sequence `num_amplitudes` times,
-        # then average `num_averages` times
-        pls.run(
-            period       = T,
-            repeat_count = num_amplitudes,
-            num_averages = num_averages,
-            print_time   = True,
-        )
-    
-    if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
-        
-
-        print("Saving data")
-
-        
-        ####################
-        ''' SAVE AS HDF5 '''
-        ####################
-        assert 1 == 0, "Error: H5PY save method deprecated. Change to Log Browser"
-        
-        
-
 
 def oscillation12_with_coupler_bias_ro0(
     ip_address,
@@ -1439,15 +1246,13 @@ def oscillation12_with_coupler_bias_ro0(
             print_time   = True,
         )
     
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
-        
-        ## TODO: Do not save as h5py-HDF5. Instead, run a Rabi fit on
-        ##       every row of the arr.shape(bla, bla).
-        ##       Save all of this data in a vector of the log browser-styled
-        ##       hdf5.
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1572,11 +1377,11 @@ def oscillation12_with_coupler_bias_ro0(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1599,7 +1404,9 @@ def oscillation12_with_coupler_bias_ro0(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
-        
+    
+    return string_arr_to_return
+    
 
 def oscillation12_with_coupler_bias_ro1(
     ip_address,
@@ -1940,15 +1747,13 @@ def oscillation12_with_coupler_bias_ro1(
             print_time   = True,
         )
     
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
-        
-        ## TODO: Do not save as h5py-HDF5. Instead, run a Rabi fit on
-        ##       every row of the arr.shape(bla, bla).
-        ##       Save all of this data in a vector of the log browser-styled
-        ##       hdf5.
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2073,11 +1878,11 @@ def oscillation12_with_coupler_bias_ro1(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -2100,4 +1905,7 @@ def oscillation12_with_coupler_bias_ro1(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
-        
+    
+    return string_arr_to_return
+
+

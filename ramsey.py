@@ -322,6 +322,9 @@ def ramsey01_readout0(
         )
         
     
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
 
@@ -444,11 +447,11 @@ def ramsey01_readout0(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -470,7 +473,9 @@ def ramsey01_readout0(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
-
+    
+    return string_arr_to_return
+    
 def ramsey01_multiplexed_ro(
     ip_address,
     ext_clk_present,
@@ -801,7 +806,9 @@ def ramsey01_multiplexed_ro(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
     
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
@@ -942,19 +949,13 @@ def ramsey01_multiplexed_ro(
             processing_arr_2 = np.abs(processing_arr_2)
             
             print("... storing processed data into the HDF5 file.")
-            # TODO DEBUG This fit should not be here. The fit
-            # routines as seen in the end of this file should
-            # be a seperate script that takes Labber file data
-            # as input, and performs the fit accordingly.
+            
             if u == 0:
                 for i in range(num_freqs):
                     f.addEntry( {"fetched_data_arr": processing_arr_1[i,:]} )
-                # <FIT1 COULD GO HERE>
-                
             else:
                 for i in range(num_freqs):
                     f.addEntry( {"fetched_data_arr": processing_arr_2[i,:]} )
-                # <FIT2 COULD GO HERE>
                 
             # Check if the hdf5 file was created in the local directory.
             # If so, move it to the 'data' directory.
@@ -963,8 +964,13 @@ def ramsey01_multiplexed_ro(
 
             # Print final success message.
             print("Data saved, see " + save_path)
+    
+    return string_arr_to_return
+    
 
+    
 
+    
 def ramsey12_readout1(
     ip_address,
     ext_clk_present,
@@ -1303,7 +1309,9 @@ def ramsey12_readout1(
             num_averages = num_averages,
             print_time   = True,
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
     
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
@@ -1432,11 +1440,11 @@ def ramsey12_readout1(
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
                 if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+1)//2)+' of '+str(len(hdf5_logs)//2)+')')
+                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1458,3 +1466,6 @@ def ramsey12_readout1(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
+    
+    return string_arr_to_return
+    

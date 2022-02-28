@@ -271,7 +271,10 @@ def find_f_ro01_sweep_coupler(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
@@ -390,7 +393,7 @@ def find_f_ro01_sweep_coupler(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        return save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -412,7 +415,9 @@ def find_f_ro01_sweep_coupler(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
-
+    
+    return string_arr_to_return
+    
  
 def find_f_ro01_sweep_power(
     ip_address,
@@ -586,7 +591,10 @@ def find_f_ro01_sweep_power(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
@@ -704,7 +712,7 @@ def find_f_ro01_sweep_power(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        return save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -726,8 +734,10 @@ def find_f_ro01_sweep_power(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
-        
-        
+    
+    return string_arr_to_return
+    
+    
 def find_f_ro12_sweep_coupler(
     ip_address,
     ext_clk_present,
@@ -1033,7 +1043,10 @@ def find_f_ro12_sweep_coupler(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
@@ -1155,7 +1168,7 @@ def find_f_ro12_sweep_coupler(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        return save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1177,3 +1190,6 @@ def find_f_ro12_sweep_coupler(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
+    
+    return string_arr_to_return
+    

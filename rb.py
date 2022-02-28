@@ -418,7 +418,10 @@ def randomised_benchmarking_01_single_qubit(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
@@ -530,3 +533,5 @@ def randomised_benchmarking_01_single_qubit(
         print("Data saved, see " + save_path)
 
 
+    
+    return string_arr_to_return

@@ -322,7 +322,10 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             print_time          =   True,
             #enable_compression  =   True # Feature!
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
@@ -451,7 +454,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        return save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -473,3 +476,5 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
+    
+    return string_arr_to_return

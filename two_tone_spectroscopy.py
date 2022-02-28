@@ -320,7 +320,10 @@ def pulsed01_flux_sweep(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
@@ -442,7 +445,7 @@ def pulsed01_flux_sweep(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        return save(
+        string_arr_to_return += save(
             timestamp = timestamp,
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -464,6 +467,8 @@ def pulsed01_flux_sweep(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
+        
+    return string_arr_to_return
 
 
 def pulsed01_flux_sweep_multiplexed_ro(
@@ -834,8 +839,10 @@ def pulsed01_flux_sweep_multiplexed_ro(
             print_time          =   True,
             #enable_compression  = True # Experimental feature! TODO: bugged in the API and does not work in this script.
         )
-        
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
@@ -976,7 +983,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
             
             # Save data!
-            return save(
+            string_arr_to_return += save(
                 timestamp = timestamp,
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
@@ -999,6 +1006,8 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 select_resonator_for_single_log_export = str(u),
             )
 
+    return string_arr_to_return
+    
 def pulsed01_power_sweep(
     ip_address,
     ext_clk_present,
@@ -1286,7 +1295,10 @@ def pulsed01_power_sweep(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
@@ -1391,3 +1403,6 @@ def pulsed01_power_sweep(
 
         # Print final success message.
         print("Data saved, see " + save_path)
+
+    
+    return string_arr_to_return
