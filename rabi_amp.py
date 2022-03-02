@@ -815,11 +815,14 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                 axes[axis] = axes[axis].replace('_03','₀₃')
                 axes[axis] = axes[axis].replace('_12','₁₂')
                 axes[axis] = axes[axis].replace('_13','₁₃')
+                axes[axis] = axes[axis].replace('_20','₂₀')
                 axes[axis] = axes[axis].replace('_23','₂₃')
                 axes[axis] = axes[axis].replace('_0','₀')
                 axes[axis] = axes[axis].replace('_1','₁')
                 axes[axis] = axes[axis].replace('_2','₂')
                 axes[axis] = axes[axis].replace('_3','₃')
+                axes[axis] = axes[axis].replace('lambda','λ')
+                axes[axis] = axes[axis].replace('Lambda','Λ')
             
             # Build step lists, re-scale and re-unit where necessary.
             ext_keys = []
@@ -1322,11 +1325,14 @@ def oscillation12_with_coupler_bias_ro0(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -1823,11 +1829,14 @@ def oscillation12_with_coupler_bias_ro1(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -1901,11 +1910,9 @@ def oscillation12_with_coupler_bias_ro1(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = '12_sweep_bias_ro0',
+            append_to_log_name_before_timestamp = '12_sweep_bias_ro1',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
-    
+        
     return string_arr_to_return
-
-

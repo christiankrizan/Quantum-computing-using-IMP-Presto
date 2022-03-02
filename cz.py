@@ -52,7 +52,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     coupler_ac_rising_edge_time_cz20,
     coupler_ac_plateau_duration_maximise_cz20,
     coupler_ac_freq_cz20_nco,
-    coupler_ac_freq_cz20_center_if,
+    coupler_ac_freq_cz20_centre_if,
     coupler_ac_freq_cz20_span,
     
     coupler_ac_amp_min,
@@ -306,8 +306,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         # Setup the cz20 pulse carrier, this tone will be swept in frequency.
         # Since we set the mixer to some NCO value, we probably want to use
         # the lower sideband for sweeping the span (not the upper).
-        f_start = coupler_ac_freq_cz20_center_if - coupler_ac_freq_cz20_span / 2
-        f_stop = coupler_ac_freq_cz20_center_if + coupler_ac_freq_cz20_span / 2
+        f_start = coupler_ac_freq_cz20_centre_if - coupler_ac_freq_cz20_span / 2
+        f_stop = coupler_ac_freq_cz20_centre_if + coupler_ac_freq_cz20_span / 2
         coupler_ac_freq_cz20_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the lower sideband. Note the minus sign.
@@ -469,7 +469,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             'coupler_ac_port', "",
             'coupler_ac_duration_cz20', "s",
             'coupler_ac_freq_cz20_nco', "Hz",
-            'coupler_ac_freq_cz20_center_if', "Hz",
+            'coupler_ac_freq_cz20_centre_if', "Hz",
             'coupler_ac_freq_cz20_span', "Hz",
             
             'coupler_ac_amp_min', "FS",

@@ -50,7 +50,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     num_unitary_pulse_pairs_max,
     num_unitary_pulse_pairs_step_size,
     
-    qubit_anharmonicity,
+    qubit_anharmonicity_hz,
     drag_coefficient_lambda_min = -1.0,
     drag_coefficient_lambda_max = +1.0,
     drag_coefficient_lambda_step_size = 0.1,
@@ -74,7 +74,9 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         connected SQUID coupler. The goal is to establish the DRAG coefficient
         lambda.
     '''
-        
+    
+    ## Initial array declaration
+    
     # Declare array with the number of unitary pulse pairs to step over
     # in the main sequencer loop. And, make the array legal.
     if num_unitary_pulse_pairs_min < 0:
@@ -86,7 +88,6 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     # as given by user input.
     drag_coefficient_lambda_arr = np.arange(drag_coefficient_lambda_min, drag_coefficient_lambda_max, drag_coefficient_lambda_step_size)
     num_drag_lambdas = len(drag_coefficient_lambda_arr)
-    
     
     # Instantiate the interface
     print("\nInstantiating interface!")
@@ -111,9 +112,18 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         pls.hardware.set_inv_sinc(control_port, 0)
         
         # Coupler port(s)
-        pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-        pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        if coupler_dc_port != []:
+            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
+            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
         
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
+        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
         ''' Setup mixers '''
         
@@ -155,14 +165,15 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         pls.setup_scale_lut(
             output_ports    = control_port,
             group           = 1,
-            scales          = control_amp_01 * drag_coefficient_lambda_arr / qubit_anharmonicity,
+            scales          = control_amp_01 * (-1) * drag_coefficient_lambda_arr / (2*np.pi * qubit_anharmonicity_hz),
         )
         # Coupler port amplitudes
-        pls.setup_scale_lut(
-            output_ports    = coupler_dc_port,
-            group           = 0,
-            scales          = coupler_dc_bias,
-        )
+        if coupler_dc_port != []:
+            pls.setup_scale_lut(
+                output_ports    = coupler_dc_port,
+                group           = 0,
+                scales          = coupler_dc_bias,
+            )
         
         
         
@@ -198,7 +209,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             output_port = control_port,
             group       = 0,
             template    = control_envelope_01,
-            template_q  = control_envelope_01,
+            template_q  = 0.0,#control_envelope_01, # TODO: Keep or discard control_envelope_01 here?
             envelope    = True,
         )
         control_pulse_pi_01_DRAG_component = pls.setup_template(
@@ -227,26 +238,26 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         
         
         ### Setup pulse "coupler_bias_tone" ###
-
-        # Setup the coupler tone bias.
-        coupler_bias_tone = [pls.setup_long_drive(
-            output_port = _port,
-            group       = 0,
-            duration    = added_delay_for_bias_tee,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
-        ) for _port in coupler_dc_port]
-        
-        # Setup coupler bias tone "carrier"
-        pls.setup_freq_lut(
-            output_ports = coupler_dc_port,
-            group        = 0,
-            frequencies  = 0.0,
-            phases       = 0.0,
-            phases_q     = 0.0,
-        )
+        if coupler_dc_port != []:        
+            # Setup the coupler tone bias.
+            coupler_bias_tone = [pls.setup_long_drive(
+                output_port = _port,
+                group       = 0,
+                duration    = added_delay_for_bias_tee,
+                amplitude   = 1.0,
+                amplitude_q = 1.0,
+                rise_time   = 0e-9,
+                fall_time   = 0e-9
+            ) for _port in coupler_dc_port]
+            
+            # Setup coupler bias tone "carrier"
+            pls.setup_freq_lut(
+                output_ports = coupler_dc_port,
+                group        = 0,
+                frequencies  = 0.0,
+                phases       = 0.0,
+                phases_q     = 0.0,
+            )
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
@@ -261,24 +272,26 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         T = 0.0  # s
 
         # Charge the bias tee.
-        pls.reset_phase(T, coupler_dc_port)
-        pls.output_pulse(T, coupler_bias_tone)
-        T += added_delay_for_bias_tee
+        if coupler_dc_port != []:
+            pls.reset_phase(T, coupler_dc_port)
+            pls.output_pulse(T, coupler_bias_tone)
+            T += added_delay_for_bias_tee
         
         # For all numbers of unitary pair lengths
         for ii in num_unitary_pairs_arr:
             
             # Redefine the coupler DC pulse duration to keep on playing once
             # the bias tee has charged.
-            for bias_tone in coupler_bias_tone:
-                bias_tone.set_total_duration(
-                    2*ii * control_duration_01 + \
-                    readout_duration + \
-                    repetition_delay \
-                )
+            if coupler_dc_port != []:
+                for bias_tone in coupler_bias_tone:
+                    bias_tone.set_total_duration(
+                        2*ii * control_duration_01 + \
+                        readout_duration + \
+                        repetition_delay \
+                    )
             
-            # Re-apply the coupler bias tone.
-            pls.output_pulse(T, coupler_bias_tone)
+                # Re-apply the coupler bias tone.
+                pls.output_pulse(T, coupler_bias_tone)
             
             # Apply the unitary pairs.
             # Remember that every other gate in every pair is an inverted gate.
@@ -307,7 +320,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         pls.next_scale(T, control_port, group = 1)
         
         # Move to next iteration.
-        T += repetition_delay
+        T += repetition_delay*13
         
         
         ################################
@@ -340,8 +353,8 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         
         # Data to be stored.
         hdf5_steps = [
-            'num_unitary_pairs_arr',"",
-            'drag_coefficient_lambda_arr', "",
+            'num_unitary_pairs_arr', "",
+            'drag_coefficient_lambda_arr',"",
         ]
         hdf5_singles = [
             'readout_stimulus_port',"",
@@ -353,6 +366,8 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             'sampling_duration',"s",
             'readout_sampling_delay',"s",
             'repetition_delay',"s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
             
             'control_port',"",
             'control_amp_01',"FS",
@@ -364,13 +379,14 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             'added_delay_for_bias_tee',"s",
             
             'num_averages', "",
-            'num_minus_lambda_over_anharmonicities', "",
             
             'num_unitary_pulse_pairs_min',"",
             'num_unitary_pulse_pairs_max',"",
             'num_unitary_pulse_pairs_step_size',"",
+            
             'drag_coefficient_lambda_min',"",
             'drag_coefficient_lambda_max',"",
+            'drag_coefficient_lambda_step_size',"",
             
         ]
         hdf5_logs = [
@@ -395,11 +411,14 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
