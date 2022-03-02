@@ -523,11 +523,14 @@ def iswap_sweep_duration_and_detuning(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -1131,11 +1134,14 @@ def iswap_sweep_duration_and_amplitude(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -1274,7 +1280,6 @@ def iswap_sweep_amplitude_and_detuning(
         "z_scaler": 1.0,
         "z_unit":   'default',
         }
-    
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler.
@@ -1451,7 +1456,7 @@ def iswap_sweep_amplitude_and_detuning(
             phases       = np.full_like(readout_freq_if_B, 0.0),
             phases_q     = np.full_like(readout_freq_if_B, -np.pi/2), # USB!  ##+np.pi/2, # LSB
         )
-
+        
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
         
         # Setup control_pulse_pi_01_A and _B pulse envelopes.
@@ -1630,7 +1635,6 @@ def iswap_sweep_amplitude_and_detuning(
     if not pls.dry_run:
         time_matrix, fetched_data_arr = pls.get_store_data()
         
-        
         print("Saving data")
 
         ###########################################
@@ -1641,11 +1645,6 @@ def iswap_sweep_amplitude_and_detuning(
         timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
         
         # Data to be stored.
-        # Note that typically, the variable that matches "the inner loop"
-        # would be listed first. This specific subroutine is making an
-        # exception to this b/c order-of-operations restrictions in the
-        # Labber Log browser. All in all, this order reversal here
-        # also means that the store_data shape is also altered.
         hdf5_steps = [
             'coupler_ac_pulse_iswap_freq_arr', "Hz",
             'coupler_ac_amp_arr', "FS",
@@ -1712,11 +1711,14 @@ def iswap_sweep_amplitude_and_detuning(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -1794,6 +1796,5 @@ def iswap_sweep_amplitude_and_detuning(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
-    
     
     return string_arr_to_return
