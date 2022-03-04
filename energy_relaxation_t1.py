@@ -59,7 +59,8 @@ def t1_sweep_flux(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -381,11 +382,14 @@ def t1_sweep_flux(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -421,11 +425,11 @@ def t1_sweep_flux(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -447,6 +451,8 @@ def t1_sweep_flux(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
             path_to_script = os.path.realpath(__file__),
@@ -466,7 +472,7 @@ def t1_sweep_flux(
     return string_arr_to_return
 
 
-def t1_sweep_flux_multiplexed_ro(
+def t1_sweep_flux_multiplexed_ro0(
     ip_address,
     ext_clk_present,
     
@@ -511,7 +517,8 @@ def t1_sweep_flux_multiplexed_ro(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -901,11 +908,14 @@ def t1_sweep_flux_multiplexed_ro(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -941,11 +951,11 @@ def t1_sweep_flux_multiplexed_ro(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -967,6 +977,8 @@ def t1_sweep_flux_multiplexed_ro(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
             path_to_script = os.path.realpath(__file__),

@@ -18,21 +18,6 @@ import numpy as np
 from datetime import datetime
 from log_browser_exporter import save
 
-
-print(    "The missing pieces: https://www.nature.com/articles/s41928-020-00498-1" +\
-    "and Ganzhorn PR Research 2 033447 (2020). The idea is to tune the iSWAP's"+\
-    "individual qubit phases. Like a Ramsey in a way. With, and without"+\
-    "iSWAP _tensor_ iSWAP-dagger. Where, iSWAP-dagger is an iSWAP 180degrees"+\
-    "out of phase. Same as \"minusing\" the amplitude, aka. -A. BUT:"+\
-    "every iSWAP must execute with the iSWAP coupler drive being (phi1 - phi2) degrees."+\
-    "Aka. the coupler drive must always update to the difference-phase between"+\
-    "the qubits. The Ganzhorn paper has the methods. After one has tuned the"+\
-    "phases, one must also run iRB to optimise a phase offset "+\
-    "(added onto the coupler drive I think, check paper)"+\
-    "vs. fidelity. So it's not necessarily so that the best fidelity comes"+\
-    "from running the \"phase optimal\" values.")
-
-
 def iswap_sweep_duration_and_detuning(
     ip_address,
     ext_clk_present,
@@ -84,7 +69,8 @@ def iswap_sweep_duration_and_detuning(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -581,11 +567,11 @@ def iswap_sweep_duration_and_detuning(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -607,6 +593,8 @@ def iswap_sweep_duration_and_detuning(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
             path_to_script = os.path.realpath(__file__),
@@ -677,7 +665,8 @@ def iswap_sweep_duration_and_amplitude(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -1184,11 +1173,11 @@ def iswap_sweep_duration_and_amplitude(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -1210,6 +1199,8 @@ def iswap_sweep_duration_and_amplitude(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
             path_to_script = os.path.realpath(__file__),
@@ -1281,7 +1272,8 @@ def iswap_sweep_amplitude_and_detuning(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -1761,11 +1753,11 @@ def iswap_sweep_amplitude_and_detuning(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -1787,6 +1779,8 @@ def iswap_sweep_amplitude_and_detuning(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
             path_to_script = os.path.realpath(__file__),
@@ -1856,7 +1850,8 @@ def tune_local_qubit_phases_of_iswap(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -2418,11 +2413,11 @@ def tune_local_qubit_phases_of_iswap(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -2444,6 +2439,8 @@ def tune_local_qubit_phases_of_iswap(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
             path_to_script = os.path.realpath(__file__),
@@ -2480,5 +2477,16 @@ def tune_coupler_drive_phase_of_iswap():
         Deanna M. Abrams et al. Nature electronics, 3, December 2020 pp.744–750
         https://doi.org/10.48550/arXiv.1912.04424
     '''
-    assert 1 == 0, "Not finished."
+    assert 1 == 0, ("The missing pieces: https://www.nature.com/articles/s41928-020-00498-1 " +\
+            "and Ganzhorn PR Research 2 033447 (2020). The idea is to tune the iSWAP's "+\
+            "individual qubit phases. Like a Ramsey in a way. With, and without "+\
+            "iSWAP _tensor_ iSWAP-dagger. Where, iSWAP-dagger is an iSWAP 180degrees "+\
+            "out of phase. Same as \"minusing\" the amplitude, aka. -A. BUT: "+\
+            "every iSWAP must execute with the iSWAP coupler drive being (phi1 - phi2) degrees. "+\
+            "Aka. the coupler drive must always update to the difference-phase between "+\
+            "the qubits. The Ganzhorn paper has the methods. After one has tuned the "+\
+            "phases, one must also run iRB to optimise a phase offset "+\
+            "(added onto the coupler drive I think, check paper) "+\
+            "vs. fidelity. So it's not necessarily so that the best fidelity comes "+\
+            "from running the \"phase optimal\" values.")
     

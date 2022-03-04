@@ -38,7 +38,7 @@ def ramsey01_readout0(
     control_port,
     control_amp_01,
     control_freq_01_nco,
-    control_freq_01_center_if,
+    control_freq_01_centre_if,
     control_freq_01_span,
     control_duration_01,
     
@@ -59,7 +59,8 @@ def ramsey01_readout0(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -206,8 +207,8 @@ def ramsey01_readout0(
         )
         
         # Setup control pulse carrier, this tone will be swept in frequency.
-        f_start = control_freq_01_center_if - control_freq_01_span / 2
-        f_stop = control_freq_01_center_if + control_freq_01_span / 2
+        f_start = control_freq_01_centre_if - control_freq_01_span / 2
+        f_stop = control_freq_01_centre_if + control_freq_01_span / 2
         control_freq_01_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the lower sideband. Note the minus sign.
@@ -356,7 +357,7 @@ def ramsey01_readout0(
             'control_port', "",
             'control_amp_01', "FS",
             'control_freq_01_nco', "Hz",
-            'control_freq_01_center_if', "Hz",
+            'control_freq_01_centre_if', "Hz",
             'control_freq_01_span', "Hz",
             'control_duration_01', "s",
             
@@ -392,11 +393,14 @@ def ramsey01_readout0(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -432,11 +436,11 @@ def ramsey01_readout0(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -458,6 +462,8 @@ def ramsey01_readout0(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
             path_to_script = os.path.realpath(__file__),
@@ -497,12 +503,12 @@ def ramsey01_multiplexed_ro(
     control_port_A,
     control_amp_01_A,
     control_freq_01_A_nco,
-    control_freq_01_A_center_if,
+    control_freq_01_A_centre_if,
     control_freq_01_A_span,
     control_port_B,
     control_amp_01_B,
     control_freq_01_B_nco,
-    control_freq_01_B_center_if,
+    control_freq_01_B_centre_if,
     control_freq_01_B_span,
     control_duration_01,
     
@@ -515,6 +521,21 @@ def ramsey01_multiplexed_ro(
     
     num_delays,
     dt_per_ramsey_iteration,
+    
+    save_complex_data = False,
+    use_log_browser_database = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
     ):
     ''' Perform a Ramsey spectroscopy on two qubits connected by a
         DC-tunable SQUID coupler. Readout is multiplexed on both qubits.
@@ -683,10 +704,10 @@ def ramsey01_multiplexed_ro(
         
         # Setup control_pulse_pi_01 carrier tones, considering that there are digital mixers.
         # These tones will be swept in frequency. The NCOs are set to f_01.
-        f_start_A = control_freq_01_A_center_if - control_freq_01_A_span / 2
-        f_start_B = control_freq_01_B_center_if - control_freq_01_B_span / 2
-        f_stop_A = control_freq_01_A_center_if + control_freq_01_A_span / 2
-        f_stop_B = control_freq_01_B_center_if + control_freq_01_B_span / 2
+        f_start_A = control_freq_01_A_centre_if - control_freq_01_A_span / 2
+        f_start_B = control_freq_01_B_centre_if - control_freq_01_B_span / 2
+        f_stop_A = control_freq_01_A_centre_if + control_freq_01_A_span / 2
+        f_stop_B = control_freq_01_B_centre_if + control_freq_01_B_span / 2
         control_freq_01_A_if_arr = np.linspace(f_start_A, f_stop_A, num_freqs)
         control_freq_01_B_if_arr = np.linspace(f_start_B, f_stop_B, num_freqs)
         
@@ -850,12 +871,12 @@ def ramsey01_multiplexed_ro(
                 'control_port_A', "",
                 'control_amp_01_A', "FS",
                 'control_freq_01_A_nco', "Hz",
-                'control_freq_01_A_center_if', "Hz",
+                'control_freq_01_A_centre_if', "Hz",
                 'control_freq_01_A_span', "Hz",
                 'control_port_B', "",
                 'control_amp_01_B', "FS",
                 'control_freq_01_B_nco', "Hz",
-                'control_freq_01_B_center_if', "Hz",
+                'control_freq_01_B_centre_if', "Hz",
                 'control_freq_01_B_span', "Hz",
                 'control_duration_01', "s",
                 
@@ -967,10 +988,6 @@ def ramsey01_multiplexed_ro(
     
     return string_arr_to_return
     
-
-    
-
-    
 def ramsey12_readout1(
     ip_address,
     ext_clk_present,
@@ -993,7 +1010,7 @@ def ramsey12_readout1(
     control_duration_01,
     
     control_amp_12,
-    control_freq_12,
+    control_freq_12_centre,
     control_freq_12_span,
     control_duration_12,
     
@@ -1014,7 +1031,8 @@ def ramsey12_readout1(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -1089,8 +1107,8 @@ def ramsey12_readout1(
             sync      = False,
         )
         # Control port mixer
-        high_res  = max( [control_freq_01, control_freq_12] )
-        low_res   = min( [control_freq_01, control_freq_12] )
+        high_res  = max( [control_freq_01, control_freq_12_centre] )
+        low_res   = min( [control_freq_01, control_freq_12_centre] )
         control_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
@@ -1102,7 +1120,7 @@ def ramsey12_readout1(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
-                sync      = True,  # Sync here
+                sync      = True,
             )
         
         
@@ -1189,9 +1207,9 @@ def ramsey12_readout1(
             envelope    = True,
         )
         # Setup control_pulse_pi_12_half carrier, this tone will be swept in frequency.
-        control_freq_if_12 = np.abs(control_freq_nco - control_freq_12)
-        f_start = control_freq_if_12 - control_freq_12_span / 2
-        f_stop  = control_freq_if_12 + control_freq_12_span / 2
+        control_freq_12_centre_if = np.abs(control_freq_nco - control_freq_12_centre)
+        f_start = control_freq_12_centre_if - control_freq_12_span / 2
+        f_stop  = control_freq_12_centre_if + control_freq_12_span / 2
         control_freq_12_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the upper sideband. Note the plus sign!
@@ -1349,7 +1367,7 @@ def ramsey12_readout1(
             'control_duration_01', "s",
             
             'control_amp_12', "FS",
-            'control_freq_12', "Hz",
+            'control_freq_12_centre', "Hz",
             'control_freq_12_span', "Hz",
             'control_duration_12', "s",
             
@@ -1385,11 +1403,14 @@ def ramsey12_readout1(
             axes[axis] = axes[axis].replace('_03','₀₃')
             axes[axis] = axes[axis].replace('_12','₁₂')
             axes[axis] = axes[axis].replace('_13','₁₃')
+            axes[axis] = axes[axis].replace('_20','₂₀')
             axes[axis] = axes[axis].replace('_23','₂₃')
             axes[axis] = axes[axis].replace('_0','₀')
             axes[axis] = axes[axis].replace('_1','₁')
             axes[axis] = axes[axis].replace('_2','₂')
             axes[axis] = axes[axis].replace('_3','₃')
+            axes[axis] = axes[axis].replace('lambda','λ')
+            axes[axis] = axes[axis].replace('Lambda','Λ')
         
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
@@ -1425,11 +1446,11 @@ def ramsey12_readout1(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -1451,6 +1472,8 @@ def ramsey12_readout1(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
             path_to_script = os.path.realpath(__file__),

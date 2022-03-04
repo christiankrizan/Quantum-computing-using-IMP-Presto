@@ -38,7 +38,7 @@ def pulsed01_flux_sweep(
     control_amp_01,
     control_duration_01,
     control_freq_01_nco,
-    control_freq_01_center_if,
+    control_freq_01_centre_if,
     control_freq_01_span,
     
     coupler_dc_port,
@@ -58,7 +58,8 @@ def pulsed01_flux_sweep(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -213,8 +214,8 @@ def pulsed01_flux_sweep(
         )
         
         # Setup control pulse carrier, this tone will be swept in frequency.
-        f_start = control_freq_01_center_if - control_freq_01_span / 2
-        f_stop = control_freq_01_center_if + control_freq_01_span / 2
+        f_start = control_freq_01_centre_if - control_freq_01_span / 2
+        f_stop = control_freq_01_centre_if + control_freq_01_span / 2
         control_freq_01_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the lower sideband. Note the minus sign.
@@ -354,7 +355,7 @@ def pulsed01_flux_sweep(
             'control_amp_01', "FS",
             'control_duration_01', "s",
             'control_freq_01_nco', "Hz",
-            'control_freq_01_center_if', "Hz",
+            'control_freq_01_centre_if', "Hz",
             'control_freq_01_span', "Hz",
             #'coupler_dc_port', "",
             'added_delay_for_bias_tee', "s",
@@ -429,11 +430,11 @@ def pulsed01_flux_sweep(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -455,6 +456,8 @@ def pulsed01_flux_sweep(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
             path_to_script = os.path.realpath(__file__),
@@ -494,12 +497,12 @@ def pulsed01_flux_sweep_multiplexed_ro(
     control_port_A,
     control_amp_01_A,
     control_freq_01_A_nco,
-    control_freq_01_A_center_if,
+    control_freq_01_A_centre_if,
     control_freq_01_A_span,
     control_port_B,
     control_amp_01_B,
     control_freq_01_B_nco,
-    control_freq_01_B_center_if,
+    control_freq_01_B_centre_if,
     control_freq_01_B_span,
     control_duration_01,
     
@@ -520,7 +523,8 @@ def pulsed01_flux_sweep_multiplexed_ro(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -724,10 +728,10 @@ def pulsed01_flux_sweep_multiplexed_ro(
         
         # Setup control_pulse_pi_01 carrier tones, considering that there are digital mixers.
         # These tones will be swept in frequency. The NCOs are set to f_01.
-        f_start_A = control_freq_01_A_center_if - control_freq_01_A_span / 2
-        f_start_B = control_freq_01_B_center_if - control_freq_01_B_span / 2
-        f_stop_A = control_freq_01_A_center_if + control_freq_01_A_span / 2
-        f_stop_B = control_freq_01_B_center_if + control_freq_01_B_span / 2
+        f_start_A = control_freq_01_A_centre_if - control_freq_01_A_span / 2
+        f_start_B = control_freq_01_B_centre_if - control_freq_01_B_span / 2
+        f_stop_A = control_freq_01_A_centre_if + control_freq_01_A_span / 2
+        f_stop_B = control_freq_01_B_centre_if + control_freq_01_B_span / 2
         control_freq_01_A_if_arr = np.linspace(f_start_A, f_stop_A, num_freqs)
         control_freq_01_B_if_arr = np.linspace(f_start_B, f_stop_B, num_freqs)
         
@@ -887,12 +891,12 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 'control_port_A', "",
                 'control_amp_01_A', "FS",
                 'control_freq_01_A_nco', "Hz",
-                'control_freq_01_A_center_if', "Hz",
+                'control_freq_01_A_centre_if', "Hz",
                 'control_freq_01_A_span', "Hz",
                 'control_port_B', "",
                 'control_amp_01_B', "FS",
                 'control_freq_01_B_nco', "Hz",
-                'control_freq_01_B_center_if', "Hz",
+                'control_freq_01_B_centre_if', "Hz",
                 'control_freq_01_B_span', "Hz",
                 'control_duration_01', "s",
         
@@ -971,11 +975,11 @@ def pulsed01_flux_sweep_multiplexed_ro(
                     ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
             
             log_dict_list = []
-            if axes['y_scaler'] != 1.0:
-                # Re-scale the y-axis. Note that this happens outside of the loop,
-                # to allow for multiplexed readout.
-                ## NOTE! Direct manipulation of the fetched_data_arr array!
-                fetched_data_arr *= axes['y_scaler']
+            for qq in range(len(axes['y_scaler'])):
+                if (axes['y_scaler'])[qq] != 1.0:
+                    ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+                if (axes['y_offset'])[qq] != 0.0:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
             if (axes['y_unit']).lower() != 'default':
                 # Change the unit on the y-axis
                 temp_log_unit = axes['y_unit']
@@ -997,6 +1001,8 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 
                 time_matrix = time_matrix,
                 fetched_data_arr = fetched_data_arr,
+                fetched_data_scale = axes['y_scaler'],
+                fetched_data_offset = axes['y_offset'],
                 resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
                 
                 path_to_script = os.path.realpath(__file__),
@@ -1034,7 +1040,7 @@ def pulsed01_power_sweep(
     control_port,
     control_duration_01,
     control_freq_01_nco,
-    control_freq_01_center_if,
+    control_freq_01_centre_if,
     control_freq_01_span,
     
     coupler_dc_port,
@@ -1055,7 +1061,8 @@ def pulsed01_power_sweep(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -1199,8 +1206,8 @@ def pulsed01_power_sweep(
         )
         
         # Setup control pulse carrier, this tone will be swept in frequency.
-        f_start = control_freq_01_center_if - control_freq_01_span / 2
-        f_stop = control_freq_01_center_if + control_freq_01_span / 2
+        f_start = control_freq_01_centre_if - control_freq_01_span / 2
+        f_stop = control_freq_01_centre_if + control_freq_01_span / 2
         control_freq_01_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the lower sideband. Note the minus sign.
@@ -1334,7 +1341,7 @@ def pulsed01_power_sweep(
             'control_port', "",
             'control_duration_01', "s",
             'control_freq_01_nco', "Hz",
-            'control_freq_01_center_if', "Hz",
+            'control_freq_01_centre_if', "Hz",
             'control_freq_01_span', "Hz",
             
             #'coupler_dc_port', "",
@@ -1414,8 +1421,6 @@ def pulsed01_power_sweep(
     
     return string_arr_to_return
     
-
-
 def pulsed12_flux_sweep(
     ip_address,
     ext_clk_present,
@@ -1437,7 +1442,7 @@ def pulsed12_flux_sweep(
     control_freq_01,
     control_duration_01,
     control_amp_12,
-    control_freq_12_center,
+    control_freq_12_centre,
     control_freq_12_span,
     control_duration_12,
     
@@ -1458,15 +1463,16 @@ def pulsed12_flux_sweep(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
         }
     ):
-    ''' Find the optimal readout frequency for reading out qubits in state |0>,
-        as a function of a swept pairwise coupler bias.
+    ''' Find the optimal readout frequency for reading out qubits in state |1>,
+        transitioning to |2>, as a function of a swept pairwise coupler bias.
     '''
     
     ## Input sanitisation
@@ -1542,8 +1548,8 @@ def pulsed12_flux_sweep(
             sync      = False,
         )
         # Control port mixer
-        high_res  = max( [control_freq_01, control_freq_12_center] )
-        low_res   = min( [control_freq_01, control_freq_12_center] )
+        high_res  = max( [control_freq_01, control_freq_12_centre] )
+        low_res   = min( [control_freq_01, control_freq_12_centre] )
         control_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
@@ -1626,8 +1632,8 @@ def pulsed12_flux_sweep(
             output_ports    = control_port,
             group           = 0,
             frequencies     = control_freq_01_if,
-            phases          = np.full_like(control_freq_01_if, 0.0),
-            phases_q        = np.full_like(control_freq_01_if, -np.pi/2), # USB ! ##+np.pi/2, # LSB
+            phases          = 0.0,
+            phases_q        = -np.pi/2, # USB !
         )
         
         ### Setup pulse "control_pulse_pi_12" ###
@@ -1644,9 +1650,9 @@ def pulsed12_flux_sweep(
         )
         
         # Setup control pulse carrier, this tone will be swept in frequency.
-        control_freq_12_center_if = np.abs(control_freq_nco - control_freq_12_center)
-        f_start = control_freq_12_center_if - control_freq_12_span / 2
-        f_stop = control_freq_12_center_if + control_freq_12_span / 2
+        control_freq_12_centre_if = np.abs(control_freq_nco - control_freq_12_centre)
+        f_start = control_freq_12_centre_if - control_freq_12_span / 2
+        f_stop = control_freq_12_centre_if + control_freq_12_span / 2
         control_freq_12_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the upper sideband. Note the plus sign.
@@ -1713,7 +1719,7 @@ def pulsed12_flux_sweep(
             if coupler_dc_port != []:
                 pls.output_pulse(T, coupler_bias_tone)
             
-            # Apply pi_01 pulse.
+            # Put the qubit in the excited state.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
             T += control_duration_01
@@ -1794,7 +1800,7 @@ def pulsed12_flux_sweep(
             'control_freq_01', "Hz",
             'control_duration_01', "s",
             'control_amp_12', "FS",
-            'control_freq_12_center', "Hz",
+            'control_freq_12_centre', "Hz",
             'control_freq_12_span', "Hz",
             'control_duration_12', "s",
             
@@ -1873,11 +1879,11 @@ def pulsed12_flux_sweep(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -1899,6 +1905,8 @@ def pulsed12_flux_sweep(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
             path_to_script = os.path.realpath(__file__),

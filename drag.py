@@ -62,13 +62,13 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
         }
-    
     ):
     ''' Perform single-qubit DRAG tune-up, allowing for biasing one
         connected SQUID coupler. The goal is to establish the DRAG coefficient
@@ -209,7 +209,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             output_port = control_port,
             group       = 0,
             template    = control_envelope_01,
-            template_q  = 0.0,#control_envelope_01, # TODO: Keep or discard control_envelope_01 here?
+            template_q  = np.full_like(control_envelope_01, 0.0),#control_envelope_01, # TODO: Keep or discard control_envelope_01 here?
             envelope    = True,
         )
         control_pulse_pi_01_DRAG_component = pls.setup_template(
@@ -219,6 +219,8 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             template_q  = np.gradient(control_envelope_01),
             envelope    = True,
         )
+        
+        ''' Does not work? '''
         # Setup control_pulse_pi_01 + _DRAG carrier tones,
         # considering that there is a digital mixer.
         pls.setup_freq_lut(
@@ -298,10 +300,10 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             # I solve this by setting their phases to pi radians.
             pls.reset_phase(T, control_port)
             for dummy in range(ii):
-                pls.select_frequency(T, 0, control_port) # No group selected => Both groups will change!
+                pls.select_frequency(T, index = 0, output_ports = control_port) # No group selected => Both groups will change!
                 pls.output_pulse(T, [control_pulse_pi_01, control_pulse_pi_01_DRAG_component])
                 T += control_duration_01
-                pls.select_frequency(T, 1, control_port) # No group selected => Both groups will change!
+                pls.select_frequency(T, index = 1, output_ports = control_port) # No group selected => Both groups will change!
                 pls.output_pulse(T, [control_pulse_pi_01, control_pulse_pi_01_DRAG_component])
                 T += control_duration_01
             
@@ -454,11 +456,11 @@ def find_drag_coefficient_lambda_over_anharmonicity(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -480,6 +482,8 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
             path_to_script = os.path.realpath(__file__),
@@ -497,3 +501,5 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         )
     
     return string_arr_to_return
+    
+

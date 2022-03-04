@@ -419,7 +419,8 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -858,11 +859,11 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                     ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
             
             log_dict_list = []
-            if axes['y_scaler'] != 1.0:
-                # Re-scale the y-axis. Note that this happens outside of the loop,
-                # to allow for multiplexed readout.
-                ## NOTE! Direct manipulation of the fetched_data_arr array!
-                fetched_data_arr *= axes['y_scaler']
+            for qq in range(len(axes['y_scaler'])):
+                if (axes['y_scaler'])[qq] != 1.0:
+                    ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+                if (axes['y_offset'])[qq] != 0.0:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
             if (axes['y_unit']).lower() != 'default':
                 # Change the unit on the y-axis
                 temp_log_unit = axes['y_unit']
@@ -884,6 +885,8 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                 
                 time_matrix = time_matrix,
                 fetched_data_arr = fetched_data_arr,
+                fetched_data_scale = axes['y_scaler'],
+                fetched_data_offset = axes['y_offset'],
                 resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
                 
                 path_to_script = os.path.realpath(__file__),
@@ -948,7 +951,8 @@ def oscillation12_with_coupler_bias_ro0(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -1368,11 +1372,11 @@ def oscillation12_with_coupler_bias_ro0(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -1394,6 +1398,8 @@ def oscillation12_with_coupler_bias_ro0(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
             path_to_script = os.path.realpath(__file__),
@@ -1458,7 +1464,8 @@ def oscillation12_with_coupler_bias_ro1(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -1574,7 +1581,7 @@ def oscillation12_with_coupler_bias_ro1(
             group           = 0,
             scales          = readout_amp,
         )
-        # Control port amplitude sweep for pi_01
+        # Control port amplitude sweep for pi_01 and pi_12
         pls.setup_scale_lut(
             output_ports    = control_port,
             group           = 0,
@@ -1872,11 +1879,11 @@ def oscillation12_with_coupler_bias_ro1(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -1898,6 +1905,8 @@ def oscillation12_with_coupler_bias_ro1(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
             path_to_script = os.path.realpath(__file__),

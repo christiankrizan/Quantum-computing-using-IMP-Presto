@@ -24,9 +24,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_freq_A_excited,
+    readout_freq_f_state_A,
     readout_amp_A,
-    readout_freq_B_excited,
+    readout_freq_f_state_B,
     readout_amp_B,
     readout_duration,
     
@@ -69,7 +69,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         "x_scaler": 1.0,
         "x_unit":   'default',
         "y_name":   'default',
-        "y_scaler": 1.0,
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
         "y_unit":   'default',
         "z_name":   'default',
         "z_scaler": 1.0,
@@ -138,8 +139,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         ''' Setup mixers '''
         
         # Readout port, multiplexed, calculate an optimal NCO frequency.
-        high_res  = max( [readout_freq_A_excited, readout_freq_B_excited] )
-        low_res   = min( [readout_freq_A_excited, readout_freq_B_excited] )
+        high_res  = max( [readout_freq_f_state_A, readout_freq_f_state_B] )
+        low_res   = min( [readout_freq_f_state_A, readout_freq_f_state_B] )
         readout_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = readout_freq_nco,
@@ -232,8 +233,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             fall_time   = 0e-9
         )
         # Setup readout carriers, considering the multiplexed readout NCO.
-        readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_A_excited)
-        readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_B_excited)
+        readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_f_state_A)
+        readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_f_state_B)
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
@@ -444,9 +445,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
             'readout_duration', "s",
-            'readout_freq_A_excited', "Hz",
+            'readout_freq_f_state_A', "Hz",
             'readout_amp_A', "FS",
-            'readout_freq_B_excited', "Hz",
+            'readout_freq_f_state_B', "Hz",
             'readout_amp_B', "FS",
             'readout_freq_nco',"Hz",
             
@@ -545,11 +546,11 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         log_dict_list = []
-        if axes['y_scaler'] != 1.0:
-            # Re-scale the y-axis. Note that this happens outside of the loop,
-            # to allow for multiplexed readout.
-            ## NOTE! Direct manipulation of the fetched_data_arr array!
-            fetched_data_arr *= axes['y_scaler']
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
         if (axes['y_unit']).lower() != 'default':
             # Change the unit on the y-axis
             temp_log_unit = axes['y_unit']
@@ -571,6 +572,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             
             time_matrix = time_matrix,
             fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
             path_to_script = os.path.realpath(__file__),

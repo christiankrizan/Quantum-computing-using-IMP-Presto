@@ -21,6 +21,8 @@ def save(
     
     time_matrix,
     fetched_data_arr,
+    fetched_data_scale,
+    fetched_data_offset,
     resonator_freq_if_arrays_to_fft,
     integration_window_start,
     integration_window_stop,
@@ -161,8 +163,11 @@ def save(
                 processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * angles_mean)
                 ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
                 ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integr_indices]), axis=-1))
+                
+                print("WARNING: FETCHED DATA NOT RE-SCALED AND NOT OFFSET.")
             else:
-                processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1)
+                ## Note! Offset added to every index in the array.
+                processing_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) +fetched_data_offset[0])/fetched_data_scale[0]
             
             # Reshape depending on the repeat variable, as well as the inner loop
             # of the sequencer program.
@@ -195,7 +200,8 @@ def save(
                 fetch = processing_volume[mm]
                 fetch.shape = (outer_loop_size, inner_loop_size)
                 # TODO: perhaps this absolute-value step should be remade?
-                processing_volume[mm] = np.abs(fetch)
+                ## Note: offset added to every index in entire array
+                processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])/(fetched_data_scale[mm])
         
         # For every row in processing volume:
         print("... storing processed data into the .HDF5 file.")
@@ -268,6 +274,8 @@ def save(
         
         h5f.create_dataset("time_matrix",  data = time_matrix)
         h5f.create_dataset("fetched_data", data = fetched_data_arr)
+        h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
+        h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)
         
         print("Data saved using H5PY, see " + save_path_h5py)
     
