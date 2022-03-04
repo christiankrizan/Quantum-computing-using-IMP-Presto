@@ -167,7 +167,7 @@ def save(
                 print("WARNING: FETCHED DATA NOT RE-SCALED AND NOT OFFSET.")
             else:
                 ## Note! Offset added to every index in the array.
-                processing_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) +fetched_data_offset[0])/fetched_data_scale[0]
+                processing_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integr_indices]), axis=-1) +fetched_data_offset[0])*fetched_data_scale[0]
             
             # Reshape depending on the repeat variable, as well as the inner loop
             # of the sequencer program.
@@ -201,7 +201,7 @@ def save(
                 fetch.shape = (outer_loop_size, inner_loop_size)
                 # TODO: perhaps this absolute-value step should be remade?
                 ## Note: offset added to every index in entire array
-                processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])/(fetched_data_scale[mm])
+                processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
         
         # For every row in processing volume:
         print("... storing processed data into the .HDF5 file.")
