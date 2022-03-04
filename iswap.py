@@ -51,7 +51,7 @@ def iswap_sweep_duration_and_detuning(
     coupler_ac_port,
     coupler_ac_amp,
     coupler_ac_freq_iswap_nco,
-    coupler_ac_freq_iswap_center_if,
+    coupler_ac_freq_iswap_centre_if,
     coupler_ac_freq_iswap_span,
     
     num_freqs,
@@ -328,8 +328,8 @@ def iswap_sweep_duration_and_detuning(
         # Setup the iSWAP pulse carrier, this tone will be swept in frequency.
         # Since we set the mixer to some NCO value, we probably want to use
         # the lower sideband for sweeping the span (not the upper).
-        f_start = coupler_ac_freq_iswap_center_if - coupler_ac_freq_iswap_span / 2
-        f_stop  = coupler_ac_freq_iswap_center_if + coupler_ac_freq_iswap_span / 2
+        f_start = coupler_ac_freq_iswap_centre_if - coupler_ac_freq_iswap_span / 2
+        f_stop  = coupler_ac_freq_iswap_centre_if + coupler_ac_freq_iswap_span / 2
         coupler_ac_freq_iswap_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the lower sideband. Note the minus sign.
@@ -492,7 +492,7 @@ def iswap_sweep_duration_and_detuning(
             'coupler_ac_port',"",
             'coupler_ac_amp',"FS",
             'coupler_ac_freq_iswap_nco',"Hz",
-            'coupler_ac_freq_iswap_center_if',"Hz",
+            'coupler_ac_freq_iswap_centre_if',"Hz",
             'coupler_ac_freq_iswap_span',"Hz",
             'num_freqs',"",
             'num_averages',"",
@@ -1255,7 +1255,7 @@ def iswap_sweep_amplitude_and_detuning(
     coupler_ac_single_edge_time_iswap,
     coupler_ac_plateau_duration_iswap,
     coupler_ac_freq_iswap_nco,
-    coupler_ac_freq_iswap_center_if,
+    coupler_ac_freq_iswap_centre_if,
     coupler_ac_freq_iswap_span,
     
     coupler_ac_amp_min,
@@ -1513,8 +1513,8 @@ def iswap_sweep_amplitude_and_detuning(
         # Setup the iSWAP pulse carrier, this tone will be swept in frequency.
         # Since we set the mixer to some NCO value, we probably want to use
         # the lower sideband for sweeping the span (not the upper).
-        f_start = coupler_ac_freq_iswap_center_if - coupler_ac_freq_iswap_span / 2
-        f_stop = coupler_ac_freq_iswap_center_if + coupler_ac_freq_iswap_span / 2
+        f_start = coupler_ac_freq_iswap_centre_if - coupler_ac_freq_iswap_span / 2
+        f_stop = coupler_ac_freq_iswap_centre_if + coupler_ac_freq_iswap_span / 2
         coupler_ac_freq_iswap_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the lower sideband. Note the minus sign.
@@ -1677,7 +1677,7 @@ def iswap_sweep_amplitude_and_detuning(
             'coupler_ac_port', "",
             'coupler_ac_duration_iswap', "s",
             'coupler_ac_freq_iswap_nco', "Hz",
-            'coupler_ac_freq_iswap_center_if', "Hz",
+            'coupler_ac_freq_iswap_centre_if', "Hz",
             'coupler_ac_freq_iswap_span', "Hz",
             
             'coupler_ac_amp_min', "FS",
