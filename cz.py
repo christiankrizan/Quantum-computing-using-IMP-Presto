@@ -24,9 +24,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_freq_g_or_f_state_A,
+    readout_freq_f_state_A,
     readout_amp_A,
-    readout_freq_g_or_f_state_B,
+    readout_freq_g_state_B,
     readout_amp_B,
     readout_duration,
     
@@ -139,8 +139,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         ''' Setup mixers '''
         
         # Readout port, multiplexed, calculate an optimal NCO frequency.
-        high_res  = max( [readout_freq_g_or_f_state_A, readout_freq_g_or_f_state_B] )
-        low_res   = min( [readout_freq_g_or_f_state_A, readout_freq_g_or_f_state_B] )
+        high_res  = max( [readout_freq_f_state_A, readout_freq_g_state_B] )
+        low_res   = min( [readout_freq_f_state_A, readout_freq_g_state_B] )
         readout_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = readout_freq_nco,
@@ -233,8 +233,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             fall_time   = 0e-9
         )
         # Setup readout carriers, considering the multiplexed readout NCO.
-        readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_g_or_f_state_A)
-        readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_g_or_f_state_B)
+        readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_f_state_A)
+        readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_g_state_B)
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
@@ -445,9 +445,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
             'readout_duration', "s",
-            'readout_freq_g_or_f_state_A', "Hz",
+            'readout_freq_f_state_A', "Hz",
             'readout_amp_A', "FS",
-            'readout_freq_g_or_f_state_B', "Hz",
+            'readout_freq_g_state_B', "Hz",
             'readout_amp_B', "FS",
             'readout_freq_nco',"Hz",
             
