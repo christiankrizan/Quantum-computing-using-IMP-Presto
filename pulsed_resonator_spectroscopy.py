@@ -383,12 +383,13 @@ def find_f_ro0_sweep_coupler(
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
                 ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
-        if (axes['y_unit']).lower() != 'default':
-            # Change the unit on the y-axis
-            temp_log_unit = axes['y_unit']
         for kk in range(0,len(hdf5_logs),2):
             log_entry_name = hdf5_logs[kk]
-            temp_log_unit = hdf5_logs[kk+1]
+            # Set unit on the y-axis
+            if (axes['y_unit']).lower() != 'default':
+                temp_log_unit = axes['y_unit']
+            else:
+                temp_log_unit = hdf5_logs[kk+1]
             if (axes['y_name']).lower() != 'default':
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
@@ -707,12 +708,13 @@ def find_f_ro0_sweep_power(
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
                 ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
-        if (axes['y_unit']).lower() != 'default':
-            # Change the unit on the y-axis
-            temp_log_unit = axes['y_unit']
         for kk in range(0,len(hdf5_logs),2):
             log_entry_name = hdf5_logs[kk]
-            temp_log_unit = hdf5_logs[kk+1]
+            # Set unit on the y-axis
+            if (axes['y_unit']).lower() != 'default':
+                temp_log_unit = axes['y_unit']
+            else:
+                temp_log_unit = hdf5_logs[kk+1]
             if (axes['y_name']).lower() != 'default':
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
@@ -1169,12 +1171,13 @@ def find_f_ro1_sweep_coupler(
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
                 ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
-        if (axes['y_unit']).lower() != 'default':
-            # Change the unit on the y-axis
-            temp_log_unit = axes['y_unit']
         for kk in range(0,len(hdf5_logs),2):
             log_entry_name = hdf5_logs[kk]
-            temp_log_unit = hdf5_logs[kk+1]
+            # Set unit on the y-axis
+            if (axes['y_unit']).lower() != 'default':
+                temp_log_unit = axes['y_unit']
+            else:
+                temp_log_unit = hdf5_logs[kk+1]
             if (axes['y_name']).lower() != 'default':
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
@@ -1676,12 +1679,13 @@ def find_f_ro2_sweep_coupler(
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
                 ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
-        if (axes['y_unit']).lower() != 'default':
-            # Change the unit on the y-axis
-            temp_log_unit = axes['y_unit']
         for kk in range(0,len(hdf5_logs),2):
             log_entry_name = hdf5_logs[kk]
-            temp_log_unit = hdf5_logs[kk+1]
+            # Set unit on the y-axis
+            if (axes['y_unit']).lower() != 'default':
+                temp_log_unit = axes['y_unit']
+            else:
+                temp_log_unit = hdf5_logs[kk+1]
             if (axes['y_name']).lower() != 'default':
                 # Replace the y-axis name
                 log_entry_name = axes['y_name']
