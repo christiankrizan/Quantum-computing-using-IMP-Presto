@@ -16,8 +16,13 @@ import Labber
 import shutil
 import numpy as np
 from datetime import datetime
-from log_browser_exporter import save
-
+from data_exporter import \
+    ensure_all_keyed_elements_even, \
+    stylise_axes, \
+    get_timestamp_string, \
+    get_dict_for_step_list, \
+    get_dict_for_log_list, \
+    save
 
 def find_drag_coefficient_lambda_over_anharmonicity(
     ip_address,
@@ -350,9 +355,6 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         hdf5_steps = [
             'num_unitary_pairs_arr', "",
@@ -477,7 +479,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             

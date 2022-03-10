@@ -16,7 +16,13 @@ import Labber
 import shutil
 import numpy as np
 from datetime import datetime
-from log_browser_exporter import save
+from data_exporter import \
+    ensure_all_keyed_elements_even, \
+    stylise_axes, \
+    get_timestamp_string, \
+    get_dict_for_step_list, \
+    get_dict_for_log_list, \
+    save
 
 def cz20_sweep_amplitude_and_detuning_for_t_half(
     ip_address,
@@ -301,7 +307,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             amplitude   = 1.0,
             amplitude_q = 1.0,
             rise_time   = coupler_ac_rising_edge_time_cz20,
-            fall_time   = 0.0, #coupler_ac_rising_edge_time_cz20
+            fall_time   = coupler_ac_rising_edge_time_cz20,
         )
         
         # Setup the cz20 pulse carrier, this tone will be swept in frequency.
@@ -432,9 +438,6 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
-        
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
         
         # Data to be stored.
         hdf5_steps = [
@@ -567,7 +570,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             

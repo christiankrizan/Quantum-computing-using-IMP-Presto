@@ -171,21 +171,10 @@ def save(
     # Depending on the state of the Log Browser export, this string may change.
     savefile_string_h5py = script_filename + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.h5'
     
-    # Has the user set up the calling script so that the X and Z axes are
-    # reversed? I.e. "the graph is rotated -90° in the Log Browser."
-    if (len(ext_keys) > 1) and (inner_loop_size != outer_loop_size):
-        first_dict  = ext_keys[0]
-        second_dict = ext_keys[1]
-        if (len(first_dict.get('values')) == outer_loop_size) and (len(second_dict.get('values')) == inner_loop_size):
-            print("Detected external key reversal. Will flip axes "+first_dict.get('name')+" and "+second_dict.get('name')+".")
-            tempflip = inner_loop_size
-            inner_loop_size = outer_loop_size
-            outer_loop_size = tempflip
-    
     # Get index corresponding to integration_window_start and
     # integration_window_stop respectively.
     integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-    integration_stop_index  = np.argmin(np.abs(time_matrix - integration_window_stop))
+    integration_stop_index  = np.argmin(np.abs(time_matrix - integration_window_stop ))
     integration_indices     = np.arange(integration_start_index, integration_stop_index)
     
     # Attempt an export to Labber's Log Browser!
@@ -215,10 +204,6 @@ def save(
         f.setProject(script_filename)
         f.setTags(log_browser_tag)
         f.setUser(log_browser_user)
-
-        # Declare the processing volume (tensor)
-        processing_volume = []
-        
         
         ###########################################
         # COMPLEX READOUT CODE, DO NOT REMOVE YET #
@@ -254,8 +239,6 @@ def save(
         processing_volume.append( processing_arr )
         """
         
-        
-        
         # Acquire the DFT sample frequencies contained within the
         # fetched_data_arr trace. freq_arr contains the centres of
         # the (representable) segments of the discretised frequency axis.
@@ -263,40 +246,125 @@ def save(
         num_samples = len(integration_indices)
         freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
         
-        # Execute complex FFT.
-        resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples
-        
-        # Get new indices for the new processing_arr arrays.
+        # Get IF frequencies, so that we can pick out indices in the FFT array.
         # Did the user not send any IF information? Then assume IF = 0 Hz.
         # Did the user drive one resonator on resonance? Then set its IF to 0.
         if len(resonator_freq_if_arrays_to_fft) == 0:
             resonator_freq_if_arrays_to_fft.append(0)
         else:
-            for pp in range(resonator_freq_if_arrays_to_fft):
+            for pp in range(len(resonator_freq_if_arrays_to_fft)):
                 if resonator_freq_if_arrays_to_fft[pp] == []:
                     resonator_freq_if_arrays_to_fft[pp] = 0
         
+        # Note! The user may have done a frequency sweep. In that case,
+        # _ro_freq_if will be an array
         integration_indices_list = []
         for _ro_freq_if in resonator_freq_if_arrays_to_fft:
-            integration_indices_list.append( np.argmin(np.abs(freq_arr - _ro_freq_if)) )
+            if (not isinstance(_ro_freq_if, list)) and (not isinstance(_ro_freq_if, np.ndarray)):
+                _curr_item = [_ro_freq_if] # Cast to list if not list.
+            else:
+                _curr_item = _ro_freq_if
+            # The user may have swept the frequency => many IFs.
+            curr_array = []
+            for if_point in _curr_item:
+                curr_array.append( np.argmin(np.abs(freq_arr - if_point)) )
+            integration_indices_list.append( curr_array )
         
-        # Build new processing_arr arrays.
+        # Execute complex FFT. Every row of the resp_fft matrix,
+        # contains the FFT of every time trace that was ever collected
+        # using .store() -- meaning that for instance resp_fft[0,:]
+        # contains the FFT of the first store event in the first repeat.
+        
+        # If the user swept the IF frequency, then picking whatever
+        # frequency in the FFT that is closest to the list of IF frequencies
+        # will return may identical indices.
+        # Ie. something like [124, 124, 124, 124, 124, 125, 125, 125, 125]
+        # Instead, we should demodulate the collected data.
+        '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples'''
+        
+        # Build a processing_volume.
+        processing_volume = []
         for _item in integration_indices_list:
-            processing_volume.append( 2 * resp_fft[:, _item] )
+            if len(_item) <= 1:
+                resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples
+                processing_volume.append( 2 * resp_fft[:, _item[0]] )
+            else:
+                print("WARNING: Currently, resonator frequency sweeps are not supported due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.")
+                return_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) +fetched_data_offset[0])*fetched_data_scale[0]
+                
+                ## TODO: The commented part below is not finished. ##
+                
+                ################# IF frequency sweep (case) #################
+                # Every new row in resp_fft corresponds to another ("the next")
+                # instance of .store() in the entire sequencer program.
+                # If the user swept some IF frequency during the sequence,
+                # then the current _item will be a list, triggering this case.
+                
+                # Each new entry in _item will be the index (in the FFT
+                # for that particular row in the grand resp_fft matrix)
+                # that corresponds to the peak we want.
+                
+                """ This is actually a good one, except noise output (FFT resolution error perhaps?)
+                ll = 0
+                return_arr = []
+                for fft_row in resp_fft[:]:
+                    return_arr.append( \
+                        fft_row[ _item[ ll ] ] \
+                    )
+                    ll += 1"""
+                
+                """return_arr = []
+                if len(_item[:]) == inner_loop_size:
+                    # The frequency sweep happened as an inner loop.
+                    for ll in range(inner_loop_size*outer_loop_size):
+                        fft_row = np.fft.fft(fetched_data_arr[ll, 0, integration_indices] * 2*np.cos(2*np.pi*_item[ll % inner_loop_size]), axis=-1) / num_samples
+                        return_arr.append( \
+                            fft_row[ np.argmin(np.abs(freq_arr - _item[len(_item[:])//2] )) ] \
+                        )
+                        # TODO Remove the stuff to the right: #fft_row[ _item[ (ll % inner_loop_size) ] ]
+                else:
+                    pass
+                    # The frequency sweep happened as an outer loop.
+                    ee = 0
+                    ff = 0
+                    for fft_row in resp_fft[:]:
+                        return_arr.append( fft_row[ _item[ee] ] )
+                        ff += 1
+                        if ff == outer_loop_size:
+                            ff = 0
+                            ee += 1"""
+                            
+                # We have picked the appropriate fq.-swept indices. Return!
+                processing_volume.append( 2 * np.array(return_arr) )
+        
+        # Has the user set up the calling script so that the X and Z axes are
+        # reversed? I.e. "the graph is rotated -90° in the Log Browser."
+        if (len(ext_keys) > 1) and (inner_loop_size != outer_loop_size):
+            first_dict  = ext_keys[0]
+            second_dict = ext_keys[1]
+            if (len(first_dict.get('values')) == outer_loop_size) and (len(second_dict.get('values')) == inner_loop_size):
+                print("Detected external key reversal. Will flip axes "+first_dict.get('name')+" and "+second_dict.get('name')+".")
+                tempflip = inner_loop_size
+                inner_loop_size = outer_loop_size
+                outer_loop_size = tempflip
         
         # Reshape the data to account for repeats.
+        # And, save either complex or magnitude data with/without some
+        # scale and offset.
         for mm in range(len(processing_volume[:])):
             fetch = processing_volume[mm]
             fetch.shape = (outer_loop_size, inner_loop_size)
-            # TODO: perhaps this absolute-value step should be remade?
-            ## Note: offset added to every index in entire array
-            processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
-        
-        # For every row in processing volume:
+            if not save_complex_data:
+                processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
+            else:
+                # TODO: offset and scale not included yet!
+                processing_volume[mm] = fetch
+            
+        # Store the post-processed data.
         print("... storing processed data into the .HDF5 file.")
-        
-        # TODO! This part should cover an arbitrary number of fetched_data_arr arrays!
-        ## TODO This subroutine is a mess, and should be made fully generic.
+        # TODO: This part should cover an arbitrary number of fetched_data_arr
+        #       arrays. And, this entire subroutine should be made fully
+        #       generic.
         if (select_resonator_for_single_log_export == ''):
             if (len(resonator_freq_if_arrays_to_fft) > 1):
                 # Then store multiplexed!

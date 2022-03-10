@@ -16,7 +16,13 @@ import Labber
 import shutil
 import numpy as np
 from datetime import datetime
-from log_browser_exporter import save
+from data_exporter import \
+    ensure_all_keyed_elements_even, \
+    stylise_axes, \
+    get_timestamp_string, \
+    get_dict_for_step_list, \
+    get_dict_for_log_list, \
+    save
 
 def pulsed01_flux_sweep(
     ip_address,
@@ -334,9 +340,6 @@ def pulsed01_flux_sweep(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         hdf5_steps = [
             'control_pulse_01_freq_arr', "Hz",
@@ -451,7 +454,7 @@ def pulsed01_flux_sweep(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
@@ -859,9 +862,6 @@ def pulsed01_flux_sweep_multiplexed_ro(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # This save is done in a loop, due to quirks with Labber's log browser.
         arrays_in_loop = [
             'control_pulse_01_A_freq_arr',
@@ -997,7 +997,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
             
             # Save data!
             string_arr_to_return += save(
-                timestamp = timestamp,
+                timestamp = get_timestamp_string(),
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
                 
@@ -1776,9 +1776,6 @@ def pulsed12_flux_sweep(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         hdf5_steps = [
             'control_pulse_12_freq_arr', "Hz",
@@ -1902,7 +1899,7 @@ def pulsed12_flux_sweep(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             

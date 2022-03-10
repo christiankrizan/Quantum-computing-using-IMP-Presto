@@ -17,7 +17,13 @@ import shutil
 import numpy as np
 from datetime import datetime
 from scipy.optimize import curve_fit
-from log_browser_exporter import save
+from data_exporter import \
+    ensure_all_keyed_elements_even, \
+    stylise_axes, \
+    get_timestamp_string, \
+    get_dict_for_step_list, \
+    get_dict_for_log_list, \
+    save
 
 def ramsey01_readout0(
     ip_address,
@@ -335,9 +341,6 @@ def ramsey01_readout0(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         hdf5_steps = [
             'delay_arr', "s",
@@ -457,7 +460,7 @@ def ramsey01_readout0(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
@@ -840,9 +843,6 @@ def ramsey01_multiplexed_ro(
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
-        
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
         
         # This save is done in a loop, due to quirks with Labber's log browser.
         arrays_in_loop = [
@@ -1341,9 +1341,6 @@ def ramsey12_readout1(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         hdf5_steps = [
             'delay_arr', "s",
@@ -1468,7 +1465,7 @@ def ramsey12_readout1(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             

@@ -16,7 +16,13 @@ import Labber
 import shutil
 import numpy as np
 from datetime import datetime
-from log_browser_exporter import save
+from data_exporter import \
+    ensure_all_keyed_elements_even, \
+    stylise_axes, \
+    get_timestamp_string, \
+    get_dict_for_step_list, \
+    get_dict_for_log_list, \
+    save
 
 def iswap_sweep_duration_and_detuning(
     ip_address,
@@ -460,9 +466,6 @@ def iswap_sweep_duration_and_detuning(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         hdf5_steps = [
             'iswap_total_pulse_duration_arr',"s",
@@ -588,7 +591,7 @@ def iswap_sweep_duration_and_detuning(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
@@ -1056,9 +1059,6 @@ def iswap_sweep_duration_and_amplitude(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         # Note that typically, the variable that matches "the inner loop"
         # would be listed first. This specific subroutine is making an
@@ -1195,7 +1195,7 @@ def iswap_sweep_duration_and_amplitude(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
@@ -1642,9 +1642,6 @@ def iswap_sweep_amplitude_and_detuning(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         hdf5_steps = [
             'coupler_ac_pulse_iswap_freq_arr', "Hz",
@@ -1776,7 +1773,7 @@ def iswap_sweep_amplitude_and_detuning(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
@@ -2303,9 +2300,6 @@ def tune_local_qubit_phases_of_iswap(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         hdf5_steps = [
             'control_phase_arr', "rad",
@@ -2437,7 +2431,7 @@ def tune_local_qubit_phases_of_iswap(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             

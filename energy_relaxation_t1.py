@@ -16,7 +16,13 @@ import Labber
 import shutil
 import numpy as np
 from datetime import datetime
-from log_browser_exporter import save
+from data_exporter import \
+    ensure_all_keyed_elements_even, \
+    stylise_axes, \
+    get_timestamp_string, \
+    get_dict_for_step_list, \
+    get_dict_for_log_list, \
+    save
 
 
 def t1_sweep_flux(
@@ -327,9 +333,6 @@ def t1_sweep_flux(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         ## Create a linear vector corresponding to the time sweep.
         delay_arr = np.linspace(0, num_delays * dt_per_time_step, num_delays)
@@ -446,7 +449,7 @@ def t1_sweep_flux(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
@@ -843,9 +846,6 @@ def t1_sweep_flux_multiplexed_ro0(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Get timestamp for Log Browser exporter.
-        timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
-        
         # Data to be stored.
         ## Create a linear vector corresponding to the time sweep.
         delay_arr = np.linspace(0, num_delays * dt_per_time_step, num_delays)
@@ -973,7 +973,7 @@ def t1_sweep_flux_multiplexed_ro0(
         
         # Save data!
         string_arr_to_return += save(
-            timestamp = timestamp,
+            timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
