@@ -58,7 +58,7 @@ def ramsey01_readout0(
     num_delays,
     dt_per_ramsey_iteration,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -526,7 +526,7 @@ def ramsey01_multiplexed_ro(
     num_delays,
     dt_per_ramsey_iteration,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -1025,7 +1025,7 @@ def ramsey12_readout1(
     num_delays,
     dt_per_ramsey_iteration,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',

@@ -68,7 +68,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     num_averages,
     num_amplitudes,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -94,7 +94,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
     
-     ## Initial array declaration
+    ## Initial array declaration
     
     # Declare amplitude array for the AC coupler tone to be swept
     coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)

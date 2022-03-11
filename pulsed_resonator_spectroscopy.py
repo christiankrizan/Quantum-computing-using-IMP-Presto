@@ -51,7 +51,7 @@ def find_f_ro0_sweep_coupler(
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -414,7 +414,7 @@ def find_f_ro0_sweep_power(
     readout_amp_min = -1.0,
     readout_amp_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -745,7 +745,7 @@ def find_f_ro1_sweep_coupler(
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -1209,7 +1209,7 @@ def find_f_ro2_sweep_coupler(
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',

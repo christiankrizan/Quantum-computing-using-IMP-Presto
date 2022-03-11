@@ -68,7 +68,7 @@ def iswap_sweep_duration_and_detuning(
     coupler_ac_plateau_duration_iswap_min,
     coupler_ac_plateau_duration_iswap_max,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -662,7 +662,7 @@ def iswap_sweep_duration_and_amplitude(
     num_amplitudes,
     num_time_steps,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -1267,7 +1267,7 @@ def iswap_sweep_amplitude_and_detuning(
     num_averages,
     num_amplitudes,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -1843,7 +1843,7 @@ def tune_local_qubit_phases_of_iswap(
     phase_sweep_rad_min = 0.0,
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',

@@ -60,7 +60,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     drag_coefficient_lambda_max = +1.0,
     drag_coefficient_lambda_step_size = 0.1,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',

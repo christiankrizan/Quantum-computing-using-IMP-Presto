@@ -119,6 +119,7 @@ def save(
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp  = '',
     select_resonator_for_single_log_export = '',
+    force_matrix_reshape_flip_row_and_column = False,
     
     log_browser_tag = 'krizan',
     log_browser_user = 'Christian Križan',
@@ -289,7 +290,7 @@ def save(
                 resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples
                 processing_volume.append( 2 * resp_fft[:, _item[0]] )
             else:
-                print("WARNING: Currently, resonator frequency sweeps are not supported due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.")
+                print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.")
                 return_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) +fetched_data_offset[0])*fetched_data_scale[0]
                 
                 ## TODO: The commented part below is not finished. ##
@@ -342,24 +343,31 @@ def save(
         if (len(ext_keys) > 1) and (inner_loop_size != outer_loop_size):
             first_dict  = ext_keys[0]
             second_dict = ext_keys[1]
-            if (len(first_dict.get('values')) == outer_loop_size) and (len(second_dict.get('values')) == inner_loop_size):
-                print("Detected external key reversal. Will flip axes "+first_dict.get('name')+" and "+second_dict.get('name')+".")
+            if (len(first_dict.get('values')) == outer_loop_size) and (len(second_dict.get('values')) == inner_loop_size) and (not force_matrix_reshape_flip_row_and_column):
+                
+                print("Detected external key reversal in the calling script."+\
+                " Will flip axes "+first_dict.get('name')+" and "+\
+                second_dict.get('name')+". Note! This message is not from "+\
+                "the \"force_matrix_reshape_flip_row_and_column\" flag!")
+                
                 tempflip = inner_loop_size
                 inner_loop_size = outer_loop_size
                 outer_loop_size = tempflip
         
-        # Reshape the data to account for repeats.
+        
         # And, save either complex or magnitude data with/without some
-        # scale and offset.
+        # scale and offset. Reshape the data to account for repeats.
         for mm in range(len(processing_volume[:])):
             fetch = processing_volume[mm]
             fetch.shape = (outer_loop_size, inner_loop_size)
+            
             if not save_complex_data:
                 processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
             else:
                 # TODO: offset and scale not included yet!
                 processing_volume[mm] = fetch
-            
+        
+        
         # Store the post-processed data.
         print("... storing processed data into the .HDF5 file.")
         # TODO: This part should cover an arbitrary number of fetched_data_arr
@@ -369,26 +377,48 @@ def save(
             if (len(resonator_freq_if_arrays_to_fft) > 1):
                 # Then store multiplexed!
                 # For every loop entry that is to be stored in this log:
-                for outer_loop_i in range(outer_loop_size):
-                    f.addEntry({
-                        (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :],
-                        (log_dict_list[1])['name']: (processing_volume[1])[outer_loop_i, :]
-                    })
+                if (not force_matrix_reshape_flip_row_and_column):
+                    for outer_loop_i in range(outer_loop_size):
+                        f.addEntry({
+                            (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :],
+                            (log_dict_list[1])['name']: (processing_volume[1])[outer_loop_i, :]
+                        })
+                else:
+                    # Flipped storage!
+                    for inner_loop_i in range(inner_loop_size):
+                        f.addEntry({
+                            (log_dict_list[0])['name']: (processing_volume[0])[:, inner_loop_i],
+                            (log_dict_list[1])['name']: (processing_volume[1])[:, inner_loop_i]
+                        })
             else:
-                for outer_loop_i in range(outer_loop_size):
-                    f.addEntry({
-                        (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :]
-                    })
+                if (not force_matrix_reshape_flip_row_and_column):
+                    for outer_loop_i in range(outer_loop_size):
+                        f.addEntry({
+                            (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :]
+                        })
+                else:
+                    # Flipped storage!
+                    for inner_loop_i in range(inner_loop_size):
+                        f.addEntry({
+                            (log_dict_list[0])['name']: (processing_volume[0])[:, inner_loop_i]
+                        })
         else:
             # TODO  I think there is no usage case where this for-loop should be here.
             #       It should be removed.
             for log_i in range(len(log_dict_list[:])):
             
                 # ... and for every loop entry that is to be stored in this log:
-                for outer_loop_i in range(outer_loop_size):
-                    f.addEntry({
-                        (log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[outer_loop_i, :]
-                    })
+                if (not force_matrix_reshape_flip_row_and_column):
+                    for outer_loop_i in range(outer_loop_size):
+                        f.addEntry({
+                            (log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[outer_loop_i, :]
+                        })
+                else:
+                    # Flipped storage!
+                    for inner_loop_i in range(inner_loop_size):
+                        f.addEntry({
+                            (log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[:, inner_loop_i]
+                        })
 
         
         # Check if the hdf5 file was created in the local directory.

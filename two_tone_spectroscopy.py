@@ -57,7 +57,7 @@ def pulsed01_flux_sweep(
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -520,7 +520,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -1056,7 +1056,7 @@ def pulsed01_power_sweep(
     control_amp_01_min = -1.0,
     control_amp_01_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -1458,7 +1458,7 @@ def pulsed12_flux_sweep(
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',

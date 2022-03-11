@@ -58,7 +58,7 @@ def t1_sweep_flux(
     coupler_bias_min = +0.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -514,7 +514,7 @@ def t1_sweep_flux_multiplexed_ro0(
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',

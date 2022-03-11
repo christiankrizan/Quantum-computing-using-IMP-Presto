@@ -422,7 +422,7 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -945,7 +945,7 @@ def oscillation12_with_coupler_bias_ro0(
     coupler_bias_min = 0.0,
     coupler_bias_max = 1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
@@ -1060,7 +1060,7 @@ def oscillation12_with_coupler_bias_ro0(
                 sync      = True,  # Sync here
             )
         
-
+        
         ''' Setup scale LUTs '''
         
         # Readout amplitude
@@ -1177,7 +1177,7 @@ def oscillation12_with_coupler_bias_ro0(
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
         
-
+        
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
         #################################
@@ -1457,7 +1457,7 @@ def oscillation12_with_coupler_bias_ro1(
     coupler_bias_min = 0.0,
     coupler_bias_max = 1.0,
     
-    save_complex_data = False,
+    save_complex_data = True,
     use_log_browser_database = True,
     axes =  {
         "x_name":   'default',
