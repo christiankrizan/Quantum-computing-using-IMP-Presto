@@ -100,7 +100,7 @@ def save(
     ext_keys,
     log_dict_list,
     
-    time_matrix,
+    time_vector,
     fetched_data_arr,
     fetched_data_scale,
     fetched_data_offset,
@@ -174,8 +174,8 @@ def save(
     
     # Get index corresponding to integration_window_start and
     # integration_window_stop respectively.
-    integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-    integration_stop_index  = np.argmin(np.abs(time_matrix - integration_window_stop ))
+    integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
+    integration_stop_index  = np.argmin(np.abs(time_vector - integration_window_stop ))
     integration_indices     = np.arange(integration_start_index, integration_stop_index)
     
     # Attempt an export to Labber's Log Browser!
@@ -206,44 +206,10 @@ def save(
         f.setTags(log_browser_tag)
         f.setUser(log_browser_user)
         
-        ###########################################
-        # COMPLEX READOUT CODE, DO NOT REMOVE YET #
-        ###########################################
-        """
-        # Construct a matrix, where every row is an integrated sampling
-        # sequence corresponding to exactly one bias point.
-        if(save_complex_data):
-            angles = np.angle(fetched_data_arr[:, 0, integration_indices], deg=False)
-            rows, cols = np.shape(angles)
-            for row in range(rows):
-                for col in range(cols):
-                    #if angles[row][col] < 0.0:
-                    angles[row][col] += (2.0 * np.pi)
-            angles_mean = np.mean(angles, axis=-1)
-            mean_len = len(angles_mean)
-            for row in range(mean_len):
-                angles_mean[row] -= (2.0 * np.pi)
-            processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) * np.exp(1j * angles_mean)
-            ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) * np.exp(1j * np.mean(angles, axis=-1))
-            ## processing_arr = np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) * np.exp(1j * np.mean(np.angle(fetched_data_arr[:, 0, integration_indices]), axis=-1))
-            
-            print("WARNING: FETCHED DATA NOT RE-SCALED AND NOT OFFSET.")
-        else:
-            ## Note! Offset added to every index in the array.
-            processing_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) +fetched_data_offset[0])*fetched_data_scale[0]
-        
-        # Reshape depending on the repeat variable, as well as the inner loop
-        # of the sequencer program.
-        processing_arr.shape = (outer_loop_size, inner_loop_size)
-        
-        # Put the array into the processing list.
-        processing_volume.append( processing_arr )
-        """
-        
         # Acquire the DFT sample frequencies contained within the
         # fetched_data_arr trace. freq_arr contains the centres of
         # the (representable) segments of the discretised frequency axis.
-        dt = time_matrix[1] - time_matrix[0]
+        dt = time_vector[1] - time_vector[0]
         num_samples = len(integration_indices)
         freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
         
@@ -364,8 +330,21 @@ def save(
             if not save_complex_data:
                 processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
             else:
-                # TODO: offset and scale not included yet!
-                processing_volume[mm] = fetch
+                assert fetched_data_offset[mm] == 0.0, "Error: complex data acquiral does currently not work with offsets. Set your offsets to 0.0 for now."
+                """# The user might have set some scale and offset.
+                # The offset would in that case have been set as
+                # a portion of the magnitude.
+                fetch_imag = np.imag(fetch)
+                fetch_real = np.real(fetch)
+                fetch_thetas = np.arctan( np.divide( fetch_imag, fetch_real) )
+                
+                # Add user-set offset (Note: can be negative; "add minus y")
+                fetch_imag += fetched_data_offset[mm] * np.sin( fetch_thetas )
+                fetch_real += fetched_data_offset[mm] * np.cos( fetch_thetas )
+                fetch = fetch_real + fetch_imag*1j"""
+                
+                # Scale with some user-set scale and store.
+                processing_volume[mm] = fetch * fetched_data_scale[mm]
         
         
         # Store the post-processed data.
@@ -460,7 +439,7 @@ def save(
             else:
                 h5f.create_dataset( (ext_keys[ff])['name'] , data = (ext_keys[ff])['values'] )
         
-        h5f.create_dataset("time_matrix",  data = time_matrix)
+        h5f.create_dataset("time_vector",  data = time_vector)
         h5f.create_dataset("fetched_data", data = fetched_data_arr)
         h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
         h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)

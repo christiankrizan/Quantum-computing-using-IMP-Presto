@@ -423,7 +423,7 @@ def randomised_benchmarking_01_single_qubit(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         
         # For RB, make a vector showing the number of Cliffords that ran.
@@ -510,8 +510,8 @@ def randomised_benchmarking_01_single_qubit(
         integration_window_stop  = 2000 * 1e-9
         
         # Get index corresponding to integration_window_start and integration_window_stop respectively
-        integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-        integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
+        integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
+        integration_stop_index = np.argmin(np.abs(time_vector - integration_window_stop))
         integr_indices = np.arange(integration_start_index, integration_stop_index)
         
         # Construct a matrix, where every row is an integrated sampling
@@ -521,8 +521,8 @@ def randomised_benchmarking_01_single_qubit(
         
         ##for i in range(num_biases):
         f.addEntry( {"fetched_data_arr_1": processing_arr[:]} )
-        # TODO: "time_matrix does not exist."
-        #f.addEntry( {"time_matrix": time_matrix} )
+        # TODO: "time_vector does not exist."
+        #f.addEntry( {"time_vector": time_vector} )
         
         # Check if the hdf5 file was created in the local directory.
         # If so, move it to the 'data' directory.

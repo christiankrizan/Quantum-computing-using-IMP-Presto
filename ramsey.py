@@ -333,7 +333,7 @@ def ramsey01_readout0(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
 
         print("Saving data")
         
@@ -408,7 +408,7 @@ def ramsey01_readout0(
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
                 temp_name   = hdf5_steps[ii]
                 temp_object = np.array( eval(hdf5_steps[ii]) )
                 temp_unit   = hdf5_steps[ii+1]
@@ -434,7 +434,7 @@ def ramsey01_readout0(
                         temp_unit = axes['z_unit']
                 ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
@@ -464,7 +464,7 @@ def ramsey01_readout0(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
@@ -836,7 +836,7 @@ def ramsey01_multiplexed_ro(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
 
         print("Saving data")
         
@@ -940,14 +940,14 @@ def ramsey01_multiplexed_ro(
             integration_window_stop  = 2000 * 1e-9
             
             # Get index corresponding to integration_window_start and integration_window_stop respectively
-            integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-            integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
+            integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
+            integration_stop_index = np.argmin(np.abs(time_vector - integration_window_stop))
             integr_indices = np.arange(integration_start_index, integration_stop_index)
             
             ## Multiplexed readout
             
             # Acquire time step needed for returning the DFT sample frequencies.
-            dt = time_matrix[1] - time_matrix[0]
+            dt = time_vector[1] - time_vector[0]
             nr_samples = len(integr_indices)
             freq_arr = np.fft.fftfreq(nr_samples, dt)
             
@@ -1333,7 +1333,7 @@ def ramsey12_readout1(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
 
         print("Saving data")
         
@@ -1413,7 +1413,7 @@ def ramsey12_readout1(
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
                 temp_name   = hdf5_steps[ii]
                 temp_object = np.array( eval(hdf5_steps[ii]) )
                 temp_unit   = hdf5_steps[ii+1]
@@ -1439,7 +1439,7 @@ def ramsey12_readout1(
                         temp_unit = axes['z_unit']
                 ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
@@ -1469,7 +1469,7 @@ def ramsey12_readout1(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],

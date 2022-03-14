@@ -282,7 +282,7 @@ def find_f_ro0_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
 
@@ -347,7 +347,15 @@ def find_f_ro0_sweep_coupler(
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))        
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
         
         # Create log lists
         log_dict_list = []
@@ -367,7 +375,7 @@ def find_f_ro0_sweep_coupler(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
@@ -567,7 +575,7 @@ def find_f_ro0_sweep_power(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")        
         
@@ -603,85 +611,55 @@ def find_f_ro0_sweep_power(
             'fetched_data_arr', "FS",
         ]
         
-        # Assert that the received keys bear (an even number of) entries,
-        # implying whether a unit is missing.
-        number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and \
-            ((len(hdf5_singles) % 2) == 0) and \
-            ((len(hdf5_logs) % 2) == 0)
-        assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units provided. Someone likely forgot a comma."
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
         
         # Stylistically rework underscored characters in the axes dict.
-        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
-            axes[axis] = axes[axis].replace('/2','/₂')
-            axes[axis] = axes[axis].replace('/3','/₃')
-            axes[axis] = axes[axis].replace('_01','₀₁')
-            axes[axis] = axes[axis].replace('_02','₀₂')
-            axes[axis] = axes[axis].replace('_03','₀₃')
-            axes[axis] = axes[axis].replace('_12','₁₂')
-            axes[axis] = axes[axis].replace('_13','₁₃')
-            axes[axis] = axes[axis].replace('_20','₂₀')
-            axes[axis] = axes[axis].replace('_23','₂₃')
-            axes[axis] = axes[axis].replace('_0','₀')
-            axes[axis] = axes[axis].replace('_1','₁')
-            axes[axis] = axes[axis].replace('_2','₂')
-            axes[axis] = axes[axis].replace('_3','₃')
-            axes[axis] = axes[axis].replace('lambda','λ')
-            axes[axis] = axes[axis].replace('Lambda','Λ')
+        axes = stylise_axes(axes)
         
-        # Build step lists, re-scale and re-unit where necessary.
+        # Create step lists
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
-                temp_name   = hdf5_steps[ii]
-                temp_object = np.array( eval(hdf5_steps[ii]) )
-                temp_unit   = hdf5_steps[ii+1]
-                if ii == 0:
-                    if (axes['x_name']).lower() != 'default':
-                        # Replace the x-axis name
-                        temp_name = axes['x_name']
-                    if axes['x_scaler'] != 1.0:
-                        # Re-scale the x-axis
-                        temp_object *= axes['x_scaler']
-                    if (axes['x_unit']).lower() != 'default':
-                        # Change the unit on the x-axis
-                        temp_unit = axes['x_unit']
-                elif ii == 2:
-                    if (axes['z_name']).lower() != 'default':
-                        # Replace the z-axis name
-                        temp_name = axes['z_name']
-                    if axes['z_scaler'] != 1.0:
-                        # Re-scale the z-axis
-                        temp_object *= axes['z_scaler']
-                    if (axes['z_unit']).lower() != 'default':
-                        # Change the unit on the z-axis
-                        temp_unit = axes['z_unit']
-                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
-                temp_object = np.array( [eval(hdf5_singles[jj])] )
-                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
-        
-        log_dict_list = []
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
         for qq in range(len(axes['y_scaler'])):
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            log_entry_name = hdf5_logs[kk]
-            # Set unit on the y-axis
-            if (axes['y_unit']).lower() != 'default':
-                temp_log_unit = axes['y_unit']
-            else:
-                temp_log_unit = hdf5_logs[kk+1]
-            if (axes['y_name']).lower() != 'default':
-                # Replace the y-axis name
-                log_entry_name = axes['y_name']
-                if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
-            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
+            if len(hdf5_logs)/2 > 1:
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
         
         # Save data!
         string_arr_to_return += save(
@@ -689,7 +667,7 @@ def find_f_ro0_sweep_power(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
@@ -1023,7 +1001,7 @@ def find_f_ro1_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -1093,7 +1071,7 @@ def find_f_ro1_sweep_coupler(
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
                 temp_name   = hdf5_steps[ii]
                 temp_object = np.array( eval(hdf5_steps[ii]) )
                 temp_unit   = hdf5_steps[ii+1]
@@ -1119,7 +1097,7 @@ def find_f_ro1_sweep_coupler(
                         temp_unit = axes['z_unit']
                 ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
@@ -1149,7 +1127,7 @@ def find_f_ro1_sweep_coupler(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
@@ -1517,7 +1495,7 @@ def find_f_ro2_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -1598,7 +1576,7 @@ def find_f_ro2_sweep_coupler(
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
                 temp_name   = hdf5_steps[ii]
                 temp_object = np.array( eval(hdf5_steps[ii]) )
                 temp_unit   = hdf5_steps[ii+1]
@@ -1624,7 +1602,7 @@ def find_f_ro2_sweep_coupler(
                         temp_unit = axes['z_unit']
                 ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
@@ -1654,7 +1632,7 @@ def find_f_ro2_sweep_coupler(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],

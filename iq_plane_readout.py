@@ -364,7 +364,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro0(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -446,7 +446,15 @@ def get_iq_for_readout_optimisation_g_e_f_ro0(
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))        
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
         
         # Create log lists
         log_dict_list = []
@@ -466,7 +474,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro0(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
@@ -830,7 +838,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro1(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -912,7 +920,15 @@ def get_iq_for_readout_optimisation_g_e_f_ro1(
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))        
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
         
         # Create log lists
         log_dict_list = []
@@ -932,7 +948,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro1(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
@@ -1296,7 +1312,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro2(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -1378,7 +1394,15 @@ def get_iq_for_readout_optimisation_g_e_f_ro2(
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))        
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
         
         # Create log lists
         log_dict_list = []
@@ -1398,7 +1422,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro2(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],

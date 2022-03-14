@@ -273,7 +273,7 @@ def oscillation01_with_coupler_bias(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -358,8 +358,8 @@ def oscillation01_with_coupler_bias(
         integration_window_stop  = 2000 * 1e-9
         
         # Get index corresponding to integration_window_start and integration_window_stop respectively
-        integration_start_index = np.argmin(np.abs(time_matrix - integration_window_start))
-        integration_stop_index = np.argmin(np.abs(time_matrix - integration_window_stop))
+        integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
+        integration_stop_index = np.argmin(np.abs(time_vector - integration_window_stop))
         integr_indices = np.arange(integration_start_index, integration_stop_index)
         
         # Construct a matrix, where every row is an integrated sampling
@@ -369,8 +369,8 @@ def oscillation01_with_coupler_bias(
         
         for i in range(num_biases):
             f.addEntry( {"fetched_data_arr": processing_arr[i,:]} )
-        # TODO: "time_matrix does not exist."
-        #f.addEntry( {"time_matrix": time_matrix} )
+        # TODO: "time_vector does not exist."
+        #f.addEntry( {"time_vector": time_vector} )
         
         # Check if the hdf5 file was created in the local directory.
         # If so, move it to the 'data' directory.
@@ -751,7 +751,7 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -864,7 +864,15 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                 if (axes['y_scaler'])[qq] != 1.0:
                     ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
                 if (axes['y_offset'])[qq] != 0.0:
-                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))        
+                    try:
+                        ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                    except IndexError:
+                        # The user is likely stepping a multiplexed readout with seperate plot exports.
+                        if (axes['y_unit'])[qq] != 'default':
+                            print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                        else:
+                            print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                        ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
             
             # Create log lists
             log_dict_list = []
@@ -884,7 +892,7 @@ def oscillation01_with_coupler_bias_multiplexed_ro(
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
                 
-                time_matrix = time_matrix,
+                time_vector = time_vector,
                 fetched_data_arr = fetched_data_arr,
                 fetched_data_scale = axes['y_scaler'],
                 fetched_data_offset = axes['y_offset'],
@@ -1259,7 +1267,7 @@ def oscillation12_with_coupler_bias_ro0(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -1340,7 +1348,7 @@ def oscillation12_with_coupler_bias_ro0(
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
                 temp_name   = hdf5_steps[ii]
                 temp_object = np.array( eval(hdf5_steps[ii]) )
                 temp_unit   = hdf5_steps[ii+1]
@@ -1366,7 +1374,7 @@ def oscillation12_with_coupler_bias_ro0(
                         temp_unit = axes['z_unit']
                 ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
@@ -1396,7 +1404,7 @@ def oscillation12_with_coupler_bias_ro0(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
@@ -1765,7 +1773,7 @@ def oscillation12_with_coupler_bias_ro1(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
         
@@ -1846,7 +1854,7 @@ def oscillation12_with_coupler_bias_ro1(
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
                 temp_name   = hdf5_steps[ii]
                 temp_object = np.array( eval(hdf5_steps[ii]) )
                 temp_unit   = hdf5_steps[ii+1]
@@ -1872,7 +1880,7 @@ def oscillation12_with_coupler_bias_ro1(
                         temp_unit = axes['z_unit']
                 ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
@@ -1902,7 +1910,7 @@ def oscillation12_with_coupler_bias_ro1(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],

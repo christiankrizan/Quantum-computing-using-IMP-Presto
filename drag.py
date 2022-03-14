@@ -347,7 +347,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        time_matrix, fetched_data_arr = pls.get_store_data()
+        time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
 
@@ -427,7 +427,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         # Build step lists, re-scale and re-unit where necessary.
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_matrix'):
+            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
                 temp_name   = hdf5_steps[ii]
                 temp_object = np.array( eval(hdf5_steps[ii]) )
                 temp_unit   = hdf5_steps[ii+1]
@@ -453,7 +453,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
                         temp_unit = axes['z_unit']
                 ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_matrix'):
+            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
                 temp_object = np.array( [eval(hdf5_singles[jj])] )
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
@@ -483,7 +483,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
             
-            time_matrix = time_matrix,
+            time_vector = time_vector,
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
