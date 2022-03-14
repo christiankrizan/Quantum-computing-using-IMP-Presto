@@ -1,9 +1,9 @@
-#####################################################################################
+#############################################################################################
 #   Creative Commons Attribution Non Commercial Share Alike 4.0 International
 #   CC-BY-NC-SA-4.0
 #   https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
-#   https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/upload/main
-#####################################################################################
+#   https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/blob/master/LICENSE
+#############################################################################################
 
 from presto import pulsed
 from presto.utils import sin2, get_sourcecode
