@@ -454,7 +454,7 @@ def save(
                 h5f.create_dataset( (ext_keys[ff])['name'] , data = (ext_keys[ff])['values'] )
         
         h5f.create_dataset("time_vector",  data = time_vector)
-        #h5f.create_dataset("fetched_data", data = fetched_data_arr)
+        h5f.create_dataset("fetched_data", data = fetched_data_arr)
         h5f.create_dataset("processed_data", data = processing_volume)
         h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
         h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)
