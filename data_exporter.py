@@ -147,7 +147,7 @@ def save(
     # Prepare path names needed for creating the folder tree.
     # First, find the root directory of whatever is executing the calling script.
     if not ('QPU interfaces' in current_dir):
-        raise OSError("The log browser export was called from a script not residing within a QPU interfaces folder. The save action was halted before finishing.")    
+        raise OSError("The log browser export was called from a script not residing within a QPU interfaces folder. The save action was halted before finishing.")
     call_root = current_dir.split('QPU interfaces',1)[0]
     data_folder_path = os.path.join(call_root, 'Data output folder')
     path1 = os.path.join(data_folder_path, year_num)
@@ -253,10 +253,12 @@ def save(
         processing_volume = []
         for _item in integration_indices_list:
             if len(_item) <= 1:
+                print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you should also expect a weird offset on your Y-axis.") # TODO
                 resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples
                 processing_volume.append( 2 * resp_fft[:, _item[0]] )
             else:
-                print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.")
+                print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.") # TODO
+                print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you should also expect a weird offset on your Y-axis.") # TODO
                 return_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) +fetched_data_offset[0])*fetched_data_scale[0]
                 
                 ## TODO: The commented part below is not finished. ##
@@ -330,22 +332,30 @@ def save(
             if not save_complex_data:
                 processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
             else:
-                assert fetched_data_offset[mm] == 0.0, "Error: complex data acquiral does currently not work with offsets. Set your offsets to 0.0 for now."
-                """# The user might have set some scale and offset.
+                # The user might have set some scale and offset.
                 # The offset would in that case have been set as
                 # a portion of the magnitude.
                 fetch_imag = np.imag(fetch)
                 fetch_real = np.real(fetch)
-                fetch_thetas = np.arctan( np.divide( fetch_imag, fetch_real) )
+                #fetch_thetas = np.arctan2( fetch_imag, fetch_real ) # Keep in mind the quadrants! np.arctan2 gives the same values as np.angle()
+                fetch_thetas = np.angle( fetch )
                 
                 # Add user-set offset (Note: can be negative; "add minus y")
                 fetch_imag += fetched_data_offset[mm] * np.sin( fetch_thetas )
                 fetch_real += fetched_data_offset[mm] * np.cos( fetch_thetas )
-                fetch = fetch_real + fetch_imag*1j"""
+                fetch = fetch_real + fetch_imag*1j
                 
                 # Scale with some user-set scale and store.
                 processing_volume[mm] = fetch * fetched_data_scale[mm]
         
+        # Did the user request to flip the processing volume?
+        # I.e. that every new repeat in some measurement will be a column
+        # instead of a row in the processing volume? Then fix this.
+        # Every data file is either way always stored so that
+        # one row = one repeat.
+        if force_matrix_reshape_flip_row_and_column:
+            for ee in range(len(processing_volume[:])):
+                processing_volume[ee] = (processing_volume[ee]).transpose()
         
         # Store the post-processed data.
         print("... storing processed data into the .HDF5 file.")
@@ -356,31 +366,35 @@ def save(
             if (len(resonator_freq_if_arrays_to_fft) > 1):
                 # Then store multiplexed!
                 # For every loop entry that is to be stored in this log:
-                if (not force_matrix_reshape_flip_row_and_column):
-                    for outer_loop_i in range(outer_loop_size):
-                        f.addEntry({
-                            (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :],
-                            (log_dict_list[1])['name']: (processing_volume[1])[outer_loop_i, :]
-                        })
-                else:
-                    # Flipped storage!
-                    for inner_loop_i in range(inner_loop_size):
-                        f.addEntry({
-                            (log_dict_list[0])['name']: (processing_volume[0])[:, inner_loop_i],
-                            (log_dict_list[1])['name']: (processing_volume[1])[:, inner_loop_i]
-                        })
+                ##if (not force_matrix_reshape_flip_row_and_column):
+                    ##for outer_loop_i in range(outer_loop_size):
+                """ TODO This here is the new method. This storage subroutine should swap entirely to this loop_i method."""
+                for loop_i in range(len( (processing_volume[0])[:] )):
+                    f.addEntry({
+                        (log_dict_list[0])['name']: (processing_volume[0])[loop_i, :],
+                        (log_dict_list[1])['name']: (processing_volume[1])[loop_i, :]
+                    })
+                ##else:
+                ##    # Flipped storage!
+                ##    for inner_loop_i in range(inner_loop_size):
+                ##        f.addEntry({
+                ##            (log_dict_list[0])['name']: (processing_volume[0])[:, inner_loop_i],
+                ##            (log_dict_list[1])['name']: (processing_volume[1])[:, inner_loop_i]
+                ##        })
             else:
-                if (not force_matrix_reshape_flip_row_and_column):
-                    for outer_loop_i in range(outer_loop_size):
-                        f.addEntry({
-                            (log_dict_list[0])['name']: (processing_volume[0])[outer_loop_i, :]
-                        })
-                else:
-                    # Flipped storage!
-                    for inner_loop_i in range(inner_loop_size):
-                        f.addEntry({
-                            (log_dict_list[0])['name']: (processing_volume[0])[:, inner_loop_i]
-                        })
+                ##if (not force_matrix_reshape_flip_row_and_column):
+                ##    for outer_loop_i in range(outer_loop_size):
+                """ TODO This here is the new method. This storage subroutine should swap entirely to this loop_i method."""
+                for loop_i in range(len( (processing_volume[0])[:] )):
+                    f.addEntry({
+                        (log_dict_list[0])['name']: (processing_volume[0])[loop_i, :]
+                    })
+                ##else:
+                ##    # Flipped storage!
+                ##    for inner_loop_i in range(inner_loop_size):
+                ##        f.addEntry({
+                ##            (log_dict_list[0])['name']: (processing_volume[0])[:, inner_loop_i]
+                ##        })
         else:
             # TODO  I think there is no usage case where this for-loop should be here.
             #       It should be removed.
@@ -427,7 +441,7 @@ def save(
     save_path_h5py = os.path.join(path3, savefile_string_h5py)
     
     # Create a H5PY-styled hdf5 file.
-    with h5py.File(save_path_h5py, "w") as h5f:
+    with h5py.File(save_path_h5py, 'w') as h5f:
         if source_code_of_executing_file != '':
             datatype = h5py.string_dtype(encoding='utf-8')
             dataset  = h5f.create_dataset("saved_source_code", (len(source_code_of_executing_file), ), datatype)
@@ -440,7 +454,8 @@ def save(
                 h5f.create_dataset( (ext_keys[ff])['name'] , data = (ext_keys[ff])['values'] )
         
         h5f.create_dataset("time_vector",  data = time_vector)
-        h5f.create_dataset("fetched_data", data = fetched_data_arr)
+        #h5f.create_dataset("fetched_data", data = fetched_data_arr)
+        h5f.create_dataset("processed_data", data = processing_volume)
         h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
         h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)
         

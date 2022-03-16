@@ -25,7 +25,7 @@ from data_exporter import \
     save
 
 
-def get_iq_for_readout_optimisation_g_e_f_ro0(
+def get_iq_data_for_readout_optimisation_g_e_f_ro0(
     ip_address,
     ext_clk_present,
     
@@ -373,7 +373,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro0(
         ###########################################
         
         ## Create a hacky-like array structure for storage's sake.
-        prepared_qubit_states = [1, 2, 3]
+        prepared_qubit_states = [0, 1, 2]
         shot_arr = np.linspace(  \
             1,                   \
             num_shots_per_state, \
@@ -499,7 +499,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro0(
     return string_arr_to_return
     
 
-def get_iq_for_readout_optimisation_g_e_f_ro1(
+def get_iq_data_for_readout_optimisation_g_e_f_ro1(
     ip_address,
     ext_clk_present,
     
@@ -847,7 +847,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro1(
         ###########################################
         
         ## Create a hacky-like array structure for storage's sake.
-        prepared_qubit_states = [1, 2, 3]
+        prepared_qubit_states = [0, 1, 2]
         shot_arr = np.linspace(  \
             1,                   \
             num_shots_per_state, \
@@ -973,7 +973,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro1(
     return string_arr_to_return
     
 
-def get_iq_for_readout_optimisation_g_e_f_ro2(
+def get_iq_data_for_readout_optimisation_g_e_f_ro2(
     ip_address,
     ext_clk_present,
     
@@ -1321,7 +1321,7 @@ def get_iq_for_readout_optimisation_g_e_f_ro2(
         ###########################################
         
         ## Create a hacky-like array structure for storage's sake.
-        prepared_qubit_states = [1, 2, 3]
+        prepared_qubit_states = [0, 1, 2]
         shot_arr = np.linspace(  \
             1,                   \
             num_shots_per_state, \
