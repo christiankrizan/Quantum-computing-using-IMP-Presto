@@ -366,53 +366,23 @@ def save(
             if (len(resonator_freq_if_arrays_to_fft) > 1):
                 # Then store multiplexed!
                 # For every loop entry that is to be stored in this log:
-                ##if (not force_matrix_reshape_flip_row_and_column):
-                    ##for outer_loop_i in range(outer_loop_size):
-                """ TODO This here is the new method. This storage subroutine should swap entirely to this loop_i method."""
                 for loop_i in range(len( (processing_volume[0])[:] )):
                     f.addEntry({
                         (log_dict_list[0])['name']: (processing_volume[0])[loop_i, :],
                         (log_dict_list[1])['name']: (processing_volume[1])[loop_i, :]
                     })
-                ##else:
-                ##    # Flipped storage!
-                ##    for inner_loop_i in range(inner_loop_size):
-                ##        f.addEntry({
-                ##            (log_dict_list[0])['name']: (processing_volume[0])[:, inner_loop_i],
-                ##            (log_dict_list[1])['name']: (processing_volume[1])[:, inner_loop_i]
-                ##        })
             else:
-                ##if (not force_matrix_reshape_flip_row_and_column):
-                ##    for outer_loop_i in range(outer_loop_size):
-                """ TODO This here is the new method. This storage subroutine should swap entirely to this loop_i method."""
                 for loop_i in range(len( (processing_volume[0])[:] )):
                     f.addEntry({
                         (log_dict_list[0])['name']: (processing_volume[0])[loop_i, :]
                     })
-                ##else:
-                ##    # Flipped storage!
-                ##    for inner_loop_i in range(inner_loop_size):
-                ##        f.addEntry({
-                ##            (log_dict_list[0])['name']: (processing_volume[0])[:, inner_loop_i]
-                ##        })
         else:
-            # TODO  I think there is no usage case where this for-loop should be here.
-            #       It should be removed.
+            # TODO This else-case must be removed.
             for log_i in range(len(log_dict_list[:])):
-            
-                # ... and for every loop entry that is to be stored in this log:
-                if (not force_matrix_reshape_flip_row_and_column):
-                    for outer_loop_i in range(outer_loop_size):
-                        f.addEntry({
-                            (log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[outer_loop_i, :]
-                        })
-                else:
-                    # Flipped storage!
-                    for inner_loop_i in range(inner_loop_size):
-                        f.addEntry({
-                            (log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[:, inner_loop_i]
-                        })
-
+                for loop_i in range(len( (processing_volume[0])[:] )):
+                    f.addEntry({
+                        (log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[loop_i, :]
+                    })
         
         # Check if the hdf5 file was created in the local directory.
         # This would happen if you change use_data to False in the

@@ -31,7 +31,11 @@ def initiate_discriminator_settings_file(
     json_dict = dict()
     for ii in range(no_resonators_qubit_pairs):
         json_dict.update(
-            {'resonator_'+str(ii): dict( qubit_state_0_centre_real = 0, qubit_state_0_centre_imag = 0 )}
+            {'resonator_'+str(ii): 
+                {'readout_state_0':
+                    dict( qubit_state_0_centre_real = 0, qubit_state_0_centre_imag = 0 )
+                }
+            }
         )
     
     # Build JSON file.
@@ -41,7 +45,8 @@ def initiate_discriminator_settings_file(
 
 def calculate_and_update_resonator_value(
     path_to_data,
-    resonator_transmon_pair,
+    resonator_transmon_pair = None,
+    readout_state = None,
     ):
     ''' Update the discrimination.json file based on supplied data.
     '''
@@ -54,17 +59,55 @@ def calculate_and_update_resonator_value(
     with h5py.File(os.path.abspath(path_to_data), 'r') as h5f:
         processing_volume = h5f["processed_data"][()]
         prepared_qubit_states = h5f["prepared_qubit_states"][()]
-        ##    '''repetition_delay = h5f.attrs["repetition_delay"] TODO STRING SAMPLE'''
+        
+        # Automatically establish what state was gathered?
+        if readout_state != None:
+            # No: use the user-provided readout state.
+            readout_state = int(readout_state)
+        else:
+            # Yes: then find out the state from the read file.
+            readout_state_found = False
+            readout_state_numerical = 0
+            for state_char in ['g','e','f','h']:
+                if not readout_state_found:
+                    try:
+                        readout_state_frequency = h5f.attrs["readout_freq_"+state_char+"_state"]
+                        readout_state_found = True
+                    except KeyError:
+                        readout_state_numerical += 1
+            assert readout_state_found, "Error: could not establish what state the readout was done in. States |g⟩, |e⟩, |f⟩, |h⟩ were considered."
+            readout_state = int(readout_state_numerical)
         ''' TODO: Make sure that when collecting IQ plane data,
         to what extent does it matter that the IQ data for the individual
         state centres have been collected using single-resonator readout?
         Should there be a step here where values for several resonators
         are picked out?'''
+        
+        # Automatically establish what resonator-transmon pair was used?
+        if resonator_transmon_pair != None:
+            # No: use the user-provided readout state.
+            resonator_transmon_pair = int(resonator_transmon_pair)
+        else:
+            # Yes: then get current resonator-transmon-pair from the read file.
+            try:
+                resonator_transmon_pair = h5f.attrs["resonator_transmon_pair_id_number"]
+            except KeyError:
+                raise KeyError( \
+                    "Fatal error! The function for updating the "            +\
+                    "discriminator settings was called without specifying "  +\
+                    "what resonator-transmon pair the data "                 +\
+                    "in the supplied filepath belongs to. "                  +\
+                    "But, the data file at the supplied filepath "           +\
+                    "contains no explicit information regarding what "       +\
+                    "resonator-transmon pair was used for taking the data. " +\
+                    "Check the resonator frequency of this file, and "       +\
+                    "then manually call this function again with the "       +\
+                    "resonator-transmon pair argument correctly set.")
     
     # Analyse. NOTE! For now, only a single resonator is analysed
     # from the processing volume. This is likely a TODO.
     centre = []
-    for row in range((processing_volume[0])[:]):
+    for row in range(len( (processing_volume[0])[:] )):
         # Run a complex mean on all complex values.
         curr_data  = (processing_volume[0])[row,:]
         centre.append( np.mean(curr_data) )
@@ -102,22 +145,36 @@ def calculate_and_update_resonator_value(
         ////////(%%%%#%%%             (((#(/*//*...         %%%%%%%%%%
         //////(#%%%%%#%%/                                   %%%%%%%%%%
         ///((#%%%%%%%%%%#                                  %%%%%%%%%%%
-        ((#%%%%%%%%%%%%%%                                 *%%%%%%%%'''
-        
-        ''' JASON! '''
+        ((#%%%%%%%%%%%%%%                JASON!           *%%%%%%%%'''
     
     # Save this centre for this state X for resonator Y in the JSON.
-    for jj in range(prepared_qubit_states):
-        ## TODO: Here, I am not appending dicts properly for a given resonator.
-        ##loaded_json_data['resonator_'+str(resonator_transmon_pair)] = \
-        ##    { \
-        ##        'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_real' : centre[jj].real, \
-        ##        'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_imag' : centre[jj].imag  \
-        ##    }
+    # Update missing keys if any.
+    for jj in range(len(prepared_qubit_states)):
+        # The key might be non-existant. Then do whatever we want.
+        try:
+            curr_dict = (loaded_json_data['resonator_'+str(resonator_transmon_pair)])['readout_state_'+str(readout_state)]
+            # The key existed. Then update. Remember that the key will update.
+            # There is no need to re-save data into the loaded_json_data array.
+            curr_dict.update( \
+                { \
+                    'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_real' : centre[jj].real, \
+                    'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_imag' : centre[jj].imag  \
+                }
+            )
+        except KeyError:
+            top_dict = loaded_json_data['resonator_'+str(resonator_transmon_pair)]
+            top_dict.update( \
+                {'readout_state_'+str(readout_state) : \
+                    {
+                        'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_real' : centre[jj].real, \
+                        'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_imag' : centre[jj].imag  \
+                    }
+                }
+            )
     
     # Save updated JSON.
     with open(full_path_to_discriminator_settings_json, "w") as fjson:
-        json.dump(loaded_json_data, fjson)
+        json.dump(loaded_json_data, fjson, indent=4)
     
     
 def get_file_path_of_discrimination_json():

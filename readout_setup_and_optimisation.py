@@ -55,6 +55,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro0(
     
     num_averages,
     num_shots_per_state,
+    resonator_transmon_pair_id_number,
     
     use_log_browser_database = True,
     axes =  {
@@ -413,6 +414,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro0(
             
             'num_averages', "",
             'num_shots_per_state', "",
+            'resonator_transmon_pair_id_number', "",
         ]
         hdf5_logs = [
             'fetched_data_arr', "FS",
@@ -529,6 +531,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro1(
     
     num_averages,
     num_shots_per_state,
+    resonator_transmon_pair_id_number,
     
     use_log_browser_database = True,
     axes =  {
@@ -544,7 +547,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro1(
         "z_unit":   'default',
         }
     ):
-    ''' Perform single-shot readouts for gauging where in the IQ plane
+    ''' Perform readout in |1> for gauging where in the real-imaginary-plane
         one finds the |g>, |e> and |f> states.
     '''
     
@@ -887,6 +890,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro1(
             
             'num_averages', "",
             'num_shots_per_state', "",
+            'resonator_transmon_pair_id_number', "",
         ]
         hdf5_logs = [
             'fetched_data_arr', "FS",
@@ -964,7 +968,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro1(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = 'ro0_g_e_f',
+            append_to_log_name_before_timestamp = 'ro1_g_e_f',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             force_matrix_reshape_flip_row_and_column = True,
@@ -1003,6 +1007,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro2(
     
     num_averages,
     num_shots_per_state,
+    resonator_transmon_pair_id_number,
     
     use_log_browser_database = True,
     axes =  {
@@ -1018,7 +1023,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro2(
         "z_unit":   'default',
         }
     ):
-    ''' Perform readout in |0> for gauging where in the real-imaginary-plane
+    ''' Perform readout in |2> for gauging where in the real-imaginary-plane
         one finds the |g>, |e> and |f> states.
     '''
     
@@ -1361,6 +1366,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro2(
             
             'num_averages', "",
             'num_shots_per_state', "",
+            'resonator_transmon_pair_id_number', "",
         ]
         hdf5_logs = [
             'fetched_data_arr', "FS",
@@ -1438,7 +1444,7 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro2(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = 'ro0_g_e_f',
+            append_to_log_name_before_timestamp = 'ro2_g_e_f',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             force_matrix_reshape_flip_row_and_column = True,
