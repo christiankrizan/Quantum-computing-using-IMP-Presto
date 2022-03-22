@@ -23,9 +23,291 @@ from data_exporter import \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save
+from data_discriminator import calculate_and_update_resonator_value
 
 
-def readout_optimisation_g_e_f(
+def perform_readout_optimisation_g_e_f(
+    ip_address,
+    ext_clk_present,
+    
+    readout_stimulus_port,
+    readout_sampling_port,
+    readout_amp,
+    readout_duration,
+    
+    sampling_duration,
+    readout_sampling_delay,
+    repetition_delay,
+    integration_window_start,
+    integration_window_stop,
+    
+    control_port,
+    control_amp_01,
+    control_freq_01,
+    control_duration_01,
+    control_amp_12,
+    control_freq_12,
+    control_duration_12,
+    
+    coupler_dc_port,
+    coupler_dc_bias,
+    added_delay_for_bias_tee,
+    
+    num_averages,
+    num_shots_per_state,
+    resonator_transmon_pair_id_number,
+    
+    readout_freq_start,
+    readout_freq_stop,
+    num_readout_freq_steps,
+    
+    use_log_browser_database = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        },
+    
+    my_weight_given_to_area_spanned_by_qubit_states = 0.0,
+    my_weight_given_to_mean_distance_between_all_states = 1.0,
+    my_weight_given_to_hamiltonian_path_perimeter = 0.0
+    ):
+    ''' Perform complex domain readout optimisation. This function will
+        generate one complex-plane dataset per resonator frequency step.
+        The final, stored plot, will be the "winning" plot that had the
+        optimum readout given the user's settings.
+    '''
+    
+    # Declare resonator frequency stepping array.
+    resonator_freq_arr = np.linspace(readout_freq_start, readout_freq_stop, num_readout_freq_steps)
+    
+    # All output complex data plots will be stored for reference later on.
+    list_of_current_complex_datasets = []
+    
+    # Acquire all complex data.
+    for curr_ro_freq in resonator_freq_arr:
+        current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
+            ip_address = ip_address,
+            ext_clk_present = ext_clk_present,
+            
+            readout_stimulus_port = readout_stimulus_port,
+            readout_sampling_port = readout_sampling_port,
+            readout_freq = curr_ro_freq,
+            readout_amp = readout_amp,
+            readout_duration = readout_duration,
+            
+            sampling_duration = sampling_duration,
+            readout_sampling_delay = readout_sampling_delay,
+            repetition_delay = repetition_delay,
+            integration_window_start = integration_window_start,
+            integration_window_stop = integration_window_stop,
+            
+            control_port = control_port,
+            control_amp_01 = control_amp_01,
+            control_freq_01 = control_freq_01,
+            control_duration_01 = control_duration_01,
+            control_amp_12 = control_amp_12,
+            control_freq_12 = control_freq_12,
+            control_duration_12 = control_duration_12,
+            
+            coupler_dc_port = coupler_dc_port,
+            coupler_dc_bias = coupler_dc_bias,
+            added_delay_for_bias_tee = added_delay_for_bias_tee,
+            
+            num_averages = num_averages,
+            num_shots_per_state = num_shots_per_state,
+            resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
+            
+            use_log_browser_database = use_log_browser_database,
+            axes = axes
+        )
+        
+        # current_complex_dataset will be a char array. Convert to string.
+        current_complex_dataset = "".join(current_complex_dataset)
+        
+        # Analyse the complex dataset.
+        area_spanned, mean_state_distance, hamiltonian_path_perimeter = calculate_and_update_resonator_value( os.path.abspath(current_complex_dataset) )
+        
+        # Append what dataset was built
+        list_of_current_complex_datasets.append([current_complex_dataset, area_spanned, mean_state_distance, hamiltonian_path_perimeter])
+        
+    # We now have a dataset, showing resonator frequencies vs. area spanned
+    # by the states, the mean distance between states in the complex plane,
+    # and the Hamiltonian path perimeter.
+    list_of_current_complex_datasets = np.array(list_of_current_complex_datasets)
+    
+    # Let's find the winning set for all entries.
+    biggest_area_idx                = np.argmax( list_of_current_complex_datasets[:,1] )
+    biggest_mean_state_distance_idx = np.argmax( list_of_current_complex_datasets[:,2] )
+    biggest_perimeter_idx           = np.argmax( list_of_current_complex_datasets[:,3] )
+    
+    if (biggest_area_idx == biggest_mean_state_distance_idx) and (biggest_area_idx == biggest_perimeter_idx):
+        print("The most optimal readout is seen in \""+list_of_current_complex_datasets[biggest_area_idx,0]+"\". This readout wins in every category." )
+    else:
+        print( "\""+list_of_current_complex_datasets[biggest_area_idx,0]+"\" had the biggest spanned area." )
+        print( "\""+list_of_current_complex_datasets[biggest_mean_state_distance_idx,0]+"\" had the biggest mean intra-state distance." )
+        print( "\""+list_of_current_complex_datasets[biggest_perimeter_idx,0]+"\" had the biggest perimeter." )
+    
+    # Now applying weights, to figure out the optimal.
+    weighted_area = list_of_current_complex_datasets[biggest_area_idx,1] * my_weight_given_to_area_spanned_by_qubit_states
+    weighted_mean_distance = list_of_current_complex_datasets[biggest_mean_state_distance_idx,2] * my_weight_given_to_mean_distance_between_all_states
+    weighted_perimeter = list_of_current_complex_datasets[biggest_perimeter_idx,3] * my_weight_given_to_hamiltonian_path_perimeter
+    optimal_choice_idx = np.max([weighted_area, weighted_mean_distance, weighted_perimeter])
+    
+    # The winner has been decided.
+    print("Winner! "+str(list_of_current_complex_datasets[optimal_choice_idx]))
+    
+    # Load the complex data from the winner.
+    ## TODO
+    
+    # Export the complex data (in a Log Browser compatible format).
+    # Idea: use the .save() feature.
+    ## TODO See below
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
+    # Declare arrays and scalars that will be used for the export.
+    analysed_areas = list_of_current_complex_datasets[:,1]
+    
+    assert 1 == 0, "Not finished, TODO"
+    
+    print("Saving data")
+    
+    ###########################################
+    ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
+    ###########################################
+    
+    """# Data to be stored.
+    hdf5_steps = [
+        'shot_arr', "",
+        'prepared_qubit_states', "",
+    ]
+    hdf5_singles = [
+        'readout_stimulus_port', "",
+        'readout_sampling_port', "",
+        'readout_freq', "Hz",
+        'readout_amp', "FS",
+        'readout_duration', "s",
+        
+        'sampling_duration', "s",
+        'readout_sampling_delay', "s",
+        'repetition_delay', "s",
+        'integration_window_start', "s",
+        'integration_window_stop', "s",
+        
+        'control_port', "",
+        'control_amp_01', "FS",
+        'control_freq_01', "Hz",
+        'control_duration_01', "s",
+        
+        'control_amp_12', "FS",
+        'control_freq_12', "Hz",
+        'control_duration_12', "s",
+        
+        #'coupler_dc_port', "",
+        'coupler_dc_bias', "FS",
+        'added_delay_for_bias_tee', "s",
+        
+        'num_averages', "",
+        'num_shots_per_state', "",
+        'resonator_transmon_pair_id_number', "",
+    ]
+    hdf5_logs = [
+        'fetched_data_arr', "FS",
+    ]
+    
+    # Ensure the keyed elements above are valid.
+    assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+        "Error: non-even amount of keys and units provided. " + \
+        "Someone likely forgot a comma."
+    
+    # Stylistically rework underscored characters in the axes dict.
+    axes = stylise_axes(axes)
+    
+    # Create step lists
+    ext_keys = []
+    for ii in range(0,len(hdf5_steps),2):
+        ext_keys.append( get_dict_for_step_list(
+            step_entry_name   = hdf5_steps[ii],
+            step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+            step_entry_unit   = hdf5_steps[ii+1],
+            axes = axes,
+            axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+        ))
+    for jj in range(0,len(hdf5_singles),2):
+        ext_keys.append( get_dict_for_step_list(
+            step_entry_name   = hdf5_singles[jj],
+            step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+            step_entry_unit   = hdf5_singles[jj+1],
+        ))
+    for qq in range(len(axes['y_scaler'])):
+        if (axes['y_scaler'])[qq] != 1.0:
+            ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+        if (axes['y_offset'])[qq] != 0.0:
+            try:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+            except IndexError:
+                # The user is likely stepping a multiplexed readout with seperate plot exports.
+                if (axes['y_unit'])[qq] != 'default':
+                    print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                else:
+                    print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+    
+    # Create log lists
+    log_dict_list = []
+    for kk in range(0,len(hdf5_logs),2):
+        if len(hdf5_logs)/2 > 1:
+            hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+        log_dict_list.append( get_dict_for_log_list(
+            log_entry_name = hdf5_logs[kk],
+            unit           = hdf5_logs[kk+1],
+            log_is_complex = save_complex_data,
+            axes = axes
+        ))
+    
+    # Save data!
+    string_arr_to_return += save(
+        timestamp = get_timestamp_string(),
+        ext_keys = ext_keys,
+        log_dict_list = log_dict_list,
+        
+        time_vector = time_vector,
+        fetched_data_arr = fetched_data_arr,
+        fetched_data_scale = axes['y_scaler'],
+        fetched_data_offset = axes['y_offset'],
+        resonator_freq_if_arrays_to_fft = [],
+        
+        path_to_script = os.path.realpath(__file__),
+        use_log_browser_database = use_log_browser_database,
+        
+        integration_window_start = integration_window_start,
+        integration_window_stop = integration_window_stop,
+        inner_loop_size = len(prepared_qubit_states),
+        outer_loop_size = num_shots_per_state,
+        
+        save_complex_data = save_complex_data,
+        source_code_of_executing_file = '', #get_sourcecode(__file__),
+        append_to_log_name_before_timestamp = '_g_e_f',
+        append_to_log_name_after_timestamp  = '',
+        select_resonator_for_single_log_export = '',
+        force_matrix_reshape_flip_row_and_column = True,
+    )
+    
+    return string_arr_to_return"""
+    
+    
+    
+    
+def get_complex_data_for_readout_optimisation_g_e_f(
     ip_address,
     ext_clk_present,
     
@@ -71,8 +353,8 @@ def readout_optimisation_g_e_f(
         "z_unit":   'default',
         }
     ):
-    ''' Perform readout in |2> for gauging where in the real-imaginary-plane
-        one finds the |g>, |e> and |f> states.
+    ''' Perform readout for whatever frequency, for gauging where in the
+        real-imaginary-plane one finds the |g>, |e> and |f> states.
     '''
     
     # This measurement requires complex data. The user is not given a choice.
@@ -127,7 +409,7 @@ def readout_optimisation_g_e_f(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq_f_state,
+            freq      = readout_freq,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             sync      = False,
@@ -300,9 +582,9 @@ def readout_optimisation_g_e_f(
             # Re-apply the coupler bias tone.
             pls.output_pulse(T, coupler_bias_tone)
         
-        ''' State |0>, reading out in |0> '''
+        ''' State |0> '''
         
-        # Read out the ground state
+        # Read out, while the qubit is in |0>
         pls.reset_phase(T, readout_stimulus_port)
         pls.output_pulse(T, readout_pulse)
         pls.store(T + readout_sampling_delay) # Sampling window
@@ -311,9 +593,9 @@ def readout_optimisation_g_e_f(
         # Wait for decay
         T += repetition_delay
         
-        ''' State |1>, reading out in |0> '''
+        ''' State |1> '''
         
-        # Read out the resonator in |0>, but move the qubit to |1>
+        # Move the qubit to |1>
         pls.reset_phase(T, control_port)
         pls.output_pulse(T, control_pulse_pi_01)
         T += control_duration_01
@@ -327,9 +609,9 @@ def readout_optimisation_g_e_f(
         # Wait for decay
         T += repetition_delay
         
-        ''' State |2>, reading out in |0> '''
+        ''' State |2> '''
         
-        # Read out the resonator in |0>, but move the qubit to |2>
+        # Move the qubit to |2>:
         # First, move to |1>
         pls.reset_phase(T, control_port)
         pls.output_pulse(T, control_pulse_pi_01)
@@ -389,7 +671,7 @@ def readout_optimisation_g_e_f(
         hdf5_singles = [
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
-            'readout_freq_f_state', "Hz",
+            'readout_freq', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
             
@@ -492,7 +774,7 @@ def readout_optimisation_g_e_f(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = 'ro2_g_e_f',
+            append_to_log_name_before_timestamp = '_g_e_f',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             force_matrix_reshape_flip_row_and_column = True,
@@ -501,7 +783,13 @@ def readout_optimisation_g_e_f(
     return string_arr_to_return
 
 
-def get_iq_data_for_readout_optimisation_g_e_f_ro0(
+
+# ##################################################### #
+'''  The following three defs have been uncommented,  '''
+''' since they have been superceded by the first def. '''
+# ##################################################### #
+
+"""def get_complex_data_for_readout_optimisation_g_e_f_ro0(
     ip_address,
     ext_clk_present,
     
@@ -976,8 +1264,9 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro0(
     
     return string_arr_to_return
     
+"""
 
-def get_iq_data_for_readout_optimisation_g_e_f_ro1(
+"""def get_complex_data_for_readout_optimisation_g_e_f_ro1(
     ip_address,
     ext_clk_present,
     
@@ -1452,8 +1741,9 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro1(
     
     return string_arr_to_return
     
+"""
 
-def get_iq_data_for_readout_optimisation_g_e_f_ro2(
+"""def get_complex_data_for_readout_optimisation_g_e_f_ro2(
     ip_address,
     ext_clk_present,
     
@@ -1927,4 +2217,4 @@ def get_iq_data_for_readout_optimisation_g_e_f_ro2(
         )
     
     return string_arr_to_return
-    
+"""

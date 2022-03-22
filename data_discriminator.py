@@ -15,7 +15,7 @@ import numpy as np
 from datetime import datetime
 
 def initiate_discriminator_settings_file(
-    no_resonators_qubit_pairs = 1
+    initial_resonator_qubit_pair = 0
     ):
     '''Assuming one resonator per qubit, make a discriminator settings file.'''
     
@@ -28,16 +28,14 @@ def initiate_discriminator_settings_file(
         open(full_path_to_discriminator_settings_json, 'a').close()
     
     # Build the JSON (dict template of dicts) that will be saved.
-    json_dict = dict()
-    for ii in range(no_resonators_qubit_pairs):
-        json_dict.update(
-            {'resonator_'+str(ii): 
-                {'qubit_states':
-                    dict( qubit_state_0_centre_real = 0, qubit_state_0_centre_imag = 0 )
-                }
+    json_dict = dict()    
+    json_dict.update(
+        {'resonator_'+str(initial_resonator_qubit_pair): 
+            {'qubit_states':
+                dict( qubit_state_0_centre_real = 0, qubit_state_0_centre_imag = 0 )
             }
-            
-        )
+        }
+    )
     
     # Build JSON file.
     with open(full_path_to_discriminator_settings_json, 'w') as json_file:
@@ -109,7 +107,7 @@ def calculate_and_update_resonator_value(
         centre.append( np.mean(curr_data) )
     
     # Get JSON.
-    loaded_json_data = load_discriminator_settings()
+    loaded_json_data = load_discriminator_settings(resonator_transmon_pair)
     
     # Save this centre for this state X for resonator Y in the JSON.
     # Update missing keys if any.
@@ -144,8 +142,9 @@ def calculate_and_update_resonator_value(
     # Save updated JSON.
     save_discriminator_settings(loaded_json_data)
     
-    # Also get the area (and more) spanned by the qubit states for this resonator.
-    find_area_and_mean_distance_between_all_qubit_states(resonator_transmon_pair)
+    # Also get the area (and more) spanned by the qubit states for
+    # this resonator. This value can also be returned.
+    return find_area_and_mean_distance_between_all_qubit_states(resonator_transmon_pair)
     
 
 def discriminate(
@@ -176,7 +175,7 @@ def find_area_and_mean_distance_between_all_qubit_states(
     '''
     
     # Get JSON.
-    loaded_json_data = load_discriminator_settings()
+    loaded_json_data = load_discriminator_settings(resonator_transmon_pair)
     
     # For all qubit states in the readout, gather area and perimeter
     # where possible.
@@ -286,9 +285,9 @@ def find_area_and_mean_distance_between_all_qubit_states(
             np.abs(vertices[0] - vertices[2])
     
     # Update the return values.
-    area_spanned_by_qubit_states.append(curr_area_spanned_by_qubit_states)
-    mean_distance_between_all_states.append(curr_mean_distance_between_all_states)
-    hamiltonian_path_perimeter.append(curr_hamiltonian_path_perimeter)
+    area_spanned_by_qubit_states = curr_area_spanned_by_qubit_states
+    mean_distance_between_all_states = curr_mean_distance_between_all_states
+    hamiltonian_path_perimeter = curr_hamiltonian_path_perimeter
     
     # Update the local JSON that will be saved to file.
     try:
@@ -328,6 +327,7 @@ def find_area_and_mean_distance_between_all_qubit_states(
         except KeyError:
             # The key did not exist, this is OK.
             pass
+        
     
     # Save calculated settings
     save_discriminator_settings(loaded_json_data)
@@ -351,6 +351,13 @@ def get_file_path_of_discrimination_json():
     discriminator_json_folder_path = os.path.join(discriminator_json_folder_path, name_of_interface)
     full_path_to_discriminator_settings_json = os.path.join(discriminator_json_folder_path,'discriminator_settings.json')
     
+    assert ( not (".py" in name_of_interface)), \
+        "Critical error: could not establish name of QPU interface. "        +\
+        "You have likely not followed the proper folder structure. Make "    +\
+        "sure the function scripts are placed within a folder (with some "   +\
+        "name corresponding to your chosen interface), and that this folder "+\
+        "is placed in a folder called \"QPU interfaces\"."
+    
     return [full_path_to_discriminator_settings_json, call_root, name_of_interface]
     
 def save_discriminator_settings(json_data = [], verbose = False):
@@ -369,46 +376,59 @@ def save_discriminator_settings(json_data = [], verbose = False):
         print("Finished dumping JSON data to file.")
     
     
-def load_discriminator_settings(verbose = False):
+def load_discriminator_settings(resonator_transmon_pair = None, verbose = False):
     ''' Get the content of the discriminator_settings.json file.
     '''
     
     # Get file path of the discriminator_settings.json file.
     full_path = (get_file_path_of_discrimination_json())[0]
     
-    with open(full_path, "r") as fjson:
-        loaded_json_data = json.load(fjson)
-        '''          .,,*/(#########%%%%%%%%%%((/***,,,*,,*,,,,,,,,,,,
-                     .#####################%#%%%%/*,,...,,,,,,,,,,,,,,
-                   ,######################%%%%%%%#%#(*,.......     .. 
-                 (###########################%%%%%%####(.             
-               ,##(##%##########%###%########(//(########*.           
-              *#########(((((((#**/*((, ..,       (#######(.          
-             .#####(((***/. .,,     .*              (###%##(.         
-             (((/*.*. ,,                             .(##%%#/,..   ...
-        ....,#((/*   *                                ./(###/,..     .
-        ,***/(((/,                           ,*///*    .(##%(,,..     
-        ***//((/*.        .****,                :       *(##/,,..    .
-        (((((((//,          ::            .,, */,        ((  ....  ...
-        ((((/((//*               ..         .            /      ......
-        ((((/,   ,.                                      .     ..,,,,,
-        ((((/.                                                ..,,,,,,
-        ((((/*                             **                .,,****,,
-        ((((//*  ..                                         ,,********
-        ####((//.   ..             .,,..,,...****      .,, ,,,***,****
-        #######((/.  ,,         ..               **   ,*,.          ..
-        /(((((((//////**,       ,  (%%%%%%%%%%%%(,*/**////.           
-        ((((/(///****//////*.  ,,.%%%%%%%%%%%%%#*,*/((((//,,.....     
-        ///(((((///////((((/((((/  *%%(((/(/*(/ . *((((((/**,,,,,*****
-        ..,,****,,,,,,,*/(((((((/,    ....,,.    ,/((###*%%%#,,,,,,**/
-        ..,,,,,,,,....,,,./(##(//*.          ..,**/(####.%%%%%#*,....,
-        ..,,,,,,,*****/#%. ./(((///*    ,/(((/,.,/(##(/*.(%%%%%#(,,,.,
-        ,,,,,,***//(%%%##*     /(//*,.     .,,**/((((/*, .&&%%%%%(#***
-        ********/(#%%%%%%*        #(***.  ..**/(((,....    &%%%%%%#%#(
-        ////////(%%%%#%%%             (((#(/*//*...         %%%%%%%%%%
-        //////(#%%%%%#%%/                                   %%%%%%%%%%
-        ///((#%%%%%%%%%%#                                  %%%%%%%%%%%
-        ((#%%%%%%%%%%%%%%                JASON!           *%%%%%%%%'''
+    try:
+        with open(full_path, "r") as fjson:
+            loaded_json_data = json.load(fjson)
+            '''          .,,*/(#########%%%%%%%%%%((/***,,,*,,*,,,,,,,,,,,
+                         .#####################%#%%%%/*,,...,,,,,,,,,,,,,,
+                       ,######################%%%%%%%#%#(*,.......     .. 
+                     (###########################%%%%%%####(.             
+                   ,##(##%##########%###%########(//(########*.           
+                  *#########(((((((#**/*((, ..,       (#######(.          
+                 .#####(((***/. .,,     .*              (###%##(.         
+                 (((/*.*. ,,                             .(##%%#/,..   ...
+            ....,#((/*   *                                ./(###/,..     .
+            ,***/(((/,                           ,*///*    .(##%(,,..     
+            ***//((/*.        .****,                :       *(##/,,..    .
+            (((((((//,          ::            .,, */,        ((  ....  ...
+            ((((/((//*               ..         .            /      ......
+            ((((/,   ,.                                      .     ..,,,,,
+            ((((/.                                                ..,,,,,,
+            ((((/*                             **                .,,****,,
+            ((((//*  ..                                         ,,********
+            ####((//.   ..             .,,..,,...****      .,, ,,,***,****
+            #######((/.  ,,         ..               **   ,*,.          ..
+            /(((((((//////**,       ,  (%%%%%%%%%%%%(,*/**////.           
+            ((((/(///****//////*.  ,,.%%%%%%%%%%%%%#*,*/((((//,,.....     
+            ///(((((///////((((/((((/  *%%(((/(/*(/ . *((((((/**,,,,,*****
+            ..,,****,,,,,,,*/(((((((/,    ....,,.    ,/((###*%%%#,,,,,,**/
+            ..,,,,,,,,....,,,./(##(//*.          ..,**/(####.%%%%%#*,....,
+            ..,,,,,,,*****/#%. ./(((///*    ,/(((/,.,/(##(/*.(%%%%%#(,,,.,
+            ,,,,,,***//(%%%##*     /(//*,.     .,,**/((((/*, .&&%%%%%(#***
+            ********/(#%%%%%%*        #(***.  ..**/(((,....    &%%%%%%#%#(
+            ////////(%%%%#%%%             (((#(/*//*...         %%%%%%%%%%
+            //////(#%%%%%#%%/                                   %%%%%%%%%%
+            ///((#%%%%%%%%%%#                                  %%%%%%%%%%%
+            ((#%%%%%%%%%%%%%%                JASON!           *%%%%%%%%'''
+        
+    except FileNotFoundError:
+        # The discriminator settings JSON file has likely not been
+        # initiated. Let's do that. Then reload the data.
+        if verbose:
+            print("The JSON settings file did not exist. It was thus initiated (created).")
+        if resonator_transmon_pair != None:
+            initiate_discriminator_settings_file(resonator_transmon_pair)
+        else:
+            initiate_discriminator_settings_file(0)
+        with open(full_path, "r") as fjson:
+            loaded_json_data = json.load(fjson)
     
     if verbose:
         print("Loaded JSON data from file \""+str(full_path)+"\"")
