@@ -470,7 +470,7 @@ def ramsey01_readout0(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -917,11 +917,11 @@ def ramsey01_multiplexed_ro(
                 log_dict_list.append(dict(name=hdf5_logs[kk], vector=False))
             
             # Get name and time for logfile.
-            path_to_script = os.path.realpath(__file__)  # Full path of current script
-            current_dir, name_of_running_script = os.path.split(path_to_script)
-            script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
+            filepath_of_calling_script = os.path.realpath(__file__)  # Full path of current script
+            current_dir, name_of_script_trying_to_save_data = os.path.split(filepath_of_calling_script)
+            name_of_measurement_that_ran = os.path.splitext(name_of_script_trying_to_save_data)[0]  # Name of current script
             timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-            savefile_string = script_filename + '01_with_bias_'+str((u)+1)+'_of_2_' + timestamp + '.hdf5'  # Name of save file
+            savefile_string = name_of_measurement_that_ran + '01_with_bias_'+str((u)+1)+'_of_2_' + timestamp + '.hdf5'  # Name of save file
             save_path = os.path.join(current_dir, "data", savefile_string)  # Full path of save file
             
             # Make logfile
@@ -929,7 +929,7 @@ def ramsey01_multiplexed_ro(
             f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
             
             # Set project name, tag, and user in logfile.
-            f.setProject(script_filename)
+            f.setProject(name_of_measurement_that_ran)
             f.setTags('krizan')
             f.setUser('Christian Križan')
             
@@ -1475,7 +1475,7 @@ def ramsey12_readout1(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,

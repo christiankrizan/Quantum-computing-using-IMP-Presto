@@ -490,18 +490,18 @@ def randomised_benchmarking_01_single_qubit(
             log_dict_list.append(dict(name=hdf5_logs[kk], vector=False))
         
         # Get name and time for logfile.
-        path_to_script = os.path.realpath(__file__)  # Full path of current script
-        current_dir, name_of_running_script = os.path.split(path_to_script)
-        script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
+        filepath_of_calling_script = os.path.realpath(__file__)  # Full path of current script
+        current_dir, name_of_script_trying_to_save_data = os.path.split(filepath_of_calling_script)
+        name_of_measurement_that_ran = os.path.splitext(name_of_script_trying_to_save_data)[0]  # Name of current script
         timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-        savefile_string = script_filename + '_'+str(len(num_cliffords_arr))+'x'+str(num_cliffords_rb_step_size)+'_cliffords_' + timestamp + '.hdf5'  # Name of save file
+        savefile_string = name_of_measurement_that_ran + '_'+str(len(num_cliffords_arr))+'x'+str(num_cliffords_rb_step_size)+'_cliffords_' + timestamp + '.hdf5'  # Name of save file
         save_path = os.path.join(current_dir, "data", savefile_string)  # Full path of save file
         
         # Make logfile
         f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
         
         # Set project name, tag, and user in logfile.
-        f.setProject(script_filename)
+        f.setProject(name_of_measurement_that_ran)
         f.setTags('krizan')
         f.setUser('Christian Križan')
         

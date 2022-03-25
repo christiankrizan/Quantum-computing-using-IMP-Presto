@@ -489,7 +489,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,

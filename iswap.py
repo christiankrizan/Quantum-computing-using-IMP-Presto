@@ -601,7 +601,7 @@ def iswap_sweep_duration_and_detuning(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -1205,7 +1205,7 @@ def iswap_sweep_duration_and_amplitude(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -1783,7 +1783,7 @@ def iswap_sweep_amplitude_and_detuning(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -2441,7 +2441,7 @@ def tune_local_qubit_phases_of_iswap(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,

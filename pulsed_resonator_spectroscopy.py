@@ -23,6 +23,7 @@ from data_exporter import \
     get_dict_for_log_list, \
     save
 
+
 def find_f_ro0_sweep_coupler(
     ip_address,
     ext_clk_present,
@@ -50,6 +51,8 @@ def find_f_ro0_sweep_coupler(
     num_biases,
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
+    
+    skip_saving_control_data = False,
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -290,6 +293,12 @@ def find_f_ro0_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        ## Establish whether or not to write "sweep_bias" in the data export.
+        if num_biases > 1:
+            ro_with_or_without_bias_string = "ro0_sweep_bias"
+        else:
+            ro_with_or_without_bias_string = "ro0"
+        
         # Data to be stored.
         hdf5_steps = [
             'readout_pulse_freq_arr', "Hz",
@@ -298,19 +307,24 @@ def find_f_ro0_sweep_coupler(
         hdf5_singles = [
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
+            
             'readout_freq_nco', "Hz",
             'readout_freq_centre_if', "Hz",
             'readout_freq_span', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
+            
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
             'repetition_delay', "s", 
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
             
             #'coupler_dc_port', "",
             'added_delay_for_bias_tee', "s",
             'num_freqs', "",
             'num_averages', "",
+            
             'num_biases', "",
             'coupler_bias_min', "FS",
             'coupler_bias_max', "FS",
@@ -381,7 +395,7 @@ def find_f_ro0_sweep_coupler(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -390,7 +404,7 @@ def find_f_ro0_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = 'ro0_sweep_bias',
+            append_to_log_name_before_timestamp = ro_with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
@@ -599,6 +613,8 @@ def find_f_ro0_sweep_power(
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
             'repetition_delay', "s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
 
             'num_freqs', "",
             'num_amplitudes', "",
@@ -673,7 +689,7 @@ def find_f_ro0_sweep_power(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -722,6 +738,8 @@ def find_f_ro1_sweep_coupler(
     num_biases,
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
+    
+    skip_saving_control_data = False,
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -1009,34 +1027,51 @@ def find_f_ro1_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        ## Establish whether or not to write "sweep_bias" in the data export.
+        if num_biases > 1:
+            ro_with_or_without_bias_string = "ro1_sweep_bias"
+        else:
+            ro_with_or_without_bias_string = "ro1"
+        
         # Data to be stored.
         hdf5_steps = [
             'readout_pulse_freq_arr', "Hz",
             'coupler_amp_arr', "FS",
         ]
         hdf5_singles = [
+            'readout_stimulus_port', "",
+            'readout_sampling_port', "",
+            
             'readout_freq_nco', "Hz",
             'readout_freq_centre_if', "Hz",
             'readout_freq_span', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
+            
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
             'repetition_delay', "s",
-            
-            'control_port', "",
-            'control_amp_01', "FS",
-            'control_freq_01', "Hz",
-            'control_duration_01', "s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
             
             #'coupler_dc_port', "",
             'added_delay_for_bias_tee', "s",
             'num_freqs', "",
             'num_averages', "",
+            
             'num_biases', "",
             'coupler_bias_min', "FS",
             'coupler_bias_max', "FS",
         ]
+        # To make all resonator spectroscopies mergable in the Labber Log Browser, one must skip saving control data.
+        if not skip_saving_control_data:
+            for ii in [
+                'control_port', "",
+                'control_amp_01', "FS",
+                'control_freq_01', "Hz",
+                'control_duration_01', "s",
+            ]:
+            hdf5_singles.append(ii)
         hdf5_logs = [
             'fetched_data_arr', "FS",
         ]
@@ -1133,7 +1168,7 @@ def find_f_ro1_sweep_coupler(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -1142,7 +1177,7 @@ def find_f_ro1_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = 'ro1',
+            append_to_log_name_before_timestamp = ro_with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
@@ -1186,6 +1221,8 @@ def find_f_ro2_sweep_coupler(
     num_biases,
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
+    
+    skip_saving_control_data = False,
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -1503,6 +1540,12 @@ def find_f_ro2_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        ## Establish whether or not to write "sweep_bias" in the data export.
+        if num_biases > 1:
+            ro_with_or_without_bias_string = "ro2_sweep_bias"
+        else:
+            ro_with_or_without_bias_string = "ro2"
+        
         # Data to be stored.
         hdf5_steps = [
             'readout_pulse_freq_arr', "Hz",
@@ -1511,6 +1554,7 @@ def find_f_ro2_sweep_coupler(
         hdf5_singles = [
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
+            
             'readout_freq_nco', "Hz",
             'readout_freq_centre_if', "Hz",
             'readout_freq_span', "Hz",
@@ -1523,15 +1567,6 @@ def find_f_ro2_sweep_coupler(
             'integration_window_start', "s",
             'integration_window_stop', "s",
             
-            'control_port', "",
-            'control_amp_01', "FS",
-            'control_freq_01', "Hz",
-            'control_duration_01', "s",
-            
-            'control_amp_12', "FS",
-            'control_freq_12', "Hz",
-            'control_duration_12', "s",
-            
             #'coupler_dc_port', "",
             'added_delay_for_bias_tee', "s",
             
@@ -1542,6 +1577,19 @@ def find_f_ro2_sweep_coupler(
             'coupler_bias_min', "FS",
             'coupler_bias_max', "FS",
         ]
+        # To make all resonator spectroscopies mergable in the Labber Log Browser, one must skip saving control data.
+        if not skip_saving_control_data:
+            for ii in [
+                'control_port', "",
+                'control_amp_01', "FS",
+                'control_freq_01', "Hz",
+                'control_duration_01', "s",
+                
+                'control_amp_12', "FS",
+                'control_freq_12', "Hz",
+                'control_duration_12', "s",
+            ]:
+            hdf5_singles.append(ii)
         hdf5_logs = [
             'fetched_data_arr', "FS",
         ]
@@ -1638,7 +1686,7 @@ def find_f_ro2_sweep_coupler(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -1647,7 +1695,7 @@ def find_f_ro2_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = 'ro2',
+            append_to_log_name_before_timestamp = ro_with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )

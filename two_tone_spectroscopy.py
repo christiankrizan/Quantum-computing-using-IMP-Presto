@@ -464,7 +464,7 @@ def pulsed01_flux_sweep(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -1007,7 +1007,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 fetched_data_offset = axes['y_offset'],
                 resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
                 
-                path_to_script = os.path.realpath(__file__),
+                filepath_of_calling_script = os.path.realpath(__file__),
                 use_log_browser_database = use_log_browser_database,
                 
                 integration_window_start = integration_window_start,
@@ -1376,11 +1376,11 @@ def pulsed01_power_sweep(
                 ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
         
         # Get name and time for logfile.
-        path_to_script = os.path.realpath(__file__)  # Full path of current script
-        current_dir, name_of_running_script = os.path.split(path_to_script)
-        script_filename = os.path.splitext(name_of_running_script)[0]  # Name of current script
+        filepath_of_calling_script = os.path.realpath(__file__)  # Full path of current script
+        current_dir, name_of_script_trying_to_save_data = os.path.split(filepath_of_calling_script)
+        name_of_measurement_that_ran = os.path.splitext(name_of_script_trying_to_save_data)[0]  # Name of current script
         timestamp = (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)") # Date and time
-        savefile_string = script_filename + '_sweep_power_' + timestamp + '.hdf5'  # Name of save file
+        savefile_string = name_of_measurement_that_ran + '_sweep_power_' + timestamp + '.hdf5'  # Name of save file
         save_path = os.path.join(current_dir, "data", savefile_string)  # Full path of save file
         
         # Make logfile
@@ -1388,7 +1388,7 @@ def pulsed01_power_sweep(
         f = Labber.createLogFile_ForData(savefile_string, log_dict_list, step_channels=ext_keys, use_database = False)
         
         # Set project name, tag, and user in logfile.
-        f.setProject(script_filename)
+        f.setProject(name_of_measurement_that_ran)
         f.setTags('krizan')
         f.setUser('Christian Križan')
         
@@ -1909,7 +1909,7 @@ def pulsed12_flux_sweep(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
