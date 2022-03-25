@@ -190,14 +190,6 @@ def save(
     if isinstance(name_of_measurement_that_ran, list):
         name_of_measurement_that_ran = "".join(name_of_measurement_that_ran)
     
-    # Touch up on user-input strings in the calling script.
-    if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
-        append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
-    if (not append_to_log_name_before_timestamp.startswith('_')) and (append_to_log_name_before_timestamp != ''):
-        append_to_log_name_before_timestamp = '_' + append_to_log_name_before_timestamp
-    if (not timestamp.startswith('_')) and (timestamp != ''):
-        timestamp = '_' + timestamp
-    
     # Get index corresponding to integration_window_start and
     # integration_window_stop respectively.
     integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
@@ -247,13 +239,13 @@ def save(
     # Instead, we should demodulate the collected data.
     '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples'''
     
-    # Build a processing_volume.
-    processing_volume = []
+    # Build a processed_data.
+    processed_data = []
     for _item in integration_indices_list:
         if len(_item) <= 1:
             print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you should also expect a weird offset on your Y-axis.") # TODO
             resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples
-            processing_volume.append( 2 * resp_fft[:, _item[0]] )
+            processed_data.append( 2 * resp_fft[:, _item[0]] )
         else:
             print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.") # TODO
             print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you should also expect a weird offset on your Y-axis.") # TODO
@@ -302,7 +294,7 @@ def save(
                         ee += 1"""
                         
             # We have picked the appropriate fq.-swept indices. Return!
-            processing_volume.append( 2 * np.array(return_arr) )
+            processed_data.append( 2 * np.array(return_arr) )
     
     # Has the user set up the calling script so that the X and Z axes are
     # reversed? I.e. "the graph is rotated -90° in the Log Browser."
@@ -322,12 +314,12 @@ def save(
     
     # And, save either complex or magnitude data with/without some
     # scale and offset. Reshape the data to account for repeats.
-    for mm in range(len(processing_volume[:])):
-        fetch = processing_volume[mm]
+    for mm in range(len(processed_data[:])):
+        fetch = processed_data[mm]
         fetch.shape = (outer_loop_size, inner_loop_size)
         
         if not save_complex_data:
-            processing_volume[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
+            processed_data[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
         else:
             # The user might have set some scale and offset.
             # The offset would in that case have been set as
@@ -343,16 +335,16 @@ def save(
             fetch = fetch_real + fetch_imag*1j
             
             # Scale with some user-set scale and store.
-            processing_volume[mm] = fetch * fetched_data_scale[mm]
+            processed_data[mm] = fetch * fetched_data_scale[mm]
     
-    # Did the user request to flip the processing volume?
+    # Did the user request to flip the processed data?
     # I.e. that every new repeat in some measurement will be a column
-    # instead of a row in the processing volume? Then fix this.
+    # instead of a row in the processed data? Then fix this.
     # Every data file is either way always stored so that
     # one row = one repeat.
     if force_matrix_reshape_flip_row_and_column:
-        for ee in range(len(processing_volume[:])):
-            processing_volume[ee] = (processing_volume[ee]).transpose()
+        for ee in range(len(processed_data[:])):
+            processed_data[ee] = (processed_data[ee]).transpose()
     
     # Perform data export to file
     filepath_to_exported_h5_file = export_processed_data_to_file(
@@ -362,7 +354,7 @@ def save(
         log_dict_list = log_dict_list,
         
         time_vector = time_vector,
-        processing_volume = processing_volume,
+        processed_data = processed_data,
         fetched_data_arr = fetched_data_arr,
         fetched_data_scale = fetched_data_scale,
         fetched_data_offset = fetched_data_offset,
@@ -390,7 +382,7 @@ def export_processed_data_to_file(
     log_dict_list,
     
     time_vector,
-    processing_volume,
+    processed_data,
     fetched_data_arr,
     fetched_data_scale,
     fetched_data_offset,
@@ -422,6 +414,14 @@ def export_processed_data_to_file(
         folder_path_to_calling_script_attempting_to_save = "".join(folder_path_to_calling_script_attempting_to_save)
     if isinstance(name_of_measurement_that_ran, list):
         name_of_measurement_that_ran = "".join(name_of_measurement_that_ran)
+    
+    # Touch up on user-input strings in the calling script.
+    if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
+        append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
+    if (not append_to_log_name_before_timestamp.startswith('_')) and (append_to_log_name_before_timestamp != ''):
+        append_to_log_name_before_timestamp = '_' + append_to_log_name_before_timestamp
+    if (not timestamp.startswith('_')) and (timestamp != ''):
+        timestamp = '_' + timestamp
     
     # Attempt an export to Labber's Log Browser!
     labber_import_worked = False
@@ -462,22 +462,22 @@ def export_processed_data_to_file(
                 if (len(resonator_freq_if_arrays_to_fft) > 1):
                     # Then store multiplexed!
                     # For every loop entry that is to be stored in this log:
-                    for loop_i in range(len( (processing_volume[0])[:] )):
+                    for loop_i in range(len( (processed_data[0])[:] )):
                         f.addEntry({
-                            (log_dict_list[0])['name']: (processing_volume[0])[loop_i, :],
-                            (log_dict_list[1])['name']: (processing_volume[1])[loop_i, :]
+                            (log_dict_list[0])['name']: (processed_data[0])[loop_i, :],
+                            (log_dict_list[1])['name']: (processed_data[1])[loop_i, :]
                         })
                 else:
-                    for loop_i in range(len( (processing_volume[0])[:] )):
+                    for loop_i in range(len( (processed_data[0])[:] )):
                         f.addEntry({
-                            (log_dict_list[0])['name']: (processing_volume[0])[loop_i, :]
+                            (log_dict_list[0])['name']: (processed_data[0])[loop_i, :]
                         })
             else:
                 # TODO This else-case must be removed.
                 for log_i in range(len(log_dict_list[:])):
-                    for loop_i in range(len( (processing_volume[0])[:] )):
+                    for loop_i in range(len( (processed_data[0])[:] )):
                         f.addEntry({
-                            (log_dict_list[log_i])['name']: (processing_volume[int(select_resonator_for_single_log_export)])[loop_i, :]
+                            (log_dict_list[log_i])['name']: (processed_data[int(select_resonator_for_single_log_export)])[loop_i, :]
                         })
             
             # Check if the hdf5 file was created in the local directory.
@@ -521,8 +521,8 @@ def export_processed_data_to_file(
                 h5f.create_dataset( (ext_keys[ff])['name'] , data = (ext_keys[ff])['values'] )
         
         h5f.create_dataset("time_vector",  data = time_vector)
-        h5f.create_dataset("fetched_data", data = fetched_data_arr)
-        h5f.create_dataset("processed_data", data = processing_volume)
+        h5f.create_dataset("fetched_data_arr", data = fetched_data_arr)
+        h5f.create_dataset("processed_data", data = processed_data)
         h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
         h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)
         
