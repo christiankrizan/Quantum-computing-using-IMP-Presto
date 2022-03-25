@@ -12,6 +12,7 @@ from presto.hardware import AdcFSample, AdcMode, DacFSample, DacMode
 import os
 import sys
 import time
+import h5py # Needed for .h5 data feedback.
 import Labber
 import shutil
 import numpy as np
@@ -22,7 +23,7 @@ from data_exporter import \
     get_timestamp_string, \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
-    save
+    export_processed_data_to_file
 from data_discriminator import calculate_and_update_resonator_value
 
 
@@ -62,6 +63,7 @@ def perform_readout_optimisation_g_e_f(
     num_readout_freq_steps,
     
     use_log_browser_database = True,
+    suppress_log_browser_export_of_suboptimal_data = True,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -75,12 +77,13 @@ def perform_readout_optimisation_g_e_f(
         "z_unit":   'default',
         },
     
-    my_weight_given_to_area_spanned_by_qubit_states = 0.0,
-    my_weight_given_to_mean_distance_between_all_states = 1.0,
+    my_weight_given_to_area_spanned_by_qubit_states = 1.0,
+    my_weight_given_to_mean_distance_between_all_states = 0.0,
     my_weight_given_to_hamiltonian_path_perimeter = 0.0
     ):
     ''' Perform complex domain readout optimisation. This function will
-        generate one complex-plane dataset per resonator frequency step.
+        generate one complex-plane dataset per resonator frequency step,
+        unless the Log Browser output is suppressed.
         The final, stored plot, will be the "winning" plot that had the
         optimum readout given the user's settings.
     '''
@@ -126,6 +129,7 @@ def perform_readout_optimisation_g_e_f(
             resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
             
             use_log_browser_database = use_log_browser_database,
+            suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
             axes = axes
         )
         
@@ -149,57 +153,67 @@ def perform_readout_optimisation_g_e_f(
     biggest_perimeter_idx           = np.argmax( list_of_current_complex_datasets[:,3] )
     
     if (biggest_area_idx == biggest_mean_state_distance_idx) and (biggest_area_idx == biggest_perimeter_idx):
-        print("The most optimal readout is seen in \""+list_of_current_complex_datasets[biggest_area_idx,0]+"\". This readout wins in every category." )
+        print("\nThe most optimal readout is seen in \""+list_of_current_complex_datasets[biggest_area_idx,0]+"\". This readout wins in every category." )
     else:
+        print("\n")
         print( "\""+list_of_current_complex_datasets[biggest_area_idx,0]+"\" had the biggest spanned area." )
         print( "\""+list_of_current_complex_datasets[biggest_mean_state_distance_idx,0]+"\" had the biggest mean intra-state distance." )
         print( "\""+list_of_current_complex_datasets[biggest_perimeter_idx,0]+"\" had the biggest perimeter." )
     
     # Now applying weights, to figure out the optimal.
-    weighted_area = list_of_current_complex_datasets[biggest_area_idx,1] * my_weight_given_to_area_spanned_by_qubit_states
-    weighted_mean_distance = list_of_current_complex_datasets[biggest_mean_state_distance_idx,2] * my_weight_given_to_mean_distance_between_all_states
-    weighted_perimeter = list_of_current_complex_datasets[biggest_perimeter_idx,3] * my_weight_given_to_hamiltonian_path_perimeter
-    optimal_choice_idx = np.max([weighted_area, weighted_mean_distance, weighted_perimeter])
+    weighted_area = (list_of_current_complex_datasets[biggest_area_idx,1]).astype(np.float64) * my_weight_given_to_area_spanned_by_qubit_states
+    weighted_mean_distance = (list_of_current_complex_datasets[biggest_mean_state_distance_idx,2]).astype(np.float64) * my_weight_given_to_mean_distance_between_all_states
+    weighted_perimeter = (list_of_current_complex_datasets[biggest_perimeter_idx,3]).astype(np.float64) * my_weight_given_to_hamiltonian_path_perimeter
+    biggest_metric = np.max([weighted_area, weighted_mean_distance, weighted_perimeter])
     
-    # The winner has been decided.
-    print("Winner! "+str(list_of_current_complex_datasets[optimal_choice_idx]))
+    # Decide on the winner
+    if biggest_metric == weighted_area:
+        optimal_choice_idx = biggest_area_idx
+    elif biggest_metric == weighted_mean_distance:
+        optimal_choice_idx = biggest_mean_state_distance_idx
+    else:
+        optimal_choice_idx = biggest_perimeter_idx
+    print("\nAfter weighing the metrics, entry " + list_of_current_complex_datasets[optimal_choice_idx,0]+" is hereby crowned as the optimal readout. (Scores: [Area, Inter-state distance, Perimeter] = "+str([weighted_area, weighted_mean_distance, weighted_perimeter])+")")
     
-    # Load the complex data from the winner.
-    ## TODO
+    # Get the optimal readout frequency for this resonator.
+    with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
+        optimal_readout_freq = h5f.attrs["readout_freq"]
+        #print("The optimal readout frequency is: "+str(optimal_readout_freq)+" Hz.")
     
-    # Export the complex data (in a Log Browser compatible format).
-    # Idea: use the .save() feature.
-    ## TODO See below
-    
-    # Declare path to whatever data will be saved.
-    string_arr_to_return = []
+    # Load the complex data from the winner, and re-store this in a new file.
+    with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
+        time_vector = h5f["time_vector"][()]
+        processing_volume = h5f["processing_volume"][()]
+        fetched_data_arr = h5f["fetched_data_arr"][()]
+        
+        ## Create a hacky-like array structure for storage's sake.
+        prepared_qubit_states = h5f["prepared_qubit_states"][()]
+        shot_arr = h5f["shot_arr"][()]
     
     # Declare arrays and scalars that will be used for the export.
-    analysed_areas = list_of_current_complex_datasets[:,1]
+    analysed_areas = (list_of_current_complex_datasets[:,1]).astype(np.float64)
+    analysed_means = (list_of_current_complex_datasets[:,2]).astype(np.float64)
+    analysed_perimeters = (list_of_current_complex_datasets[:,3]).astype(np.float64)
+    weighed_areas = (list_of_current_complex_datasets[:,1]).astype(np.float64) * my_weight_given_to_area_spanned_by_qubit_states
+    weighed_means = (list_of_current_complex_datasets[:,2]).astype(np.float64) * my_weight_given_to_mean_distance_between_all_states
+    weighed_perimeters = (list_of_current_complex_datasets[:,3]).astype(np.float64) * my_weight_given_to_hamiltonian_path_perimeter
     
-    assert 1 == 0, "Not finished, TODO"
-    
-    print("Saving data")
-    
-    ###########################################
-    ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
-    ###########################################
-    
-    """# Data to be stored.
+    # Data to be stored.
     hdf5_steps = [
         'shot_arr', "",
         'prepared_qubit_states', "",
     ]
     hdf5_singles = [
+        'optimal_readout_freq', "Hz",
+        
         'readout_stimulus_port', "",
         'readout_sampling_port', "",
-        'readout_freq', "Hz",
         'readout_amp', "FS",
         'readout_duration', "s",
         
         'sampling_duration', "s",
         'readout_sampling_delay', "s",
-        'repetition_delay', "s",
+        'repetition_delay', "s", 
         'integration_window_start', "s",
         'integration_window_stop', "s",
         
@@ -207,7 +221,6 @@ def perform_readout_optimisation_g_e_f(
         'control_amp_01', "FS",
         'control_freq_01', "Hz",
         'control_duration_01', "s",
-        
         'control_amp_12', "FS",
         'control_freq_12', "Hz",
         'control_duration_12', "s",
@@ -219,9 +232,19 @@ def perform_readout_optimisation_g_e_f(
         'num_averages', "",
         'num_shots_per_state', "",
         'resonator_transmon_pair_id_number', "",
+        
+        'readout_freq_start', "Hz",
+        'readout_freq_stop', "Hz",
+        'num_readout_freq_steps', "",
     ]
     hdf5_logs = [
         'fetched_data_arr', "FS",
+        #'analysed_areas', "(FS)²",  TODO! Add capability of exporting other logs in the data exporter.
+        #'analysed_means', "FS",
+        #'analysed_perimeters', "FS",
+        #'weighed_areas', "(FS)²",
+        #'weighed_means', "FS",
+        #'weighed_perimeters', "FS",
     ]
     
     # Ensure the keyed elements above are valid.
@@ -273,38 +296,27 @@ def perform_readout_optimisation_g_e_f(
             log_is_complex = save_complex_data,
             axes = axes
         ))
-    
-    # Save data!
-    string_arr_to_return += save(
-        timestamp = get_timestamp_string(),
+        
+    # Export the complex data (in a Log Browser compatible format).
+    string_arr_to_return = export_processed_data_to_file(
+        filepath_of_calling_script = os.path.realpath(__file__),
         ext_keys = ext_keys,
         log_dict_list = log_dict_list,
         
         time_vector = time_vector,
+        processing_volume = processing_volume,
         fetched_data_arr = fetched_data_arr,
         fetched_data_scale = axes['y_scaler'],
         fetched_data_offset = axes['y_offset'],
-        resonator_freq_if_arrays_to_fft = [],
         
-        path_to_script = os.path.realpath(__file__),
+        timestamp = get_timestamp_string(),
+        append_to_log_name_before_timestamp = 'optimal_result',
+        append_to_log_name_after_timestamp = '',
         use_log_browser_database = use_log_browser_database,
-        
-        integration_window_start = integration_window_start,
-        integration_window_stop = integration_window_stop,
-        inner_loop_size = len(prepared_qubit_states),
-        outer_loop_size = num_shots_per_state,
-        
-        save_complex_data = save_complex_data,
-        source_code_of_executing_file = '', #get_sourcecode(__file__),
-        append_to_log_name_before_timestamp = '_g_e_f',
-        append_to_log_name_after_timestamp  = '',
-        select_resonator_for_single_log_export = '',
-        force_matrix_reshape_flip_row_and_column = True,
+        suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
     )
     
-    return string_arr_to_return"""
-    
-    
+    return string_arr_to_return
     
     
 def get_complex_data_for_readout_optimisation_g_e_f(
@@ -340,6 +352,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
     resonator_transmon_pair_id_number,
     
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -764,7 +777,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -778,6 +791,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             force_matrix_reshape_flip_row_and_column = True,
+            suppress_log_browser_export = suppress_log_browser_export,
         )
     
     return string_arr_to_return
@@ -1246,7 +1260,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -1723,7 +1737,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
@@ -2200,7 +2214,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             fetched_data_offset = axes['y_offset'],
             resonator_freq_if_arrays_to_fft = [],
             
-            path_to_script = os.path.realpath(__file__),
+            filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
