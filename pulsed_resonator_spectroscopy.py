@@ -293,11 +293,11 @@ def find_f_ro0_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        ## Establish whether or not to write "sweep_bias" in the data export.
+        # Establish whether or not to write "sweep_bias" in the data export.
         if num_biases > 1:
-            ro_with_or_without_bias_string = "ro0_sweep_bias"
+            with_or_without_bias_string = "_sweep_bias"
         else:
-            ro_with_or_without_bias_string = "ro0"
+            with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [
@@ -404,7 +404,7 @@ def find_f_ro0_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = ro_with_or_without_bias_string,
+            append_to_log_name_before_timestamp = 'ro0' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
@@ -1027,11 +1027,11 @@ def find_f_ro1_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        ## Establish whether or not to write "sweep_bias" in the data export.
+        # Establish whether or not to write "sweep_bias" in the data export.
         if num_biases > 1:
-            ro_with_or_without_bias_string = "ro1_sweep_bias"
+            with_or_without_bias_string = "_sweep_bias"
         else:
-            ro_with_or_without_bias_string = "ro1"
+            with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [
@@ -1071,7 +1071,7 @@ def find_f_ro1_sweep_coupler(
                 'control_freq_01', "Hz",
                 'control_duration_01', "s",
             ]:
-            hdf5_singles.append(ii)
+                hdf5_singles.append(ii)
         hdf5_logs = [
             'fetched_data_arr', "FS",
         ]
@@ -1177,7 +1177,7 @@ def find_f_ro1_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = ro_with_or_without_bias_string,
+            append_to_log_name_before_timestamp = 'ro1' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
@@ -1540,11 +1540,11 @@ def find_f_ro2_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        ## Establish whether or not to write "sweep_bias" in the data export.
+        # Establish whether or not to write "sweep_bias" in the data export.
         if num_biases > 1:
-            ro_with_or_without_bias_string = "ro2_sweep_bias"
+            with_or_without_bias_string = "_sweep_bias"
         else:
-            ro_with_or_without_bias_string = "ro2"
+            with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [
@@ -1589,7 +1589,7 @@ def find_f_ro2_sweep_coupler(
                 'control_freq_12', "Hz",
                 'control_duration_12', "s",
             ]:
-            hdf5_singles.append(ii)
+                hdf5_singles.append(ii)
         hdf5_logs = [
             'fetched_data_arr', "FS",
         ]
@@ -1695,7 +1695,7 @@ def find_f_ro2_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = ro_with_or_without_bias_string,
+            append_to_log_name_before_timestamp = 'ro2' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )

@@ -145,7 +145,7 @@ def t1_sweep_flux(
         dt_per_time_step = (coupler_ac_plateau_duration_iswap_max-coupler_ac_plateau_duration_iswap_min)/num_time_steps
         dt_per_time_step = int(round(dt_per_time_step / plo_clk_T)) * plo_clk_T
         
-        
+        assert 1 == 0, "There is no way this function is complete, there are even iSWAP references here. TODO"
         
         ''' Setup mixers '''
         

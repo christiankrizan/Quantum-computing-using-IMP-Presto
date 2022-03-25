@@ -142,9 +142,10 @@ def iswap_sweep_duration_and_detuning(
         
         ''' Make the user-set time variables representable '''
         
-        # Figure out a dt_per_time_step and make the value representable.
-        dt_per_time_step = (coupler_ac_plateau_duration_iswap_max-coupler_ac_plateau_duration_iswap_min)/num_time_steps
-        dt_per_time_step = int(round(dt_per_time_step / plo_clk_T)) * plo_clk_T
+        ## dt_per_time_step is a bad idea and should be removed. This is likely already fixed to be honest. TODO
+        ### Figure out a dt_per_time_step and make the value representable.
+        ##dt_per_time_step = (coupler_ac_plateau_duration_iswap_max-coupler_ac_plateau_duration_iswap_min)/num_time_steps
+        ##dt_per_time_step = int(round(dt_per_time_step / plo_clk_T)) * plo_clk_T
         
         # Generate an array for data storage. For all elements, round to the
         # programmable logic clock period. Then, remove duplicates and update
@@ -390,17 +391,19 @@ def iswap_sweep_duration_and_detuning(
             pls.output_pulse(T, coupler_bias_tone)
             T += added_delay_for_bias_tee
         
-        # For every resonator stimulus pulse duration to sweep over:
-        for ii in range(num_time_steps):
+        # For every pulse duration to sweep over:
+        ##for ii in range(dt_per_time_step): TODO I removed this, likely bugged, see Rabi_12 duration sweep
+        for ii in iswap_total_pulse_duration_arr:
 
-            # Redefine the iSWAP pulse's total duration,
-            # resulting in stepping said duration in time.
-            coupler_ac_duration_iswap = \
-                2 * coupler_ac_single_edge_time_iswap + \
-                coupler_ac_plateau_duration_iswap_min + \
-                ii * dt_per_time_step
+            ## # Redefine the iSWAP pulse's total duration,
+            ## # resulting in stepping said duration in time.
+            ## coupler_ac_duration_iswap = \
+            ##     2 * coupler_ac_single_edge_time_iswap + \
+            ##     coupler_ac_plateau_duration_iswap_min + \
+            ##     ii * dt_per_time_step
+            coupler_ac_duration_iswap = ii
             coupler_ac_pulse_iswap.set_total_duration(coupler_ac_duration_iswap)
-
+            
             # Redefine the coupler DC pulse duration to keep on playing once
             # the bias tee has charged.
             if coupler_dc_port != []:
@@ -743,9 +746,9 @@ def iswap_sweep_duration_and_amplitude(
         
         ''' Make the user-set time variables representable '''
         
-        # Figure out a dt_per_time_step and make the value representable.
-        dt_per_time_step = (coupler_ac_plateau_duration_iswap_max-coupler_ac_plateau_duration_iswap_min)/num_time_steps
-        dt_per_time_step = int(round(dt_per_time_step / plo_clk_T)) * plo_clk_T
+        ## # Figure out a dt_per_time_step and make the value representable.
+        ## dt_per_time_step = (coupler_ac_plateau_duration_iswap_max-coupler_ac_plateau_duration_iswap_min)/num_time_steps
+        ## dt_per_time_step = int(round(dt_per_time_step / plo_clk_T)) * plo_clk_T
         
         # Generate an array for data storage. For all elements, round to the
         # programmable logic clock period. Then, remove duplicates and update
@@ -984,14 +987,16 @@ def iswap_sweep_duration_and_amplitude(
             T += added_delay_for_bias_tee
         
         # For every resonator stimulus pulse frequency to sweep over:
-        for ii in range(num_time_steps):
+        ##for ii in range(num_time_steps): TODO I removed this, dt_per_time_step is likely bugged. See Rabi_12 duration sweep.
+        for ii in iswap_total_pulse_duration_arr:
         
-            # Redefine the iSWAP pulse's total duration,
-            # resulting in stepping said duration in time.
-            coupler_ac_duration_iswap = \
-                2 * coupler_ac_single_edge_time_iswap + \
-                coupler_ac_plateau_duration_iswap_min + \
-                ii * dt_per_time_step
+            ## # Redefine the iSWAP pulse's total duration,
+            ## # resulting in stepping said duration in time.
+            ## coupler_ac_duration_iswap = \
+            ##     2 * coupler_ac_single_edge_time_iswap + \
+            ##     coupler_ac_plateau_duration_iswap_min + \
+            ##     ii * dt_per_time_step
+            coupler_ac_duration_iswap = ii
             coupler_ac_pulse_iswap.set_total_duration(coupler_ac_duration_iswap)
             
             # Redefine the coupler DC pulse duration to keep on playing once
@@ -2220,7 +2225,7 @@ def tune_local_qubit_phases_of_iswap(
             coupler_bias_tone.set_total_duration(
                 control_duration_01 + \
                 coupler_ac_duration_iswap + \
-                coupler_ac_duration_iswap + \
+                coupler_ac_duration_iswap + \ # Not a duplicate row bug!
                 control_duration_01 + \
                 readout_duration + \
                 repetition_delay \

@@ -1961,12 +1961,13 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
     coupler_dc_port,
     added_delay_for_bias_tee,
     
-    num_amplitudes,
     num_biases,
     num_averages,
     
-    control_duration_12_min,
-    control_duration_12_max,
+    num_time_steps,
+    control_single_edge_time_12,
+    control_plateau_duration_12_min,
+    control_plateau_duration_12_max,
     
     coupler_bias_min = 0.0,
     coupler_bias_max = 1.0,
@@ -1994,7 +1995,6 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
         Note! Readout is in |1>
     '''
     
-    assert 1 == 0, "Halted. This function is not finished."
     
     ## Input sanitisation
     
@@ -2016,12 +2016,9 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
     
     ## Initial array declaration
     
-    # Declare amplitude array for the Rabi experiment.
-    control_amp_arr = np.linspace(control_amp_12_min, control_amp_12_max, num_amplitudes)
-    
     # Declare amplitude array for the coupler sweep.
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
-
+    
     
     # Instantiate the interface
     print("\nInstantiating interface!")
@@ -2057,11 +2054,31 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
-        control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
+        control_single_edge_time_12 = int(round(control_single_edge_time_12 / plo_clk_T)) * plo_clk_T
+        control_plateau_duration_12_min = int(round(control_plateau_duration_12_min / plo_clk_T)) * plo_clk_T
+        control_plateau_duration_12_max = int(round(control_plateau_duration_12_max / plo_clk_T)) * plo_clk_T
         
         
-
+        ''' Make the user-set time variables representable '''
+        
+        # Generate an array for data storage. For all elements, round to the
+        # programmable logic clock period. Then, remove duplicates and update
+        # the num_time_steps parameter.
+        control_pulse_12_total_duration_arr = np.linspace( \
+            control_plateau_duration_12_min + 2 * control_single_edge_time_12, \
+            control_plateau_duration_12_max + 2 * control_single_edge_time_12, \
+            num_time_steps
+        )
+        for jj in range(len(control_pulse_12_total_duration_arr)):
+            control_pulse_12_total_duration_arr[jj] = int(round(control_pulse_12_total_duration_arr[jj] / plo_clk_T)) * plo_clk_T
+        new_list = []
+        for kk in range(len(control_pulse_12_total_duration_arr)):
+            if not (control_pulse_12_total_duration_arr[kk] in new_list):
+                new_list.append(control_pulse_12_total_duration_arr[kk])
+        control_pulse_12_total_duration_arr = new_list
+        num_time_steps = len(control_pulse_12_total_duration_arr)
+        
         ''' Setup mixers '''
         
         # Readout mixer
@@ -2106,7 +2123,7 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
         pls.setup_scale_lut(
             output_ports    = control_port,
             group           = 1,
-            scales          = control_amp_arr,
+            scales          = control_amp_12,
         )
         # Coupler port amplitude (the bias)
         if coupler_dc_port != []:
@@ -2151,15 +2168,19 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
             template_q  = control_envelope_01,
             envelope    = True,
         )
-        control_ns_12 = int(round(control_duration_12 * pls.get_fs("dac")))  # Number of samples in the control template
-        control_envelope_12 = sin2(control_ns_12)
-        control_pulse_pi_12 = pls.setup_template(
+        # The initially set duration is temporary, and will be swept by the
+        # sequencer program.
+        control_pulse_pi_12 = pls.setup_long_drive(
             output_port = control_port,
             group       = 1,
-            template    = control_envelope_12,
-            template_q  = control_envelope_12,
-            envelope    = True,
+            duration    = control_plateau_duration_12_min + \
+                          2 * control_single_edge_time_12,
+            amplitude   = 1.0,
+            amplitude_q = 1.0,
+            rise_time   = control_single_edge_time_12,
+            fall_time   = control_single_edge_time_12
         )
+        
         # Setup control pulse carrier tones, considering that there is a digital mixer
         control_freq_if_01 = np.abs(control_freq_nco - control_freq_01)
         pls.setup_freq_lut(
@@ -2219,7 +2240,20 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
             pls.output_pulse(T, coupler_bias_tone)
             T += added_delay_for_bias_tee
         
-        for ii in range(num_amplitudes):
+        # For every pulse duration to sweep over:
+        for ii in control_pulse_12_total_duration_arr:
+            
+            # Redefine the pi_12 pulse's total duration,
+            # resulting in stepping said duration in time.
+            ##control_duration_12 = \
+            ##    2 * control_single_edge_time_12 + \
+            ##    control_plateau_duration_12_min + \
+            ##    ii * dt_per_time_step
+            control_duration_12 = ii
+            control_pulse_pi_12.set_total_duration(control_duration_12)
+            
+            # TODO DEBUG
+            print("Current duration is: "+str(control_duration_12))
             
             # Redefine the coupler DC pulse duration to keep on playing once
             # the bias tee has charged.
@@ -2249,9 +2283,6 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
             pls.output_pulse(T, readout_pulse_excited)
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
-            
-            # Move to next Rabi amplitude
-            pls.next_scale(T, control_port, group = 1)
             
             # Wait for decay
             T += repetition_delay
@@ -2289,9 +2320,15 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Establish whether or not to write "sweep_bias" in the data export.
+        if num_biases > 1:
+            with_or_without_bias_string = "_sweep_bias"
+        else:
+            with_or_without_bias_string = ""
+        
         # Data to be stored.
         hdf5_steps = [
-            'control_amp_arr', "FS",
+            'control_pulse_12_total_duration_arr', "s",
             'coupler_amp_arr', "FS",
         ]
         hdf5_singles = [
@@ -2312,18 +2349,19 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
             'control_freq_01', "Hz",
             'control_duration_01', "s",
             
+            'control_amp_12', "FS",
             'control_freq_12', "Hz",
-            'control_duration_12', "s",
             
             #'coupler_dc_port', "",
             'added_delay_for_bias_tee', "s",
             
-            'num_amplitudes', "",
             'num_biases', "",
             'num_averages', "",
             
-            'control_amp_12_min', "FS",
-            'control_amp_12_max', "FS",
+            'num_time_steps', "",
+            'control_single_edge_time_12', "s",
+            'control_plateau_duration_12_min', "s",
+            'control_plateau_duration_12_max', "s",
             
             'coupler_bias_min', "FS",
             'coupler_bias_max', "FS",
@@ -2332,85 +2370,55 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
             'fetched_data_arr', "FS",
         ]
         
-        # Assert that the received keys bear (an even number of) entries,
-        # implying whether a unit is missing.
-        number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and \
-            ((len(hdf5_singles) % 2) == 0) and \
-            ((len(hdf5_logs) % 2) == 0)
-        assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units provided. Someone likely forgot a comma."
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
         
         # Stylistically rework underscored characters in the axes dict.
-        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
-            axes[axis] = axes[axis].replace('/2','/₂')
-            axes[axis] = axes[axis].replace('/3','/₃')
-            axes[axis] = axes[axis].replace('_01','₀₁')
-            axes[axis] = axes[axis].replace('_02','₀₂')
-            axes[axis] = axes[axis].replace('_03','₀₃')
-            axes[axis] = axes[axis].replace('_12','₁₂')
-            axes[axis] = axes[axis].replace('_13','₁₃')
-            axes[axis] = axes[axis].replace('_20','₂₀')
-            axes[axis] = axes[axis].replace('_23','₂₃')
-            axes[axis] = axes[axis].replace('_0','₀')
-            axes[axis] = axes[axis].replace('_1','₁')
-            axes[axis] = axes[axis].replace('_2','₂')
-            axes[axis] = axes[axis].replace('_3','₃')
-            axes[axis] = axes[axis].replace('lambda','λ')
-            axes[axis] = axes[axis].replace('Lambda','Λ')
+        axes = stylise_axes(axes)
         
-        # Build step lists, re-scale and re-unit where necessary.
+        # Create step lists
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
-                temp_name   = hdf5_steps[ii]
-                temp_object = np.array( eval(hdf5_steps[ii]) )
-                temp_unit   = hdf5_steps[ii+1]
-                if ii == 0:
-                    if (axes['x_name']).lower() != 'default':
-                        # Replace the x-axis name
-                        temp_name = axes['x_name']
-                    if axes['x_scaler'] != 1.0:
-                        # Re-scale the x-axis
-                        temp_object *= axes['x_scaler']
-                    if (axes['x_unit']).lower() != 'default':
-                        # Change the unit on the x-axis
-                        temp_unit = axes['x_unit']
-                elif ii == 2:
-                    if (axes['z_name']).lower() != 'default':
-                        # Replace the z-axis name
-                        temp_name = axes['z_name']
-                    if axes['z_scaler'] != 1.0:
-                        # Re-scale the z-axis
-                        temp_object *= axes['z_scaler']
-                    if (axes['z_unit']).lower() != 'default':
-                        # Change the unit on the z-axis
-                        temp_unit = axes['z_unit']
-                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
-                temp_object = np.array( [eval(hdf5_singles[jj])] )
-                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
-        
-        log_dict_list = []
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
         for qq in range(len(axes['y_scaler'])):
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            log_entry_name = hdf5_logs[kk]
-            # Set unit on the y-axis
-            if (axes['y_unit']).lower() != 'default':
-                temp_log_unit = axes['y_unit']
-            else:
-                temp_log_unit = hdf5_logs[kk+1]
-            if (axes['y_name']).lower() != 'default':
-                # Replace the y-axis name
-                log_entry_name = axes['y_name']
-                if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
-            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
+            if len(hdf5_logs)/2 > 1:
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
         
         # Save data!
         string_arr_to_return += save(
@@ -2429,12 +2437,12 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
             
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
-            inner_loop_size = num_amplitudes,
+            inner_loop_size = num_time_steps,
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = '12_sweep_bias_ro1',
+            append_to_log_name_before_timestamp = '12_duration' + with_or_without_bias_string + '_ro1',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )

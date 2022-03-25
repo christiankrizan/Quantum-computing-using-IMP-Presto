@@ -51,7 +51,7 @@ def calculate_and_update_resonator_value(
     
     # Load the file at path_to_data.
     with h5py.File(os.path.abspath(path_to_data), 'r') as h5f:
-        processing_volume = h5f["processed_data"][()]
+        processed_data = h5f["processed_data"][()]
         prepared_qubit_states = h5f["prepared_qubit_states"][()]
         
         ## # Automatically establish what state was gathered?
@@ -99,11 +99,11 @@ def calculate_and_update_resonator_value(
                     "resonator-transmon pair argument correctly set.")
     
     # Analyse. NOTE! For now, only a single resonator is analysed
-    # from the processing volume. This is likely a TODO.
+    # from the processed data. This is likely a TODO.
     centre = []
-    for row in range(len( (processing_volume[0])[:] )):
+    for row in range(len( (processed_data[0])[:] )):
         # Run a complex mean on all complex values.
-        curr_data  = (processing_volume[0])[row,:]
+        curr_data  = (processed_data[0])[row,:]
         centre.append( np.mean(curr_data) )
     
     # Get JSON.

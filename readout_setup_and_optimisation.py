@@ -23,6 +23,7 @@ from data_exporter import \
     get_timestamp_string, \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
+    save, \
     export_processed_data_to_file
 from data_discriminator import calculate_and_update_resonator_value
 
@@ -64,6 +65,7 @@ def perform_readout_optimisation_g_e_f(
     
     use_log_browser_database = True,
     suppress_log_browser_export_of_suboptimal_data = True,
+    suppress_log_browser_export_of_final_optimal_data = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -93,6 +95,10 @@ def perform_readout_optimisation_g_e_f(
     
     # All output complex data plots will be stored for reference later on.
     list_of_current_complex_datasets = []
+    
+    # For this type of measurement, all data will always be saved as
+    # complex values.
+    save_complex_data = True
     
     # Acquire all complex data.
     for curr_ro_freq in resonator_freq_arr:
@@ -183,7 +189,7 @@ def perform_readout_optimisation_g_e_f(
     # Load the complex data from the winner, and re-store this in a new file.
     with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
         time_vector = h5f["time_vector"][()]
-        processing_volume = h5f["processing_volume"][()]
+        processed_data = h5f["processed_data"][()]
         fetched_data_arr = h5f["fetched_data_arr"][()]
         
         ## Create a hacky-like array structure for storage's sake.
@@ -296,7 +302,7 @@ def perform_readout_optimisation_g_e_f(
             log_is_complex = save_complex_data,
             axes = axes
         ))
-        
+    
     # Export the complex data (in a Log Browser compatible format).
     string_arr_to_return = export_processed_data_to_file(
         filepath_of_calling_script = os.path.realpath(__file__),
@@ -304,7 +310,7 @@ def perform_readout_optimisation_g_e_f(
         log_dict_list = log_dict_list,
         
         time_vector = time_vector,
-        processing_volume = processing_volume,
+        processed_data = processed_data,
         fetched_data_arr = fetched_data_arr,
         fetched_data_scale = axes['y_scaler'],
         fetched_data_offset = axes['y_offset'],
@@ -313,7 +319,7 @@ def perform_readout_optimisation_g_e_f(
         append_to_log_name_before_timestamp = 'optimal_result',
         append_to_log_name_after_timestamp = '',
         use_log_browser_database = use_log_browser_database,
-        suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
+        suppress_log_browser_export = suppress_log_browser_export_of_final_optimal_data,
     )
     
     return string_arr_to_return
@@ -787,7 +793,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = '_g_e_f',
+            append_to_log_name_before_timestamp = 'g_e_f',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             force_matrix_reshape_flip_row_and_column = True,
