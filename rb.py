@@ -13,7 +13,6 @@ import os
 import sys
 import time
 import math
-import Labber
 import shutil
 import random
 import numpy as np

@@ -12,7 +12,6 @@ from presto.hardware import AdcFSample, AdcMode, DacFSample, DacMode
 import os
 import sys
 import time
-import Labber
 import shutil
 import numpy as np
 from data_exporter import \
@@ -280,6 +279,18 @@ def amplitude_sweep_oscillation01_with_coupler_bias(
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
+        
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [
@@ -759,6 +770,18 @@ def amplitude_sweep_oscillation01_with_coupler_bias_multiplexed_ro(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
+        
         # This save is done in a loop, due to quirks with Labber's log browser.
         arrays_in_loop = [
             'control_amp_arr_A',
@@ -908,7 +931,7 @@ def amplitude_sweep_oscillation01_with_coupler_bias_multiplexed_ro(
                 
                 save_complex_data = save_complex_data,
                 source_code_of_executing_file = '', #get_sourcecode(__file__),
-                append_to_log_name_before_timestamp = '01_sweep_bias_multiplexed',
+                append_to_log_name_before_timestamp = '01'+with_or_without_bias_string+'_multiplexed',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
             )
@@ -1275,6 +1298,18 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro0(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
+        
         # Data to be stored.
         hdf5_steps = [
             'control_amp_arr', "FS",
@@ -1420,7 +1455,7 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro0(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = '12_sweep_bias_ro0',
+            append_to_log_name_before_timestamp = '12' + with_or_without_bias_string + '_ro0',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
@@ -1781,6 +1816,18 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro1(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
+        
         # Data to be stored.
         hdf5_steps = [
             'control_amp_arr', "FS",
@@ -1926,7 +1973,7 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro1(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = '12_sweep_bias_ro1',
+            append_to_log_name_before_timestamp = '12'+with_or_without_bias_string+'_ro1',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
@@ -2320,11 +2367,17 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Establish whether or not to write "sweep_bias" in the data export.
-        if num_biases > 1:
-            with_or_without_bias_string = "_sweep_bias"
-        else:
-            with_or_without_bias_string = ""
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [

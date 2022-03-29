@@ -12,7 +12,6 @@ from presto.hardware import AdcFSample, AdcMode, DacFSample, DacMode
 import os
 import sys
 import time
-import Labber
 import shutil
 import numpy as np
 from datetime import datetime

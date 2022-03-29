@@ -12,7 +12,6 @@ from presto.hardware import AdcFSample, AdcMode, DacFSample, DacMode
 import os
 import sys
 import time
-import Labber
 import shutil
 import numpy as np
 from data_exporter import \
@@ -1540,11 +1539,17 @@ def find_f_ro2_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Establish whether or not to write "sweep_bias" in the data export.
-        if num_biases > 1:
-            with_or_without_bias_string = "_sweep_bias"
-        else:
-            with_or_without_bias_string = ""
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [

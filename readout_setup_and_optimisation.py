@@ -13,7 +13,6 @@ import os
 import sys
 import time
 import h5py # Needed for .h5 data feedback.
-import Labber
 import shutil
 import numpy as np
 from datetime import datetime
