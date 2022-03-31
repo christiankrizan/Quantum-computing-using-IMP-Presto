@@ -15,6 +15,7 @@ import time
 import h5py # Needed for .h5 data feedback.
 import shutil
 import numpy as np
+from numpy import hanning as von_hann
 from datetime import datetime
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -386,7 +387,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         coupler_dc_bias = 0.0
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -397,6 +398,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -659,7 +661,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             repeat_count = num_shots_per_state,
             num_averages = num_averages,
             print_time   = True,
-        )    
+        )
         
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -802,6 +804,12 @@ def get_complex_data_for_readout_optimisation_g_e_f(
     return string_arr_to_return
 
 
+def make_templates_for_state_matching_g_e_f(
+    ip_address,
+    ext_clk_present
+    ):
+    assert 1 == 0, "Not finished."
+    
 
 # ##################################################### #
 '''  The following three defs have been uncommented,  '''
@@ -869,7 +877,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         coupler_dc_bias = 0.0
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -880,6 +888,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -1142,7 +1151,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             repeat_count = num_shots_per_state,
             num_averages = num_averages,
             print_time   = True,
-        )    
+        )
         
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1346,7 +1355,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         coupler_dc_bias = 0.0
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -1357,6 +1366,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -1619,7 +1629,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             repeat_count = num_shots_per_state,
             num_averages = num_averages,
             print_time   = True,
-        )    
+        )
         
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1823,7 +1833,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         coupler_dc_bias = 0.0
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -1834,6 +1844,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -2096,7 +2107,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             repeat_count = num_shots_per_state,
             num_averages = num_averages,
             print_time   = True,
-        )    
+        )
         
     # Declare path to whatever data will be saved.
     string_arr_to_return = []

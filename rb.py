@@ -16,6 +16,7 @@ import math
 import shutil
 import random
 import numpy as np
+from numpy import hanning as von_hann
 from datetime import datetime
 
 def get_theta_phi_of_next_pulse(i_am_here = [0,0], going_here = [0,0]):
@@ -140,7 +141,7 @@ def randomised_benchmarking_01_single_qubit(
     
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -151,6 +152,7 @@ def randomised_benchmarking_01_single_qubit(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)

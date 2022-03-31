@@ -12,6 +12,7 @@ import h5py
 import json
 import shutil
 import numpy as np
+from numpy import hanning as von_hann
 from datetime import datetime
 
 def initiate_discriminator_settings_file(
@@ -28,7 +29,7 @@ def initiate_discriminator_settings_file(
         open(full_path_to_discriminator_settings_json, 'a').close()
     
     # Build the JSON (dict template of dicts) that will be saved.
-    json_dict = dict()    
+    json_dict = dict()
     json_dict.update(
         {'resonator_'+str(initial_resonator_qubit_pair): 
             {'qubit_states':
@@ -148,22 +149,54 @@ def calculate_and_update_resonator_value(
     
 
 def discriminate(
-    readout_resonator_ids = [],
+    path_to_data,
+    ordered_readout_resonator_ids_in_data = [],
+    select_disciminations_to_export = [[]]
     ):
     ''' Takes a data set and discriminates the data held within.
     '''
     
     # Input sanitisation.
-    assert (len(readout_resonator_ids) != 0) and (len(intended_qubit_states_in_readout) != 0), print("TODO!")
-    ## TODO make sure that len(readout_resonator_ids) == len(intended_qubit_states_in_readout) AND that both are NOT(empty).
+    assert (len(ordered_readout_resonator_ids_in_data) > 0), "Error: state discrimination failed, no readout resonator ID provided."
     
-    # Check if the discriminator settings JSON exists.
-    # If not, throw an error.
-    ## TODO stuff.
+    # Load discrimination settings. Each new row in
+    # loaded_json_data_for_discrimination corresponds to a new resonator ID.
+    loaded_json_data_for_discrimination = [[]] * len(ordered_readout_resonator_ids_in_data)
+    for yy in len(ordered_readout_resonator_ids_in_data):
+        loaded_json_data_for_discrimination[yy] = load_discriminator_settings(yy)
     
-    # The JSON exists. Based on the user-provided settings TODO
+    states_present_for_resonators = [[]] * len(ordered_readout_resonator_ids_in_data)
+    """for ordered_readout_resonator_ids_in_data:
+        So we are looping over all resonators that the user intends to target.
+        
+        try checking if state number 0 is there, if not then check if 1 is there,
+        then check if 2 is there etc. On every hit, store the hit as what
+        state number and centre coordinate it has.
+        
+        So states_present_for_resonators[0] means that the first resonator_ID
+        has (states_present_for_resonators[0]) number of states that can be
+        disciminated to."""
+        
     
-    assert 1 == 0, "Not finished"
+        
+    
+    
+    # Get data in path_to_data.
+    with h5py.File(os.path.abspath(path_to_data), 'r') as h5f:
+        processed_data = h5f["processed_data"][()]
+    
+    # Each new row in processed data will be data for one particular resonator.
+    # The rows will correspond to ordered_readout_resonator_ids_in_data
+    # as to which resonators they were.
+    
+    # For all rows in processing_data, take all data and 
+    
+    
+    
+    #   Store in new thing.
+    # For all new thing rows, make new dataset and export discriminated data.
+        
+    assert 1 == 0, "Not finished."
     
     
 def find_area_and_mean_distance_between_all_qubit_states(

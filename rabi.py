@@ -14,6 +14,7 @@ import sys
 import time
 import shutil
 import numpy as np
+from numpy import hanning as von_hann
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -22,7 +23,7 @@ from data_exporter import \
     get_dict_for_log_list, \
     save
 
-def amplitude_sweep_oscillation01_with_coupler_bias(
+def amplitude_sweep_oscillation01(
     ip_address,
     ext_clk_present,
     
@@ -67,7 +68,7 @@ def amplitude_sweep_oscillation01_with_coupler_bias(
 
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -78,6 +79,7 @@ def amplitude_sweep_oscillation01_with_coupler_bias(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -394,7 +396,7 @@ def amplitude_sweep_oscillation01_with_coupler_bias(
     return string_arr_to_return
     
 
-def amplitude_sweep_oscillation01_with_coupler_bias_multiplexed_ro(
+def amplitude_sweep_oscillation01_multiplexed_ro(
     ip_address,
     ext_clk_present,
     
@@ -485,7 +487,7 @@ def amplitude_sweep_oscillation01_with_coupler_bias_multiplexed_ro(
 
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -496,6 +498,7 @@ def amplitude_sweep_oscillation01_with_coupler_bias_multiplexed_ro(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -939,7 +942,7 @@ def amplitude_sweep_oscillation01_with_coupler_bias_multiplexed_ro(
     return string_arr_to_return
     
 
-def amplitude_sweep_oscillation12_with_coupler_bias_ro0(
+def amplitude_sweep_oscillation12_ro0(
     ip_address,
     ext_clk_present,
     
@@ -1027,7 +1030,7 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro0(
 
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -1038,6 +1041,7 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro0(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -1463,7 +1467,7 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro0(
     return string_arr_to_return
     
 
-def amplitude_sweep_oscillation12_with_coupler_bias_ro1(
+def amplitude_sweep_oscillation12_ro1(
     ip_address,
     ext_clk_present,
     
@@ -1551,7 +1555,7 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro1(
 
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -1562,6 +1566,7 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro1(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -1981,7 +1986,7 @@ def amplitude_sweep_oscillation12_with_coupler_bias_ro1(
     return string_arr_to_return
     
 
-def duration_sweep_oscillation12_with_coupler_bias_ro1(
+def duration_sweep_oscillation12_ro1(
     ip_address,
     ext_clk_present,
     
@@ -2068,7 +2073,7 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
     
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -2079,6 +2084,7 @@ def duration_sweep_oscillation12_with_coupler_bias_ro1(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)

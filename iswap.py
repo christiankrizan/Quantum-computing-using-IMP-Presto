@@ -14,6 +14,7 @@ import sys
 import time
 import shutil
 import numpy as np
+from numpy import hanning as von_hann
 from datetime import datetime
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -96,7 +97,7 @@ def iswap_sweep_duration_and_detuning(
     
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -107,6 +108,7 @@ def iswap_sweep_duration_and_detuning(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -700,7 +702,7 @@ def iswap_sweep_duration_and_amplitude(
     
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -711,6 +713,7 @@ def iswap_sweep_duration_and_amplitude(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -1305,7 +1308,7 @@ def iswap_sweep_amplitude_and_detuning(
     
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -1316,6 +1319,7 @@ def iswap_sweep_amplitude_and_detuning(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -1900,7 +1904,7 @@ def tune_local_qubit_phases_of_iswap(
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -1911,6 +1915,7 @@ def tune_local_qubit_phases_of_iswap(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
@@ -2221,10 +2226,11 @@ def tune_local_qubit_phases_of_iswap(
             T += added_delay_for_bias_tee
             
             # Redefine the coupler bias tone duration.
+            '''Note! The second coupler_ac_duration_iswap row is not a bug.'''
             coupler_bias_tone.set_total_duration(
                 control_duration_01 + \
                 coupler_ac_duration_iswap + \
-                coupler_ac_duration_iswap + \ # Not a duplicate row bug!
+                coupler_ac_duration_iswap + \
                 control_duration_01 + \
                 readout_duration + \
                 repetition_delay \

@@ -11,6 +11,7 @@ import time
 import h5py
 import shutil
 import numpy as np
+from numpy import hanning as von_hann
 from datetime import datetime
 
 
@@ -95,7 +96,6 @@ def get_dict_for_log_list(
         log_entry_name = axes['y_name']
     return dict(name=log_entry_name, unit=unit, vector=False, complex=log_is_complex)
 
-
 def make_and_get_save_folder(
     filepath_of_calling_script
     ):
@@ -131,7 +131,6 @@ def make_and_get_save_folder(
             os.makedirs(lb_path_name)
     
     return full_folder_path_where_data_will_be_saved, folder_path_to_calling_script_attempting_to_save, name_of_measurement_that_ran
-
 
 def save(
     timestamp,
@@ -373,7 +372,6 @@ def save(
     
     # Return the .h5 save path to the calling script
     return filepath_to_exported_h5_file
-
 
 def export_processed_data_to_file(
     filepath_of_calling_script,

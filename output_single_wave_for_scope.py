@@ -9,6 +9,7 @@ import os
 import time
 
 import numpy as np
+from numpy import hanning as von_hann
 
 from presto import pulsed
 from presto.utils import sin2, get_sourcecode
@@ -41,7 +42,7 @@ def outputSingleWave(
 
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         address     = ip_address,
         ext_ref_clk = ext_clk_present,
@@ -51,6 +52,7 @@ def outputSingleWave(
         dac_fsample = [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run     = False,
     ) as pls:
+        print("Connected. Setting up...")
         #pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
         #pls.hardware.set_dac_current(readout_stimulus_port, 40_500)
         #pls.hardware.set_dac_current(control_port, 40_500)

@@ -14,6 +14,7 @@ import sys
 import time
 import shutil
 import numpy as np
+from numpy import hanning as von_hann
 from datetime import datetime
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -99,7 +100,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)
     
     # Instantiate the interface
-    print("\nInstantiating interface!")
+    print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
         force_reload =   True,
         address      =   ip_address,
@@ -110,6 +111,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
+        print("Connected. Setting up...")
         
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
