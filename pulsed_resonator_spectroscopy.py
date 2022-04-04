@@ -240,7 +240,7 @@ def find_f_ro0_sweep_coupler(
             # once one tee risetime has passed.
             for bias_tone in coupler_bias_tone:
                 bias_tone.set_total_duration(readout_duration + repetition_delay)
-        
+            
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
 
@@ -267,8 +267,7 @@ def find_f_ro0_sweep_coupler(
         
         # Move to next iteration.
         T += repetition_delay
-
-
+        
         
         ################################
         ''' EXPERIMENT EXECUTES HERE '''

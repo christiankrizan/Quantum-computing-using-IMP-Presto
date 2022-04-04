@@ -150,8 +150,10 @@ def save(
     
     inner_loop_size,
     outer_loop_size,
+    single_shot_repeats_to_discretise = 0,
     
     save_complex_data = True,
+    discriminate_for_getting_probabilities_on_these_states = [],
     source_code_of_executing_file = '',
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp  = '',
@@ -313,38 +315,58 @@ def save(
     
     # And, save either complex or magnitude data with/without some
     # scale and offset. Reshape the data to account for repeats.
-    for mm in range(len(processed_data[:])):
-        fetch = processed_data[mm]
-        fetch.shape = (outer_loop_size, inner_loop_size)
+    # Also, take into account whether the user is running a discretisation
+    # measurements, meaning that every data point on the "z axis" of
+    # fetched_data_arr is in fact a new 2D-plane of inner_loop+outer_loop data.
+    if len(discriminate_for_getting_probabilities_on_these_states) > 0:
+        # We are running a discretisation measurement.
+        assert single_shot_repeats_to_discretise >= 1, "Error: a measurement is requesting state discrimination, but reports that its saved data is less than 1 shot long. (No. shots = "+str(single_shot_repeats_to_discretise)+")"
         
-        if not save_complex_data:
-            processed_data[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
-        else:
-            # The user might have set some scale and offset.
-            # The offset would in that case have been set as
-            # a portion of the magnitude.
-            fetch_imag = np.copy(np.imag(fetch))
-            fetch_real = np.copy(np.real(fetch))
-            #fetch_thetas = np.arctan2( fetch_imag, fetch_real ) # Keep in mind the quadrants! np.arctan2 gives the same values as np.angle()
-            fetch_thetas = np.copy(np.angle( fetch ))
+        # processed_data[mm] contains, on an per-resonator basis,
+        # every 2D slice (inner_loop_size, outer_loop_size) big,
+        # repeated for single_shot_repeats_to_discretise iterations.
+        # But, all of this data is given on a single line in a vector.
+        
+        ''' TODO
+            This will happen now:
             
-            # Add user-set offset (Note: can be negative; "add minus y")
-            fetch_imag += np.copy(fetched_data_offset[mm]) * np.sin( fetch_thetas )
-            fetch_real += np.copy(fetched_data_offset[mm]) * np.cos( fetch_thetas )
-            fetch = fetch_real + fetch_imag*1j
+        '''
+        
+        assert 1 == 0, "Not finished"
+        
+    else:
+        for mm in range(len(processed_data[:])):
+            fetch = processed_data[mm]
+            fetch.shape = (outer_loop_size, inner_loop_size)
             
-            # Scale with some user-set scale and store.
-            processed_data[mm] = fetch * fetched_data_scale[mm]
-    
-    # Did the user request to flip the processed data?
-    # I.e. that every new repeat in some measurement will be a column
-    # instead of a row in the processed data? Then fix this.
-    # Every data file is either way always stored so that
-    # one row = one repeat.
-    if force_matrix_reshape_flip_row_and_column:
-        for ee in range(len(processed_data[:])):
-            processed_data[ee] = (processed_data[ee]).transpose()
-    
+            if not save_complex_data:
+                processed_data[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
+            else:
+                # The user might have set some scale and offset.
+                # The offset would in that case have been set as
+                # a portion of the magnitude.
+                fetch_imag = np.copy(np.imag(fetch))
+                fetch_real = np.copy(np.real(fetch))
+                #fetch_thetas = np.arctan2( fetch_imag, fetch_real ) # Keep in mind the quadrants! np.arctan2 gives the same values as np.angle()
+                fetch_thetas = np.copy(np.angle( fetch ))
+                
+                # Add user-set offset (Note: can be negative; "add minus y")
+                fetch_imag += np.copy(fetched_data_offset[mm]) * np.sin( fetch_thetas )
+                fetch_real += np.copy(fetched_data_offset[mm]) * np.cos( fetch_thetas )
+                fetch = fetch_real + fetch_imag*1j
+                
+                # Scale with some user-set scale and store.
+                processed_data[mm] = fetch * fetched_data_scale[mm]
+        
+        # Did the user request to flip the processed data?
+        # I.e. that every new repeat in some measurement will be a column
+        # instead of a row in the processed data? Then fix this.
+        # Every data file is either way always stored so that
+        # one row = one repeat.
+        if force_matrix_reshape_flip_row_and_column:
+            for ee in range(len(processed_data[:])):
+                processed_data[ee] = (processed_data[ee]).transpose()
+        
     # Perform data export to file
     filepath_to_exported_h5_file = export_processed_data_to_file(
         filepath_of_calling_script = filepath_of_calling_script,
