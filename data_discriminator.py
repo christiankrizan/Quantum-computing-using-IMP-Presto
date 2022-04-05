@@ -98,6 +98,12 @@ def calculate_and_update_resonator_value(
                     "Check the resonator frequency of this file, and "       +\
                     "then manually call this function again with the "       +\
                     "resonator-transmon pair argument correctly set.")
+            
+            # Assert that the datatype of the resonator_transmon_pair
+            # is valid. This fact could depend on Labber bugs for instance.
+            if (not isinstance(resonator_transmon_pair, int)):
+                # The returned value is not an integer. Make it into one.
+                resonator_transmon_pair = int(resonator_transmon_pair[0])
     
     # Analyse. NOTE! For now, only a single resonator is analysed
     # from the processed data. This is likely a TODO.
@@ -149,54 +155,71 @@ def calculate_and_update_resonator_value(
     
 
 def discriminate(
-    path_to_data,
-    ordered_readout_resonator_ids_in_data = [],
-    select_disciminations_to_export = [[]]
+    data_or_filepath_to_data,
+    i_provided_a_filepath = False,
+    ordered_resonator_ids_in_readout_data = []
     ):
     ''' Takes a data set and discriminates the data held within.
     '''
     
     # Input sanitisation.
-    assert (len(ordered_readout_resonator_ids_in_data) > 0), "Error: state discrimination failed, no readout resonator ID provided."
+    assert (len(ordered_resonator_ids_in_readout_data) > 0), "Error: state discrimination failed, no readout resonator ID provided."
     
     # Load discrimination settings. Each new row in
-    # loaded_json_data_for_discrimination corresponds to a new resonator ID.
-    loaded_json_data_for_discrimination = [[]] * len(ordered_readout_resonator_ids_in_data)
-    for yy in len(ordered_readout_resonator_ids_in_data):
-        loaded_json_data_for_discrimination[yy] = load_discriminator_settings(yy)
-    
-    states_present_for_resonators = [[]] * len(ordered_readout_resonator_ids_in_data)
-    """for ordered_readout_resonator_ids_in_data:
-        So we are looping over all resonators that the user intends to target.
+    # states_present_for_resonators corresponds to a new resonator ID.
+    states_present_for_resonators = [[]] * len(ordered_resonator_ids_in_readout_data)
+    curr_ii = 0
+    for ff in ordered_resonator_ids_in_readout_data:
         
-        try checking if state number 0 is there, if not then check if 1 is there,
-        then check if 2 is there etc. On every hit, store the hit as what
-        state number and centre coordinate it has.
+        # Cut out what states are available to discriminate to at resonator ff:
+        looked_at_res_dict = (load_discriminator_settings(ff))['resonator_'+str(ff)]
+        curr_looked_at_res_dict = (looked_at_res_dict)['qubit_states']
+        list_of_qubit_states = list(curr_looked_at_res_dict.keys())
+        new_list = []
+        for tt in range(0,len(list_of_qubit_states),2):
+            new_list.append(int((list_of_qubit_states[tt].replace('qubit_state_','')).replace('_centre_real','')))
+        list_of_qubit_states = new_list
         
-        So states_present_for_resonators[0] means that the first resonator_ID
-        has (states_present_for_resonators[0]) number of states that can be
-        disciminated to."""
+        # Now get the coordinates (real, imaginary) for all of the present states.
+        coordinate_list = []
+        for cc in list_of_qubit_states:
+            real_coord = curr_looked_at_res_dict['qubit_state_'+str(cc)+'_centre_real']
+            imag_coord = curr_looked_at_res_dict['qubit_state_'+str(cc)+'_centre_imag']
+            coordinate_list.append(real_coord + 1j*imag_coord)
         
+        # Note:
+        # coordinate_list[ff] = centre coordinates for list_of_qubit_states[ff]
+        states_present_for_resonators[curr_ii] = [list_of_qubit_states, coordinate_list]
+        curr_ii += 1
     
+    # Get data.
+    if i_provided_a_filepath:
+        # The user provided a filepath to data.
+        assert isinstance(data_or_filepath_to_data, str), "Error: the discriminator was provided a non-string datatype. Expected string (filepath to data)."
+        with h5py.File(os.path.abspath(data_or_filepath_to_data), 'r') as h5f:
+            processed_data = h5f["processed_data"][()]
+    else:
+        # Then the user provided the data raw.
+        assert (not isinstance(data_or_filepath_to_data, str)), "Error: the discriminator was provided a string type. Expected raw data. The provided variable was: "+str(processsed_data)
+        processed_data = data_or_filepath_to_data
+    
+    # We now have the necessary data for discretisation, and the
+    # processed data that will be discretised. Let's go.
+    for current_res_idx in range(len(processed_data)):
+        res_content = processed_data[current_res_idx]
+        states = (states_present_for_resonators[current_res_idx])[0]
+        state_centres = np.array((states_present_for_resonators[current_res_idx])[1])
         
-    
-    
-    # Get data in path_to_data.
-    with h5py.File(os.path.abspath(path_to_data), 'r') as h5f:
-        processed_data = h5f["processed_data"][()]
-    
-    # Each new row in processed data will be data for one particular resonator.
-    # The rows will correspond to ordered_readout_resonator_ids_in_data
-    # as to which resonators they were.
-    
-    # For all rows in processing_data, take all data and 
-    
-    
-    
-    #   Store in new thing.
-    # For all new thing rows, make new dataset and export discriminated data.
+        # For all complex-valued indices from the readout on this resonator,
+        # figure out what state centre a_shot was closest to.
+        for bb in range(len(res_content)):
+            assigned = np.argmin(np.abs(state_centres-res_content[bb]))
+            res_content[bb] = states[assigned]
         
-    assert 1 == 0, "Not finished."
+        # Save and move on to the next resonator.
+        processed_data[current_res_idx] = res_content.astype(int)
+    
+    return processed_data
     
     
 def find_area_and_mean_distance_between_all_qubit_states(

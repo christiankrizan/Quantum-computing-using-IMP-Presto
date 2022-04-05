@@ -13,6 +13,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
+from data_discriminator import discriminate
 
 
 def ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs):
@@ -150,10 +151,12 @@ def save(
     
     inner_loop_size,
     outer_loop_size,
+    
     single_shot_repeats_to_discretise = 0,
+    ordered_resonator_ids_in_readout_data = [],
+    get_probabilities_on_these_states = [],
     
     save_complex_data = True,
-    discriminate_for_getting_probabilities_on_these_states = [],
     source_code_of_executing_file = '',
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp  = '',
@@ -318,7 +321,7 @@ def save(
     # Also, take into account whether the user is running a discretisation
     # measurements, meaning that every data point on the "z axis" of
     # fetched_data_arr is in fact a new 2D-plane of inner_loop+outer_loop data.
-    if len(discriminate_for_getting_probabilities_on_these_states) > 0:
+    if len(get_probabilities_on_these_states) > 0:
         # We are running a discretisation measurement.
         assert single_shot_repeats_to_discretise >= 1, "Error: a measurement is requesting state discrimination, but reports that its saved data is less than 1 shot long. (No. shots = "+str(single_shot_repeats_to_discretise)+")"
         
@@ -327,11 +330,116 @@ def save(
         # repeated for single_shot_repeats_to_discretise iterations.
         # But, all of this data is given on a single line in a vector.
         
-        ''' TODO
-            This will happen now:
-            
-        '''
+        # First, discretise every entry in the in processed_data[:]
+        discriminated_data = discriminate(
+            data_or_filepath_to_data = processed_data,
+            i_provided_a_filepath = False,
+            ordered_resonator_ids_in_readout_data = ordered_resonator_ids_in_readout_data
+        )
         
+        # discriminated_data[resonator] now contains only discrete values.
+        # We will reshape this into a 3D-volume with the following dimensions:
+        #   Rows:     outer_loop_size
+        #   Columns:  inner_loop_size
+        #   Depth:    single_shot_repeats_to_discretise
+        for aa in range(len(discriminated_data)):
+            disc_data = np.array(discriminated_data[aa])
+            disc_data.shape = \
+                (single_shot_repeats_to_discretise, inner_loop_size * outer_loop_size)
+            for hh in range(len(disc_data)):
+                cut = np.array(disc_data[hh])
+                cut.shape = (outer_loop_size, inner_loop_size)
+                disc_data[hh] = cut
+            discriminated_data[aa] = disc_data
+        
+        # We now want to look for probabilities of some user-provided states.
+        # Remove duplicates from get_probabilities_on_these_states.
+        # get_probabilities_on_these_states will get some random order.
+        get_probabilities_on_these_states = list(set(get_probabilities_on_these_states))
+        
+        # Which is the highest represented state in the entire system?
+        num_states = 0
+        for item in discriminated_data:
+            highest_num_in_slice = np.max(item)
+            if highest_num_in_slice > num_states:
+                num_states = highest_num_in_slice
+        num_states = num_states +1 # Keep in mind that 0 counts (= |0>)
+        
+        # How many qubits are there?
+        # (by assumption, the same as the number of resonators).
+        num_qubits = len(discriminated_data)
+        
+        ## TODO: get_probabilities_on_these_states is a list of states,
+        ##       not just one state. This fact would mean that the user
+        ##       could write ['11','02'] and get two plots, matching the
+        ##       probabilities for being in |11> and |02> respectively.
+        ##for blabla goes here
+        for curr_checked_state in get_probabilities_on_these_states:
+            
+            # Let's ensure that the user-provided state to investigate,
+            # matches the same number of provided resonator IDs.
+            assert len(curr_checked_state) == len(discriminated_data), "Error: the number of qubits in the user-provided state to discriminate, does not match the number of readout resonators in the state discriminated readout."
+            
+            ''' Here is an algorithm for representing states with unique
+                integer identifiers.
+                        
+                discriminated_data[mm] contains integer values 0 ->
+                (No. states that were discriminated between).
+                
+                For instance, if the state discrimination is between states
+                |0>, |1>, |2>, for two resonators assuming one qubit each,
+                then we may assign integer identifiers to every two-qubit
+                state like this:
+                
+                0 = |00>
+                1 = |01>
+                2 = |02>
+                3 = |10>
+                4 = |11>
+                5 = |12>
+                6 = |20>
+                7 = |21>
+                8 = |22>
+                
+                ... so the integers involved are 0 through (no_qubits ** no_states).
+                
+                So, take discretised_data[  LEN-1  ]  ## WHICH IS THE LSB IN THE TABLE ABOVE,
+                and perform:
+                    processed_data[  LEN-1  ] * no_states**0
+                  + processed_data[  LEN-2  ] * no_states**1
+                  = some_integer
+                
+                Store some_integer in a new 3D-volume that has the same dimensions as one of any of all entries in discretised_data[mm].
+                
+                This new 3D-volume, which has the same dimensions as processed_data[any], will contain integers only.
+                    
+                Now, convert the user supplied state (like ['11']) to an integer
+                as was done above. '11' becomes integer 4 in this case.
+                
+                FOR EVERY XY-pixel in (the new 3D-volume) along the length of every shot,
+                    probability of being in 11 in this pixel = (number of 4 along this Z-line) / (length_of_the_z_line)
+                
+                Now once the probabilites are determined for every pixel,
+                    processed_data[0] = the probabilities matrix
+                        
+                        Look at """ # Store the post-processed data. """ below. Make sure that when discretising, only processed_data[0] is saved anyway.
+                            Keep in mind that there are measurements that request seperate resonator exports.
+                                How though? Hm.
+                
+                Since inner_loop_size and outer_loop_size will match with the correct dimensions of the probabilities_matrix, then we're good.
+                
+            '''
+            
+            
+            num_qubits
+            num_states
+            
+            
+            
+            
+            
+            
+            
         assert 1 == 0, "Not finished"
         
     else:
@@ -358,14 +466,14 @@ def save(
                 # Scale with some user-set scale and store.
                 processed_data[mm] = fetch * fetched_data_scale[mm]
         
-        # Did the user request to flip the processed data?
-        # I.e. that every new repeat in some measurement will be a column
-        # instead of a row in the processed data? Then fix this.
-        # Every data file is either way always stored so that
-        # one row = one repeat.
-        if force_matrix_reshape_flip_row_and_column:
-            for ee in range(len(processed_data[:])):
-                processed_data[ee] = (processed_data[ee]).transpose()
+    # Did the user request to flip the processed data?
+    # I.e. that every new repeat in some measurement will be a column
+    # instead of a row in the processed data? Then fix this.
+    # Every data file is either way always stored so that
+    # one row = one repeat.
+    if force_matrix_reshape_flip_row_and_column:
+        for ee in range(len(processed_data[:])):
+            processed_data[ee] = (processed_data[ee]).transpose()
         
     # Perform data export to file
     filepath_to_exported_h5_file = export_processed_data_to_file(
