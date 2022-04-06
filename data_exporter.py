@@ -342,14 +342,20 @@ def save(
         #   Rows:     outer_loop_size
         #   Columns:  inner_loop_size
         #   Depth:    single_shot_repeats_to_discretise
+        #
+        #   ... once we have the probabilities counted!
+        #
         for aa in range(len(discriminated_data)):
             disc_data = np.array(discriminated_data[aa])
             disc_data.shape = \
                 (single_shot_repeats_to_discretise, inner_loop_size * outer_loop_size)
-            for hh in range(len(disc_data)):
-                cut = np.array(disc_data[hh])
-                cut.shape = (outer_loop_size, inner_loop_size)
-                disc_data[hh] = cut
+            # Let's not reshape every entry in discriminated_data to match
+            # the (outer_loop_size, inner_loop_size) format just yet.
+            # This enables using np.bincount later for probabilities.
+            ##for hh in range(len(disc_data)):
+            ##    cut = np.array(disc_data[hh])
+            ##    cut.shape = (outer_loop_size, inner_loop_size)
+            ##    disc_data[hh] = cut
             discriminated_data[aa] = disc_data
         
         # We now want to look for probabilities of some user-provided states.
@@ -365,82 +371,105 @@ def save(
                 num_states = highest_num_in_slice
         num_states = num_states +1 # Keep in mind that 0 counts (= |0>)
         
-        # How many qubits are there?
-        # (by assumption, the same as the number of resonators).
-        num_qubits = len(discriminated_data)
+        # Remake the discriminated data into an integer format.
+        ''' Here is my way of representing n-qubit states with unique integers.
+                    
+            discriminated_data[mm] contains integer values 0 ->
+            (No. states that were discriminated between).
+            
+            For instance, if the state discrimination is between states
+            |0>, |1>, |2>, for two resonators assuming one qubit each,
+            then we may assign integer identifiers to every two-qubit
+            state like this:
+            
+            0 = |00>
+            1 = |01>
+            2 = |02>
+            3 = |10>
+            4 = |11>
+            5 = |12>
+            6 = |20>
+            7 = |21>
+            8 = |22>
+            
+            The possible integers are 0 through (no_qubits ** no_states).
+            
+            So, take discretised_data[  LEN-1  ]  ## THE LSB IN THE LUT ABOVE!
+            and perform (for example, for a 4-qubit state):
+                processed_data[  LEN-1  ] * no_states**0
+              + processed_data[  LEN-2  ] * no_states**1
+              + processed_data[  LEN-3  ] * no_states**2
+              + processed_data[  LEN-4  ] * no_states**3
+              = some_integer showing a unique 4-qubit state.
+            
+            Now, convert the user supplied state (like ['11']) to an integer
+            as was done above. '11' becomes integer 4 (see LUT above) if
+            we have a 2-qubit state with 3 possible states.
+            
+        '''
+        integer_rep_matrix = np.zeros_like(discriminated_data[0])
+        for ll in range(len(discriminated_data)):    
+            integer_rep_matrix += np.array(discriminated_data[len(discriminated_data)-1-ll]) * (num_states**ll)
+        
+        # integer_rep_matrix is now the total discriminated system matrix,
+        # where every integer corresponds to the n-qubit state held there.
         
         ## TODO: get_probabilities_on_these_states is a list of states,
         ##       not just one state. This fact would mean that the user
         ##       could write ['11','02'] and get two plots, matching the
         ##       probabilities for being in |11> and |02> respectively.
-        ##for blabla goes here
-        for curr_checked_state in get_probabilities_on_these_states:
+        ##       This implementation has yet not been done, and only
+        ##       single-entry lists are supported as of writing.
+        if len(get_probabilities_on_these_states) > 1:
+            raise NotImplementedError("Error: Currently, using more than one sought-for state when discretising is not supported. The plan is to implement this feature in the future.")
+        probability_vectors = [[]] * len(get_probabilities_on_these_states)
+        for urr in range(len(get_probabilities_on_these_states)):
+            curr_checked_state = get_probabilities_on_these_states[urr]
             
             # Let's ensure that the user-provided state to investigate,
             # matches the same number of provided resonator IDs.
             assert len(curr_checked_state) == len(discriminated_data), "Error: the number of qubits in the user-provided state to discriminate, does not match the number of readout resonators in the state discriminated readout."
             
-            ''' Here is an algorithm for representing states with unique
-                integer identifiers.
-                        
-                discriminated_data[mm] contains integer values 0 ->
-                (No. states that were discriminated between).
-                
-                For instance, if the state discrimination is between states
-                |0>, |1>, |2>, for two resonators assuming one qubit each,
-                then we may assign integer identifiers to every two-qubit
-                state like this:
-                
-                0 = |00>
-                1 = |01>
-                2 = |02>
-                3 = |10>
-                4 = |11>
-                5 = |12>
-                6 = |20>
-                7 = |21>
-                8 = |22>
-                
-                ... so the integers involved are 0 through (no_qubits ** no_states).
-                
-                So, take discretised_data[  LEN-1  ]  ## WHICH IS THE LSB IN THE TABLE ABOVE,
-                and perform:
-                    processed_data[  LEN-1  ] * no_states**0
-                  + processed_data[  LEN-2  ] * no_states**1
-                  = some_integer
-                
-                Store some_integer in a new 3D-volume that has the same dimensions as one of any of all entries in discretised_data[mm].
-                
-                This new 3D-volume, which has the same dimensions as processed_data[any], will contain integers only.
-                    
-                Now, convert the user supplied state (like ['11']) to an integer
-                as was done above. '11' becomes integer 4 in this case.
-                
-                FOR EVERY XY-pixel in (the new 3D-volume) along the length of every shot,
-                    probability of being in 11 in this pixel = (number of 4 along this Z-line) / (length_of_the_z_line)
-                
-                Now once the probabilites are determined for every pixel,
-                    processed_data[0] = the probabilities matrix
-                        
-                        Look at """ # Store the post-processed data. """ below. Make sure that when discretising, only processed_data[0] is saved anyway.
-                            Keep in mind that there are measurements that request seperate resonator exports.
-                                How though? Hm.
-                
-                Since inner_loop_size and outer_loop_size will match with the correct dimensions of the probabilities_matrix, then we're good.
-                
-            '''
+            # Convert the sought-for state to an integer, see ~14 rows up how.
+            int_rep = 0
+            for ll in range(len(curr_checked_state)):
+                int_rep += int(curr_checked_state[len(curr_checked_state)-1-ll]) * (num_states**ll)
             
+            # NOTE! That we have yet not reshaped every entry in 
+            # neither discriminated_data or integer_rep_matrix.
+            # Every row in the matrix, corresponds merely to
+            # the whole 2D-matrix (outer_loop_size * inner_loop_size)
+            # unravelled to a single row. The final reshaping will happen soon.
             
-            num_qubits
-            num_states
+            # int_rep is an n-qubit state that the user seeks a probability of.
+            # Let's calculate how often int_rep (aka. curr_checked_state)
+            # shows up *for every pixel* in integer_rep_matrix.
+            ''' DO NOTE that specifying dtype='float64' is CRUCIAL.
+                Otherwise, prob_vector will remain [0 0 0 0 0 0] always.'''
+            prob_vector = np.zeros_like(integer_rep_matrix[0], dtype='float64')
+            for curr_rowcol in range(len(integer_rep_matrix[0,:])):
+                bix = np.bincount(integer_rep_matrix[:,curr_rowcol])
+                try:
+                    no_sought_vals_found = bix[int_rep]
+                except IndexError:
+                    # If this triggers, then there were no user-sought
+                    # n-qubit states for any shot for this row+column value.
+                    no_sought_vals_found = 0
+                prob_vector[curr_rowcol] = no_sought_vals_found / single_shot_repeats_to_discretise
             
-            
-            
-            
-            
-            
-            
-        assert 1 == 0, "Not finished"
+            # For the current state that the user is interested in,
+            # fill in the resulting probabilities.
+            probability_vectors[urr] = prob_vector
+        
+        # Now, we only have to reshape the data right.
+        ## TODO: enable a whole list of user-sought state probabilites.
+        ##       For now, we accept only one, stored in probability_vectors[0].
+        fetch = probability_vectors[0]
+        fetch.shape = (outer_loop_size, inner_loop_size)
+        ## TODO this loop is a temporary solution. Just fill all resonators'
+        ## results with the state probability which the user sought.
+        for mm in range(len(processed_data)):
+            processed_data[mm] = fetch
         
     else:
         for mm in range(len(processed_data[:])):
@@ -474,7 +503,7 @@ def save(
     if force_matrix_reshape_flip_row_and_column:
         for ee in range(len(processed_data[:])):
             processed_data[ee] = (processed_data[ee]).transpose()
-        
+    
     # Perform data export to file
     filepath_to_exported_h5_file = export_processed_data_to_file(
         filepath_of_calling_script = filepath_of_calling_script,
