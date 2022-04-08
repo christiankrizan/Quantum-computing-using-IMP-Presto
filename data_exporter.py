@@ -332,6 +332,7 @@ def save(
         
         # First, discretise every entry in the in processed_data[:]
         discriminated_data = discriminate(
+            get_probabilities_on_these_states = get_probabilities_on_these_states,
             data_or_filepath_to_data = processed_data,
             i_provided_a_filepath = False,
             ordered_resonator_ids_in_readout_data = ordered_resonator_ids_in_readout_data
@@ -414,14 +415,6 @@ def save(
         # integer_rep_matrix is now the total discriminated system matrix,
         # where every integer corresponds to the n-qubit state held there.
         
-        ## TODO: get_probabilities_on_these_states is a list of states,
-        ##       not just one state. This fact would mean that the user
-        ##       could write ['11','02'] and get two plots, matching the
-        ##       probabilities for being in |11> and |02> respectively.
-        ##       This implementation has yet not been done, and only
-        ##       single-entry lists are supported as of writing.
-        if len(get_probabilities_on_these_states) > 1:
-            raise NotImplementedError("Error: Currently, using more than one sought-for state when discretising is not supported. The plan is to implement this feature in the future.")
         probability_vectors = [[]] * len(get_probabilities_on_these_states)
         for urr in range(len(get_probabilities_on_these_states)):
             curr_checked_state = get_probabilities_on_these_states[urr]
@@ -462,14 +455,11 @@ def save(
             probability_vectors[urr] = prob_vector
         
         # Now, we only have to reshape the data right.
-        ## TODO: enable a whole list of user-sought state probabilites.
-        ##       For now, we accept only one, stored in probability_vectors[0].
-        fetch = probability_vectors[0]
-        fetch.shape = (outer_loop_size, inner_loop_size)
-        ## TODO this loop is a temporary solution. Just fill all resonators'
-        ## results with the state probability which the user sought.
-        for mm in range(len(processed_data)):
-            processed_data[mm] = fetch
+        processed_data = [[]] * len(probability_vectors)
+        for pv in range(len(probability_vectors)):
+            fetch = probability_vectors[pv]
+            fetch.shape = (outer_loop_size, inner_loop_size)
+            processed_data[pv] = fetch
         
     else:
         for mm in range(len(processed_data[:])):
@@ -616,8 +606,36 @@ def export_processed_data_to_file(
             #       arrays. And, this entire subroutine should be made fully
             #       generic.
             if (select_resonator_for_single_log_export == ''):
+                
+                # Ensure that log_dict_list and processed_data matches.
+                assert len(log_dict_list) == len(processed_data), "Error: the requested logs to store do not match the available amount of data to store. Likely, the log_dict_list in the calling script is erroneous."
+                
+                # The Log Browser API has sort-of strange expectations
+                # as to how data is saved, as will be seen in the loops below. 
+                
+                # We can run a dict-update loop to construct the target dict
+                # that we want to add to the log. But, we must know
+                # beforehand what data we want to store into the dict keys.
+                # And, only run f.addEntry once per storage of such data.
+                # I.e. "one outer_loop" row typically of the measurement.
+                
+                # Here, it makes more sense to look at processed_data rather
+                # than the length of the log_dict_list. Because, the latter
+                # is set by the user, and the former is supposedly always
+                # set by the algorithm of this very file you are looking at.
+                dict_to_add_into_log = dict()
+                for loop_i in range(len( (processed_data[0])[:] )):
+                    for qq in range(len(processed_data)):
+                        dict_to_add_into_log.update({
+                            (log_dict_list[qq])['name']: (processed_data[qq])[loop_i, :]
+                        })
+                    f.addEntry(dict_to_add_into_log) # This line stores data.
+                    dict_to_add_into_log.clear()
+                
+                ''' Old code below.
                 if (len(resonator_freq_if_arrays_to_fft) > 1):
-                    # Then store multiplexed!
+                    ##if (len(processed_data) > 1):
+                    # Then store multiplexed! TODO: add support for n-length qubits' woth of data.
                     # For every loop entry that is to be stored in this log:
                     for loop_i in range(len( (processed_data[0])[:] )):
                         f.addEntry({
@@ -628,9 +646,11 @@ def export_processed_data_to_file(
                     for loop_i in range(len( (processed_data[0])[:] )):
                         f.addEntry({
                             (log_dict_list[0])['name']: (processed_data[0])[loop_i, :]
-                        })
+                        })'''
             else:
                 # TODO This else-case must be removed.
+                # TODO2: It can likely be removed if only looking at how long
+                #        processed_data is.
                 for log_i in range(len(log_dict_list[:])):
                     for loop_i in range(len( (processed_data[0])[:] )):
                         f.addEntry({

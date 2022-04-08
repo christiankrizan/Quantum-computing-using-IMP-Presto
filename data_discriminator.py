@@ -155,6 +155,7 @@ def calculate_and_update_resonator_value(
     
 
 def discriminate(
+    get_probabilities_on_these_states,
     data_or_filepath_to_data,
     i_provided_a_filepath = False,
     ordered_resonator_ids_in_readout_data = []
@@ -191,6 +192,23 @@ def discriminate(
         # coordinate_list[ff] = centre coordinates for list_of_qubit_states[ff]
         states_present_for_resonators[curr_ii] = [list_of_qubit_states, coordinate_list]
         curr_ii += 1
+        
+    # Assert that the user is not trying to look for states that are
+    # unavailable for a particular resonator.
+    for curr_state_string in get_probabilities_on_these_states:
+        for pp in range(len(curr_state_string)):
+            # Check that this sought-for state is available in said resonator.
+            for cc in range(len(states_present_for_resonators)):
+                cur_res = states_present_for_resonators[cc]
+                assert (int(curr_state_string[pp]) in cur_res[0]), \
+                    "Error: the user is trying to state discriminate to "    +\
+                    "state "+str(curr_state_string[pp])+" in resonator with" +\
+                    " ID "+str(ordered_resonator_ids_in_readout_data[cc])+"."+\
+                    " But, there is no information about this state for this"+\
+                    " resonator stored. Please configure state "             +\
+                    "discrimination for this state on this resonator "       +\
+                    "to continue."
+        pass #TODO HAER
     
     # Get data.
     if i_provided_a_filepath:
