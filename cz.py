@@ -1111,8 +1111,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         # Create log lists
         log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            if len(hdf5_logs)/2 > 1:
-                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            if (len(hdf5_logs)/2 > 1):
+                if not ( ('Probability for state |') in hdf5_logs[kk] ):
+                    hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append( get_dict_for_log_list(
                 log_entry_name = hdf5_logs[kk],
                 unit           = hdf5_logs[kk+1],

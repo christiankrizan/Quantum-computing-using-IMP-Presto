@@ -331,12 +331,18 @@ def save(
         # But, all of this data is given on a single line in a vector.
         
         # First, discretise every entry in the in processed_data[:]
-        discriminated_data = discriminate(
-            get_probabilities_on_these_states = get_probabilities_on_these_states,
+        discriminated_data, num_states = discriminate(
+            states_that_will_be_checked = get_probabilities_on_these_states,
             data_or_filepath_to_data = processed_data,
             i_provided_a_filepath = False,
             ordered_resonator_ids_in_readout_data = ordered_resonator_ids_in_readout_data
         )
+        
+        ## TODO DEBUG
+        ## For whatever dumbfuck reason, running discriminated_data
+        ## changes processed_data so that it matches discriminated_data.
+        ## Should not be a problem I think. processed_data gets properly
+        ## blanked further down the code.
         
         # discriminated_data[resonator] now contains only discrete values.
         # We will reshape this into a 3D-volume with the following dimensions:
@@ -361,16 +367,7 @@ def save(
         
         # We now want to look for probabilities of some user-provided states.
         # Remove duplicates from get_probabilities_on_these_states.
-        # get_probabilities_on_these_states will get some random order.
-        get_probabilities_on_these_states = list(set(get_probabilities_on_these_states))
-        
-        # Which is the highest represented state in the entire system?
-        num_states = 0
-        for item in discriminated_data:
-            highest_num_in_slice = np.max(item)
-            if highest_num_in_slice > num_states:
-                num_states = highest_num_in_slice
-        num_states = num_states +1 # Keep in mind that 0 counts (= |0>)
+        ## TODO Feature removed for now, since list(set( )) randomises everything.
         
         # Remake the discriminated data into an integer format.
         ''' Here is my way of representing n-qubit states with unique integers.
@@ -461,6 +458,23 @@ def save(
             fetch.shape = (outer_loop_size, inner_loop_size)
             processed_data[pv] = fetch
         
+        # Error-check that the probability calculation is correct.
+        # No "pixel" should have more than 100% probability.
+        # TODO: This segment can probably be removed some time in the future.
+        curr_pix_total = 0
+        for all_rows in range(len(processed_data[0])):
+            for all_cols in range(len((processed_data[0])[0])):
+                for all_states_checked in range(len(processed_data)):
+                    curr_pix_total += (processed_data[all_states_checked])[all_rows][all_cols]
+                # Check whether this pixel has more than 100% probability.
+                assert curr_pix_total <= 1.0, \
+                    "\nHalted! Pixel ("+str(all_rows)+","+str(str(all_cols)) +\
+                    ") returned more than 100% probability for its state"    +\
+                    " distribution. \n\nDebug information:\n"                +\
+                    "Pixel total was: " + str(curr_pix_total)+"\n\nInteger " +\
+                    "matrix:\n"+str(integer_rep_matrix)+"\n\nProbability-"   +\
+                    "vectors matrix:\n"+str(probability_vectors)
+                curr_pix_total = 0.0
     else:
         for mm in range(len(processed_data[:])):
             fetch = processed_data[mm]
@@ -484,7 +498,7 @@ def save(
                 
                 # Scale with some user-set scale and store.
                 processed_data[mm] = fetch * fetched_data_scale[mm]
-        
+    
     # Did the user request to flip the processed data?
     # I.e. that every new repeat in some measurement will be a column
     # instead of a row in the processed data? Then fix this.
@@ -631,24 +645,8 @@ def export_processed_data_to_file(
                         })
                     f.addEntry(dict_to_add_into_log) # This line stores data.
                     dict_to_add_into_log.clear()
-                
-                ''' Old code below.
-                if (len(resonator_freq_if_arrays_to_fft) > 1):
-                    ##if (len(processed_data) > 1):
-                    # Then store multiplexed! TODO: add support for n-length qubits' woth of data.
-                    # For every loop entry that is to be stored in this log:
-                    for loop_i in range(len( (processed_data[0])[:] )):
-                        f.addEntry({
-                            (log_dict_list[0])['name']: (processed_data[0])[loop_i, :],
-                            (log_dict_list[1])['name']: (processed_data[1])[loop_i, :]
-                        })
-                else:
-                    for loop_i in range(len( (processed_data[0])[:] )):
-                        f.addEntry({
-                            (log_dict_list[0])['name']: (processed_data[0])[loop_i, :]
-                        })'''
             else:
-                # TODO This else-case must be removed.
+                # TODO1: This else-case must be removed.
                 # TODO2: It can likely be removed if only looking at how long
                 #        processed_data is.
                 for log_i in range(len(log_dict_list[:])):

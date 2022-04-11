@@ -155,7 +155,7 @@ def calculate_and_update_resonator_value(
     
 
 def discriminate(
-    get_probabilities_on_these_states,
+    states_that_will_be_checked,
     data_or_filepath_to_data,
     i_provided_a_filepath = False,
     ordered_resonator_ids_in_readout_data = []
@@ -195,7 +195,7 @@ def discriminate(
         
     # Assert that the user is not trying to look for states that are
     # unavailable for a particular resonator.
-    for curr_state_string in get_probabilities_on_these_states:
+    for curr_state_string in states_that_will_be_checked:
         for pp in range(len(curr_state_string)):
             # Check that this sought-for state is available in said resonator.
             for cc in range(len(states_present_for_resonators)):
@@ -208,23 +208,29 @@ def discriminate(
                     " resonator stored. Please configure state "             +\
                     "discrimination for this state on this resonator "       +\
                     "to continue."
-        pass #TODO HAER
     
     # Get data.
     if i_provided_a_filepath:
         # The user provided a filepath to data.
         assert isinstance(data_or_filepath_to_data, str), "Error: the discriminator was provided a non-string datatype. Expected string (filepath to data)."
         with h5py.File(os.path.abspath(data_or_filepath_to_data), 'r') as h5f:
-            processed_data = h5f["processed_data"][()]
+            extracted_data = h5f["processed_data"][()]
     else:
         # Then the user provided the data raw.
-        assert (not isinstance(data_or_filepath_to_data, str)), "Error: the discriminator was provided a string type. Expected raw data. The provided variable was: "+str(processsed_data)
-        processed_data = data_or_filepath_to_data
+        assert (not isinstance(data_or_filepath_to_data, str)), "Error: the discriminator was provided a string type. Expected raw data. The provided variable was: "+str(extracted_data)
+        extracted_data = data_or_filepath_to_data
     
-    # We now have the necessary data for discretisation, and the
-    # processed data that will be discretised. Let's go.
-    for current_res_idx in range(len(processed_data)):
-        res_content = processed_data[current_res_idx]
+    # Prepare the highest_state_in_system variable.
+    # As we will soon look at all states available in the system,
+    # we might as well keep track of the number of states in the system
+    # in the for loop below. num_states_in_system = highest_state_in_system +1
+    # Because |0> counts too.
+    highest_state_in_system = 0
+    
+    # We now have the discretisation information needed, and the
+    # processed data that will be discretised using the known state centres.
+    for current_res_idx in range(len(extracted_data)):
+        res_content = extracted_data[current_res_idx]
         states = (states_present_for_resonators[current_res_idx])[0]
         state_centres = np.array((states_present_for_resonators[current_res_idx])[1])
         
@@ -235,9 +241,18 @@ def discriminate(
             res_content[bb] = states[assigned]
         
         # Save and move on to the next resonator.
-        processed_data[current_res_idx] = res_content.astype(int)
+        extracted_data[current_res_idx] = res_content.astype(int)
+        
+        # For future reference (the return of this funtion), store the
+        # largest represented state in the system.
+        if np.max(states) > highest_state_in_system:
+            highest_state_in_system = np.max(states)
     
-    return processed_data
+    # The number of states in the system is the highest represented
+    # state in the system +1, because |0> counts.
+    num_states_in_system = highest_state_in_system + 1
+    
+    return extracted_data, num_states_in_system
     
     
 def find_area_and_mean_distance_between_all_qubit_states(

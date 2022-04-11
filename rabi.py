@@ -1052,7 +1052,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
     
     num_single_shots,
     resonator_ids,
-    states_to_discriminate_between = ['11'],
+    states_to_discriminate_between = ['00'],
     
     control_amp_01_A_min = -1.0,
     control_amp_01_A_max = +1.0,
@@ -1080,6 +1080,9 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         The readout is multiplexed between two pairwise-coupled transmons.
         The fetched result will be sent into a state discriminator.
     '''
+    
+    # TODO.
+    assert 1 == 0, "Halted. There have been many updates to state discrimination that are not accounted for properly in this function."
     
     ## Input sanitisation
     
@@ -1379,9 +1382,10 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # For discretised measurements, we dictate that we are working
-        # with real probabilities.
-        save_complex_data = False
+        ## TODO this part should go away I think?
+        ## For discretised measurements, we dictate that we are working
+        ## with real probabilities.
+        ##save_complex_data = False
         
         # Establish whether to include biasing in the exported file name.
         try:
@@ -1494,7 +1498,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
                     axes = axes
                 ))
             
-            # Discretise and save data!
+            # Save data!
             string_arr_to_return += save(
                 timestamp = get_timestamp_string(),
                 ext_keys = ext_keys,
@@ -2978,9 +2982,22 @@ def duration_sweep_oscillation12_ro1(
             'coupler_bias_min', "FS",
             'coupler_bias_max', "FS",
         ]
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'>')
+                    # Let the record show that I wanted to write a Unicode ket
+                    # instead of the '>' character, but the Log Browser's
+                    # support for anything non-bland is erratic at best.
+                    hdf5_logs.append("%")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
         # Ensure the keyed elements above are valid.
         assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
@@ -3023,8 +3040,9 @@ def duration_sweep_oscillation12_ro1(
         # Create log lists
         log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            if len(hdf5_logs)/2 > 1:
-                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            if (len(hdf5_logs)/2 > 1):
+                if not ( ('Probability for state |') in hdf5_logs[kk] ):
+                    hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append( get_dict_for_log_list(
                 log_entry_name = hdf5_logs[kk],
                 unit           = hdf5_logs[kk+1],
