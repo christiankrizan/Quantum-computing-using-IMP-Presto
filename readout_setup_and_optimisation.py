@@ -811,6 +811,275 @@ def make_templates_for_state_matching_g_e_f(
     assert 1 == 0, "Not finished."
     
 
+def get_wire_to_readout_delay(
+    ip_address,
+    ext_clk_present,
+    
+    readout_stimulus_port,
+    readout_sampling_port,
+    readout_freq,
+    readout_amp,
+    readout_duration,
+    
+    sampling_duration,
+    repetition_delay,
+    
+    num_averages,
+    
+    save_complex_data = True,
+    use_log_browser_database = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
+    ):
+    ''' Find the delay from sending a pulse to seeing it appearing
+        in the scoped readout data.
+    '''
+    
+    # Instantiate the interface
+    print("\nConnecting to "+str(ip_address)+"...")
+    with pulsed.Pulsed(
+        force_reload =   True,
+        address      =   ip_address,
+        ext_ref_clk  =   ext_clk_present,
+        adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
+        adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dry_run      =   False
+    ) as pls:
+        print("Connected. Setting up...")
+        
+        # Readout output and input ports
+        pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
+        pls.hardware.set_dac_current(readout_stimulus_port, 40_500)
+        pls.hardware.set_inv_sinc(readout_stimulus_port, 0)
+        
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        
+        
+        ''' Setup mixers '''
+        
+        # Readout port
+        pls.hardware.configure_mixer(
+            freq      = readout_freq,
+            in_ports  = readout_sampling_port,
+            out_ports = readout_stimulus_port,
+            sync      = True,
+        )
+        
+        
+        ''' Setup scale LUTs '''
+        
+        # Readout amplitude
+        pls.setup_scale_lut(
+            output_ports    = readout_stimulus_port,
+            group           = 0,
+            scales          = readout_amp,
+        )
+        
+        
+        ### Setup readout pulse ###
+        
+        # Setup readout pulse envelope
+        readout_pulse = pls.setup_long_drive(
+            output_port =   readout_stimulus_port,
+            group       =   0,
+            duration    =   readout_duration,
+            amplitude   =   1.0,
+            amplitude_q =   1.0,
+            rise_time   =   0e-9,
+            fall_time   =   0e-9
+        )
+        # Setup readout carrier, considering that there is a digital mixer
+        pls.setup_freq_lut(
+            output_ports =  readout_stimulus_port,
+            group        =  0,
+            frequencies  =  0.0,
+            phases       =  0.0,
+            phases_q     =  0.0,
+        )
+        
+        
+        ### Setup sampling window ###
+        pls.set_store_ports(readout_sampling_port)
+        pls.set_store_duration(sampling_duration)
+        
+        
+        #################################
+        ''' PULSE SEQUENCE STARTS HERE'''
+        #################################
+
+        # Start of sequence
+        T = 0.0  # s
+        
+        # Commence readout at some frequency.
+        pls.reset_phase(T, readout_stimulus_port)
+        pls.output_pulse(T, readout_pulse)
+        pls.store(T) # Sampling window. Note that there is no delay here.
+        T += readout_duration
+        
+        # Await a new repetition, after which a new coupler DC bias tone
+        # will be added - and a new frequency set for the readout tone.
+        T += repetition_delay
+        
+        ################################
+        ''' EXPERIMENT EXECUTES HERE '''
+        ################################
+
+        # Average the measurement over 'num_averages' averages
+        pls.run(
+            period          =   T,
+            repeat_count    =   1,
+            num_averages    =   num_averages,
+            print_time      =   True,
+        )
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
+    if not pls.dry_run:
+        time_vector, fetched_data_arr = pls.get_store_data()
+        
+        print("Saving data")
+
+        ###########################################
+        ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
+        ###########################################
+        
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            try:
+                if coupler_dc_bias > 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
+            except NameError:
+                pass
+        
+        # Data to be stored.
+        hdf5_steps = [
+            'time_vector', "s",
+        ]
+        hdf5_singles = [
+            'readout_stimulus_port', "",
+            'readout_sampling_port', "",
+            
+            'readout_freq', "Hz",
+            'readout_amp', "FS",
+            'readout_duration', "s",
+            
+            'sampling_duration', "s",
+            'repetition_delay', "s", 
+            
+            'num_averages', "",
+        ]
+        hdf5_logs = [
+            'fetched_data_arr', "FS",
+        ]
+        
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
+        
+        # Stylistically rework underscored characters in the axes dict.
+        axes = stylise_axes(axes)
+        
+        # Create step lists
+        ext_keys = []
+        for ii in range(0,len(hdf5_steps),2):
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
+        for jj in range(0,len(hdf5_singles),2):
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
+        for kk in range(0,len(hdf5_logs),2):
+            if len(hdf5_logs)/2 > 1:
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
+        
+        # Save data!
+        string_arr_to_return += save(
+            timestamp = get_timestamp_string(),
+            ext_keys = ext_keys,
+            log_dict_list = log_dict_list,
+            
+            time_vector = time_vector,
+            fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
+            resonator_freq_if_arrays_to_fft = [],
+            
+            filepath_of_calling_script = os.path.realpath(__file__),
+            use_log_browser_database = use_log_browser_database,
+            
+            integration_window_start = 0.0,
+            integration_window_stop = 0.0,
+            inner_loop_size = len(time_vector),
+            outer_loop_size = 1,
+            
+            save_complex_data = save_complex_data,
+            append_to_log_name_before_timestamp = 'get_wire_delay',
+            append_to_log_name_after_timestamp  = '',
+            select_resonator_for_single_log_export = '',
+            
+            data_to_store_consists_of_time_traces_only = True,
+        )
+    
+    return string_arr_to_return
+    
+
+
+
 # ##################################################### #
 '''  The following three defs have been uncommented,  '''
 ''' since they have been superceded by the first def. '''

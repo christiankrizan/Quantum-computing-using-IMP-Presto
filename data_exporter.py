@@ -157,6 +157,7 @@ def save(
     get_probabilities_on_these_states = [],
     
     save_complex_data = True,
+    data_to_store_consists_of_time_traces_only = False,
     source_code_of_executing_file = '',
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp  = '',
@@ -194,111 +195,119 @@ def save(
     if isinstance(name_of_measurement_that_ran, list):
         name_of_measurement_that_ran = "".join(name_of_measurement_that_ran)
     
-    # Get index corresponding to integration_window_start and
-    # integration_window_stop respectively.
-    integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
-    integration_stop_index  = np.argmin(np.abs(time_vector - integration_window_stop ))
-    integration_indices     = np.arange(integration_start_index, integration_stop_index)
-    
-    # Acquire the DFT sample frequencies contained within the
-    # fetched_data_arr trace. freq_arr contains the centres of
-    # the (representable) segments of the discretised frequency axis.
-    dt = time_vector[1] - time_vector[0]
-    num_samples = len(integration_indices)
-    freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
-    
-    # Get IF frequencies, so that we can pick out indices in the FFT array.
-    # Did the user not send any IF information? Then assume IF = 0 Hz.
-    # Did the user drive one resonator on resonance? Then set its IF to 0.
-    if len(resonator_freq_if_arrays_to_fft) == 0:
-        resonator_freq_if_arrays_to_fft.append(0)
-    else:
-        for pp in range(len(resonator_freq_if_arrays_to_fft)):
-            if resonator_freq_if_arrays_to_fft[pp] == []:
-                resonator_freq_if_arrays_to_fft[pp] = 0
-    
-    # Note! The user may have done a frequency sweep. In that case,
-    # _ro_freq_if will be an array
-    integration_indices_list = []
-    for _ro_freq_if in resonator_freq_if_arrays_to_fft:
-        if (not isinstance(_ro_freq_if, list)) and (not isinstance(_ro_freq_if, np.ndarray)):
-            _curr_item = [_ro_freq_if] # Cast to list if not list.
-        else:
-            _curr_item = _ro_freq_if
-        # The user may have swept the frequency => many IFs.
-        curr_array = []
-        for if_point in _curr_item:
-            curr_array.append( np.argmin(np.abs(freq_arr - if_point)) )
-        integration_indices_list.append( curr_array )
-    
-    # Execute complex FFT. Every row of the resp_fft matrix,
-    # contains the FFT of every time trace that was ever collected
-    # using .store() -- meaning that for instance resp_fft[0,:]
-    # contains the FFT of the first store event in the first repeat.
-    
-    # If the user swept the IF frequency, then picking whatever
-    # frequency in the FFT that is closest to the list of IF frequencies
-    # will return may identical indices.
-    # Ie. something like [124, 124, 124, 124, 124, 125, 125, 125, 125]
-    # Instead, we should demodulate the collected data.
-    '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples'''
-    
-    # Build a processed_data.
+    # Build a processed_data tensor for later.
     processed_data = []
-    for _item in integration_indices_list:
-        if len(_item) <= 1:
-            print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you should also expect a weird offset on your Y-axis.") # TODO
-            resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples
-            processed_data.append( 2 * resp_fft[:, _item[0]] )
+    
+    # Is the user only interested in time traces?
+    if not data_to_store_consists_of_time_traces_only:
+        
+        # Get index corresponding to integration_window_start and
+        # integration_window_stop respectively.
+        integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
+        integration_stop_index  = np.argmin(np.abs(time_vector - integration_window_stop ))
+        integration_indices     = np.arange(integration_start_index, integration_stop_index)
+        
+        # Acquire the DFT sample frequencies contained within the
+        # fetched_data_arr trace. freq_arr contains the centres of
+        # the (representable) segments of the discretised frequency axis.
+        dt = time_vector[1] - time_vector[0]
+        num_samples = len(integration_indices)
+        freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
+        
+        # Get IF frequencies, so that we can pick out indices in the FFT array.
+        # Did the user not send any IF information? Then assume IF = 0 Hz.
+        # Did the user drive one resonator on resonance? Then set its IF to 0.
+        if len(resonator_freq_if_arrays_to_fft) == 0:
+            resonator_freq_if_arrays_to_fft.append(0)
         else:
-            print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.") # TODO
-            print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you should also expect a weird offset on your Y-axis.") # TODO
-            return_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) +fetched_data_offset[0])*fetched_data_scale[0]
-            
-            ## TODO: The commented part below is not finished. ##
-            
-            ################# IF frequency sweep (case) #################
-            # Every new row in resp_fft corresponds to another ("the next")
-            # instance of .store() in the entire sequencer program.
-            # If the user swept some IF frequency during the sequence,
-            # then the current _item will be a list, triggering this case.
-            
-            # Each new entry in _item will be the index (in the FFT
-            # for that particular row in the grand resp_fft matrix)
-            # that corresponds to the peak we want.
-            
-            """ This is actually a good one, except noise output (FFT resolution error perhaps?)
-            ll = 0
-            return_arr = []
-            for fft_row in resp_fft[:]:
-                return_arr.append( \
-                    fft_row[ _item[ ll ] ] \
-                )
-                ll += 1"""
-            
-            """return_arr = []
-            if len(_item[:]) == inner_loop_size:
-                # The frequency sweep happened as an inner loop.
-                for ll in range(inner_loop_size*outer_loop_size):
-                    fft_row = np.fft.fft(fetched_data_arr[ll, 0, integration_indices] * 2*np.cos(2*np.pi*_item[ll % inner_loop_size]), axis=-1) / num_samples
-                    return_arr.append( \
-                        fft_row[ np.argmin(np.abs(freq_arr - _item[len(_item[:])//2] )) ] \
-                    )
-                    # TODO Remove the stuff to the right: #fft_row[ _item[ (ll % inner_loop_size) ] ]
+            for pp in range(len(resonator_freq_if_arrays_to_fft)):
+                if resonator_freq_if_arrays_to_fft[pp] == []:
+                    resonator_freq_if_arrays_to_fft[pp] = 0
+        
+        # Note! The user may have done a frequency sweep. In that case,
+        # _ro_freq_if will be an array
+        integration_indices_list = []
+        for _ro_freq_if in resonator_freq_if_arrays_to_fft:
+            if (not isinstance(_ro_freq_if, list)) and (not isinstance(_ro_freq_if, np.ndarray)):
+                _curr_item = [_ro_freq_if] # Cast to list if not list.
             else:
-                pass
-                # The frequency sweep happened as an outer loop.
-                ee = 0
-                ff = 0
+                _curr_item = _ro_freq_if
+            # The user may have swept the frequency => many IFs.
+            curr_array = []
+            for if_point in _curr_item:
+                curr_array.append( np.argmin(np.abs(freq_arr - if_point)) )
+            integration_indices_list.append( curr_array )
+        
+        # Execute complex FFT. Every row of the resp_fft matrix,
+        # contains the FFT of every time trace that was ever collected
+        # using .store() -- meaning that for instance resp_fft[0,:]
+        # contains the FFT of the first store event in the first repeat.
+        
+        # If the user swept the IF frequency, then picking whatever
+        # frequency in the FFT that is closest to the list of IF frequencies
+        # will return may identical indices.
+        # Ie. something like [124, 124, 124, 124, 124, 125, 125, 125, 125]
+        # Instead, we should demodulate the collected data.
+        '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples'''
+        for _item in integration_indices_list:
+            if len(_item) <= 1:
+                print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you may experience a weird offset on your Y-axis.") # TODO
+                resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples
+                processed_data.append( 2 * resp_fft[:, _item[0]] )
+            else:
+                print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.") # TODO
+                print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you may experience a weird offset on your Y-axis.") # TODO
+                return_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) +fetched_data_offset[0])*fetched_data_scale[0]
+                
+                ## TODO: The commented part below is not finished. ##
+                
+                ################# IF frequency sweep (case) #################
+                # Every new row in resp_fft corresponds to another ("the next")
+                # instance of .store() in the entire sequencer program.
+                # If the user swept some IF frequency during the sequence,
+                # then the current _item will be a list, triggering this case.
+                
+                # Each new entry in _item will be the index (in the FFT
+                # for that particular row in the grand resp_fft matrix)
+                # that corresponds to the peak we want.
+                
+                """ This is actually a good one, except noise output (FFT resolution error perhaps?)
+                ll = 0
+                return_arr = []
                 for fft_row in resp_fft[:]:
-                    return_arr.append( fft_row[ _item[ee] ] )
-                    ff += 1
-                    if ff == outer_loop_size:
-                        ff = 0
-                        ee += 1"""
-                        
-            # We have picked the appropriate fq.-swept indices. Return!
-            processed_data.append( 2 * np.array(return_arr) )
+                    return_arr.append( \
+                        fft_row[ _item[ ll ] ] \
+                    )
+                    ll += 1"""
+                
+                """return_arr = []
+                if len(_item[:]) == inner_loop_size:
+                    # The frequency sweep happened as an inner loop.
+                    for ll in range(inner_loop_size*outer_loop_size):
+                        fft_row = np.fft.fft(fetched_data_arr[ll, 0, integration_indices] * 2*np.cos(2*np.pi*_item[ll % inner_loop_size]), axis=-1) / num_samples
+                        return_arr.append( \
+                            fft_row[ np.argmin(np.abs(freq_arr - _item[len(_item[:])//2] )) ] \
+                        )
+                        # TODO Remove the stuff to the right: #fft_row[ _item[ (ll % inner_loop_size) ] ]
+                else:
+                    pass
+                    # The frequency sweep happened as an outer loop.
+                    ee = 0
+                    ff = 0
+                    for fft_row in resp_fft[:]:
+                        return_arr.append( fft_row[ _item[ee] ] )
+                        ff += 1
+                        if ff == outer_loop_size:
+                            ff = 0
+                            ee += 1"""
+                            
+                # We have picked the appropriate fq.-swept indices. Return!
+                processed_data.append( 2 * np.array(return_arr) )
+        
+    else:
+        # The user is only interested in time trace data.
+        processed_data.append( fetched_data_arr[:, 0, :] )
+        
     
     # Has the user set up the calling script so that the X and Z axes are
     # reversed? I.e. "the graph is rotated -90° in the Log Browser."
@@ -321,7 +330,7 @@ def save(
     # Also, take into account whether the user is running a discretisation
     # measurements, meaning that every data point on the "z axis" of
     # fetched_data_arr is in fact a new 2D-plane of inner_loop+outer_loop data.
-    if len(get_probabilities_on_these_states) > 0:
+    if (len(get_probabilities_on_these_states) > 0) and (not data_to_store_consists_of_time_traces_only):
         # We are running a discretisation measurement.
         assert single_shot_repeats_to_discretise >= 1, "Error: a measurement is requesting state discrimination, but reports that its saved data is less than 1 shot long. (No. shots = "+str(single_shot_repeats_to_discretise)+")"
         
@@ -467,7 +476,8 @@ def save(
                 for all_states_checked in range(len(processed_data)):
                     curr_pix_total += (processed_data[all_states_checked])[all_rows][all_cols]
                 # Check whether this pixel has more than 100% probability.
-                assert curr_pix_total <= 1.0, \
+                # The check should be valid to at least 14+ decimal places.
+                assert round(curr_pix_total, 14) <= 1.0, \
                     "\nHalted! Pixel ("+str(all_rows)+","+str(str(all_cols)) +\
                     ") returned more than 100% probability for its state"    +\
                     " distribution. \n\nDebug information:\n"                +\

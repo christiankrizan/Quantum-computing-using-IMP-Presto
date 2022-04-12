@@ -464,7 +464,6 @@ def save_discriminator_settings(json_data = [], verbose = False):
     if verbose:
         print("Finished dumping JSON data to file.")
     
-    
 def load_discriminator_settings(resonator_transmon_pair = None, verbose = False):
     ''' Get the content of the discriminator_settings.json file.
     '''

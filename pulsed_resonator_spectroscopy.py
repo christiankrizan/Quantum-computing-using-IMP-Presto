@@ -23,7 +23,6 @@ from data_exporter import \
     get_dict_for_log_list, \
     save
 
-
 def find_f_ro0_sweep_coupler(
     ip_address,
     ext_clk_present,
@@ -293,11 +292,17 @@ def find_f_ro0_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Establish whether or not to write "sweep_bias" in the data export.
-        if num_biases > 1:
-            with_or_without_bias_string = "_sweep_bias"
-        else:
-            with_or_without_bias_string = ""
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [
@@ -1029,11 +1034,17 @@ def find_f_ro1_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Establish whether or not to write "sweep_bias" in the data export.
-        if num_biases > 1:
-            with_or_without_bias_string = "_sweep_bias"
-        else:
-            with_or_without_bias_string = ""
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [
