@@ -139,6 +139,9 @@ def t1_sweep_flux(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Make the user-set time variables representable '''
         
@@ -598,6 +601,9 @@ def t1_sweep_flux_multiplexed_ro0(
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         dt_per_time_step = int(round(dt_per_time_step / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         

@@ -137,6 +137,9 @@ def pulsed01_flux_sweep(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         
         ''' Setup mixers '''
@@ -606,6 +609,9 @@ def pulsed01_flux_sweep_multiplexed_ro(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -1128,6 +1134,9 @@ def pulsed01_power_sweep(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -1542,6 +1551,9 @@ def pulsed12_flux_sweep(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         
         ''' Setup mixers '''

@@ -128,7 +128,9 @@ def ramsey01_readout0(
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         dt_per_ramsey_iteration = int(round(dt_per_ramsey_iteration / plo_clk_T)) * plo_clk_T
         
-        
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -1091,6 +1093,10 @@ def ramsey12_readout1(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         dt_per_ramsey_iteration = int(round(dt_per_ramsey_iteration / plo_clk_T)) * plo_clk_T
+        
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         # Declare time delay array for saving time data.
         delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)

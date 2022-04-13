@@ -28,6 +28,203 @@ from data_exporter import \
 from data_discriminator import calculate_and_update_resonator_value
 
 
+def optimise_integration_window_g_e_f(
+    ip_address,
+    ext_clk_present,
+    
+    readout_stimulus_port,
+    readout_sampling_port,
+    readout_freq,
+    readout_amp,
+    readout_duration,
+    
+    sampling_duration,
+    readout_sampling_delay,
+    repetition_delay,
+    
+    integation_window_start_min,
+    integation_window_start_max,
+    num_integration_window_start_steps,
+    
+    integation_window_stop_min,
+    integation_window_stop_max,
+    num_integration_window_stop_steps,
+    
+    control_port,
+    control_amp_01,
+    control_freq_01,
+    control_duration_01,
+    control_amp_12,
+    control_freq_12,
+    control_duration_12,
+    
+    coupler_dc_port,
+    coupler_dc_bias,
+    added_delay_for_bias_tee,
+    
+    num_averages,
+    num_shots_per_state,
+    resonator_transmon_pair_id_number,
+    
+    use_log_browser_database = True,
+    suppress_log_browser_export_of_suboptimal_data = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        },
+    
+    my_weight_given_to_area_spanned_by_qubit_states = 1.0,
+    my_weight_given_to_mean_distance_between_all_states = 0.0,
+    my_weight_given_to_hamiltonian_path_perimeter = 0.0
+    ):
+    ''' Perform complex domain readout using swept integration window
+        start and stop times. This function will generate one complex-plane
+        dataset per resonator frequency step, unless the Log Browser output
+        is suppressed.
+        The final, stored plot, will have axes:
+            Integration time start
+            Integration time stop
+            Score (on Y)
+        
+        Score is either the area, perimeter, or mean distance between states
+        from the readout using integration start and -stop times for that
+        pixel.
+    '''
+    
+    assert 1 == 0, "Halted. TODO: for every measurement routine, update the input sanitation so that the integration_window_start != integration_window_start. The best solution would be to make integration_window_stop = integration_window_start + 1 * plo_clk, i.e. one single PLO clock cycle long."
+    
+    # Declare arrays for the integration window start and stop times.
+    integration_window_start_arr = np.linspace(integation_window_start_min, integation_window_start_max, num_integration_window_start_steps)
+    integration_window_stop_arr  = np.linspace(integation_window_stop_min,  integation_window_stop_max,  num_integration_window_stop_steps )
+    
+    # All weighted output complex data "scores" will be stored later.
+    list_of_current_complex_datasets = []
+    
+    # For this type of measurement, all data will always be saved as
+    # complex values.
+    save_complex_data = True
+    
+    # Acquire all complex data.
+    for curr_integration_start in integration_window_start_arr:
+        for curr_integration_stop in integration_window_stop_arr:
+            # Take care of illegal sweep values
+            if curr_integration_stop <= curr_integration_start:
+                area_spanned = 0.0
+                mean_state_distance = 0.0
+                hamiltonian_path_perimeter = 0.0
+            else:
+                current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
+                    ip_address = ip_address,
+                    ext_clk_present = ext_clk_present,
+                    
+                    readout_stimulus_port = readout_stimulus_port,
+                    readout_sampling_port = readout_sampling_port,
+                    readout_freq = readout_freq,
+                    readout_amp = readout_amp,
+                    readout_duration = readout_duration,
+                    
+                    sampling_duration = sampling_duration,
+                    readout_sampling_delay = readout_sampling_delay,
+                    repetition_delay = repetition_delay,
+                    integration_window_start = curr_integration_start, # Sweep parameter!
+                    integration_window_stop  = curr_integration_stop,  # Sweep parameter!
+                    
+                    control_port = control_port,
+                    control_amp_01 = control_amp_01,
+                    control_freq_01 = control_freq_01,
+                    control_duration_01 = control_duration_01,
+                    control_amp_12 = control_amp_12,
+                    control_freq_12 = control_freq_12,
+                    control_duration_12 = control_duration_12,
+                    
+                    coupler_dc_port = coupler_dc_port,
+                    coupler_dc_bias = coupler_dc_bias,
+                    added_delay_for_bias_tee = added_delay_for_bias_tee,
+                    
+                    num_averages = num_averages,
+                    num_shots_per_state = num_shots_per_state,
+                    resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
+                    
+                    use_log_browser_database = use_log_browser_database,
+                    suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
+                    axes = axes
+                )
+                
+                # current_complex_dataset will be a char array. Convert to string.
+                current_complex_dataset = "".join(current_complex_dataset)
+            
+                # Analyse the complex dataset, without ruining the stored
+                # discriminator settings.
+                area_spanned, mean_state_distance, hamiltonian_path_perimeter = \
+                    calculate_and_update_resonator_value( \
+                        path_to_data = os.path.abspath(current_complex_dataset),
+                        do_not_update_discriminator_settings = True
+                    )
+            
+            # Append the area spanned, mean state distance gotten, and the perimeter spanned by this particular dataset.
+            # The weights can be applied at this stage.
+            weighted_area = area_spanned.astype(np.float64) * my_weight_given_to_area_spanned_by_qubit_states
+            weighted_mean_distance = mean_state_distance.astype(np.float64) * my_weight_given_to_mean_distance_between_all_states
+            weighted_perimeter = hamiltonian_path_perimeter.astype(np.float64) * my_weight_given_to_hamiltonian_path_perimeter
+            list_of_current_complex_datasets.append([ \
+                weighted_area, \
+                weighted_mean_distance, \
+                weighted_perimeter \
+            ])
+            
+            assert 1 == 0, "The weighted area became: "+str(weighted_area)
+    
+    # The list of current_complex_datasets was swept in 2 axes.
+    # Later, we must reshape this list into curr_integration_start rows and
+    # curr_integration_stop columns. Every pixel will then contain
+    # the [weighted area, weighted_mean_distance, weighted_perimeter] for
+    # that pixel. Meaning we will be able to export 3 plots.
+    
+    ## TODO mash things into processed_data
+    
+    # Data to be stored.
+    hdf5_steps = [
+        'integration_window_start_arr', "s",
+        'integration_window_stop_arr', "s",
+    ]
+    hdf5_singles = [
+        # TODO
+    ]
+    hdf5_logs = [
+        'weighed_areas', "(FS)²",
+        'weighed_means', "FS",
+        'weighed_perimeters', "FS",
+    ]
+    
+    assert 1 == 0, "Not finished." # TODO
+    
+    # Export the complex data (in a Log Browser compatible format).
+    string_arr_to_return = export_processed_data_to_file(
+        filepath_of_calling_script = os.path.realpath(__file__),
+        ext_keys = ext_keys,
+        log_dict_list = log_dict_list,
+        
+        time_vector = time_vector,
+        processed_data = processed_data,
+        fetched_data_arr = fetched_data_arr,
+        fetched_data_scale = axes['y_scaler'],
+        fetched_data_offset = axes['y_offset'],
+        
+        timestamp = get_timestamp_string(),
+        append_to_log_name_before_timestamp = 'optimal_result',
+        append_to_log_name_after_timestamp = '',
+        use_log_browser_database = use_log_browser_database,
+        suppress_log_browser_export = suppress_log_browser_export_of_final_optimal_data,
+    )
+    
 def perform_readout_optimisation_g_e_f(
     ip_address,
     ext_clk_present,
@@ -424,6 +621,9 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -871,6 +1071,9 @@ def get_wire_to_readout_delay(
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -1183,6 +1386,9 @@ def get_wire_to_readout_delay(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -1661,6 +1867,9 @@ def get_wire_to_readout_delay(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -2139,6 +2348,9 @@ def get_wire_to_readout_delay(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         

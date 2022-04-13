@@ -131,6 +131,10 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        
         ''' Setup mixers '''
         
         # Readout port,

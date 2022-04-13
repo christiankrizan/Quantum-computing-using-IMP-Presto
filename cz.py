@@ -142,6 +142,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         coupler_ac_rising_edge_time_cz20 = int(round(coupler_ac_rising_edge_time_cz20 / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_maximise_cz20 = int(round(coupler_ac_plateau_duration_maximise_cz20 / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -706,6 +709,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         coupler_ac_rising_edge_time_cz20 = int(round(coupler_ac_rising_edge_time_cz20 / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_maximise_cz20 = int(round(coupler_ac_plateau_duration_maximise_cz20 / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         

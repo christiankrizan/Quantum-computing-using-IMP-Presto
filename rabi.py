@@ -141,6 +141,9 @@ def amplitude_sweep_oscillation01_ro0(
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Setup mixers '''
         
@@ -601,6 +604,9 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
 
         ''' Setup mixers '''
         
@@ -1139,6 +1145,9 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
 
         ''' Setup mixers '''
         
@@ -1657,7 +1666,9 @@ def amplitude_sweep_oscillation12_ro0(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
-        
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
 
         ''' Setup mixers '''
         
@@ -2152,7 +2163,9 @@ def amplitude_sweep_oscillation12_ro1(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
-        
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
 
         ''' Setup mixers '''
         
@@ -2672,6 +2685,9 @@ def duration_sweep_oscillation12_ro1(
         control_plateau_duration_12_min = int(round(control_plateau_duration_12_min / plo_clk_T)) * plo_clk_T
         control_plateau_duration_12_max = int(round(control_plateau_duration_12_max / plo_clk_T)) * plo_clk_T
         
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Make the user-set time variables representable '''
         

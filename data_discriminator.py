@@ -45,7 +45,8 @@ def initiate_discriminator_settings_file(
 
 def calculate_and_update_resonator_value(
     path_to_data,
-    resonator_transmon_pair = None
+    resonator_transmon_pair = None,
+    do_not_update_discriminator_settings = False,
     ):
     ''' Update the discrimination.json file based on supplied data.
     '''
@@ -146,8 +147,9 @@ def calculate_and_update_resonator_value(
                 }
             )
     
-    # Save updated JSON.
-    save_discriminator_settings(loaded_json_data)
+    # Save updated JSON?
+    if (not do_not_update_discriminator_settings):
+        save_discriminator_settings(loaded_json_data)
     
     # Also get the area (and more) spanned by the qubit states for
     # this resonator. This value can also be returned.
