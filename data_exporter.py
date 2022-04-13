@@ -552,13 +552,13 @@ def export_processed_data_to_file(
     ext_keys,
     log_dict_list,
     
-    time_vector,
     processed_data,
-    fetched_data_arr,
     fetched_data_scale,
     fetched_data_offset,
     
     timestamp,
+    time_vector = [],
+    fetched_data_arr = [],
     log_browser_tag = 'krizan',
     log_browser_user = 'Christian Križan',
     append_to_log_name_before_timestamp = '',
@@ -626,9 +626,10 @@ def export_processed_data_to_file(
 
             # Store the post-processed data.
             print("... storing processed data into the .HDF5 file.")
-            # TODO: This part should cover an arbitrary number of fetched_data_arr
-            #       arrays. And, this entire subroutine should be made fully
-            #       generic.
+            # TODO:  This part should cover an arbitrary number of fetched_data_arr
+            #        arrays. And, this entire subroutine should be made fully
+            #        generic.
+            # TODO2: Is not in fact the TODO above fixed now?
             if (select_resonator_for_single_log_export == ''):
                 
                 # Ensure that log_dict_list and processed_data matches.
@@ -705,8 +706,10 @@ def export_processed_data_to_file(
             else:
                 h5f.create_dataset( (ext_keys[ff])['name'] , data = (ext_keys[ff])['values'] )
         
-        h5f.create_dataset("time_vector",  data = time_vector)
-        h5f.create_dataset("fetched_data_arr", data = fetched_data_arr)
+        if len(time_vector) != 0:
+            h5f.create_dataset("time_vector",  data = time_vector)
+        if len(fetched_data_arr) != 0:
+            h5f.create_dataset("fetched_data_arr", data = fetched_data_arr)
         h5f.create_dataset("processed_data", data = processed_data)
         h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
         h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)

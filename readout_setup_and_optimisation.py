@@ -99,7 +99,8 @@ def optimise_integration_window_g_e_f(
         pixel.
     '''
     
-    assert 1 == 0, "Halted. TODO: for every measurement routine, update the input sanitation so that the integration_window_start != integration_window_start. The best solution would be to make integration_window_stop = integration_window_start + 1 * plo_clk, i.e. one single PLO clock cycle long."
+    ## Input sanitation
+    assert type(resonator_transmon_pair_id_number) == int, "Error: the argument resonator_transmon_pair_id_number expects an int, but a "+str(type(resonator_transmon_pair_id_number))+" was provided."
     
     # Declare arrays for the integration window start and stop times.
     integration_window_start_arr = np.linspace(integation_window_start_min, integation_window_start_max, num_integration_window_start_steps)
@@ -109,17 +110,19 @@ def optimise_integration_window_g_e_f(
     list_of_current_complex_datasets = []
     
     # For this type of measurement, all data will always be saved as
-    # complex values.
-    save_complex_data = True
+    # complex values inside of the
+    # get_complex_data_for_readout_optimisation_g_e_f function. But, we do not
+    # want to export complex data.
+    save_complex_data = False
     
     # Acquire all complex data.
     for curr_integration_start in integration_window_start_arr:
         for curr_integration_stop in integration_window_stop_arr:
             # Take care of illegal sweep values
             if curr_integration_stop <= curr_integration_start:
-                area_spanned = 0.0
-                mean_state_distance = 0.0
-                hamiltonian_path_perimeter = 0.0
+                area_spanned = np.array(0.0)
+                mean_state_distance = np.array(0.0)
+                hamiltonian_path_perimeter = np.array(0.0)
             else:
                 current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
                     ip_address = ip_address,
@@ -168,6 +171,11 @@ def optimise_integration_window_g_e_f(
                         path_to_data = os.path.abspath(current_complex_dataset),
                         do_not_update_discriminator_settings = True
                     )
+                
+                # Typecasting to numpy.
+                area_spanned = np.array(area_spanned)
+                mean_state_distance = np.array(mean_state_distance)
+                hamiltonian_path_perimeter = np.array(hamiltonian_path_perimeter)
             
             # Append the area spanned, mean state distance gotten, and the perimeter spanned by this particular dataset.
             # The weights can be applied at this stage.
@@ -179,8 +187,6 @@ def optimise_integration_window_g_e_f(
                 weighted_mean_distance, \
                 weighted_perimeter \
             ])
-            
-            assert 1 == 0, "The weighted area became: "+str(weighted_area)
     
     # The list of current_complex_datasets was swept in 2 axes.
     # Later, we must reshape this list into curr_integration_start rows and
@@ -189,22 +195,144 @@ def optimise_integration_window_g_e_f(
     # that pixel. Meaning we will be able to export 3 plots.
     
     ## TODO mash things into processed_data
+    print(str(list_of_current_complex_datasets))
     
+    # How many plots should be exported?
+    hdf5_logs = []
+    if my_weight_given_to_area_spanned_by_qubit_states > 0.0:
+        hdf5_logs.append('weighed_areas')
+        hdf5_logs.append("(FS)²")
+    if my_weight_given_to_mean_distance_between_all_states > 0.0:
+        hdf5_logs.append('weighed_means')
+        hdf5_logs.append("FS")
+    if my_weight_given_to_hamiltonian_path_perimeter > 0.0:
+        hdf5_logs.append('weighed_perimeters')
+        hdf5_logs.append("FS")
+    processed_data = [[]] * (len(hdf5_logs) // 2)
+    assert len(hdf5_logs) != 0, \
+        "Error: no non-zero data can be exported using the user-provided" +\
+        " readout population score weights: " +\
+        "(area, mean dist., perimeter) = (" +\
+        str(my_weight_given_to_area_spanned_by_qubit_states)+", "           +\
+        str(my_weight_given_to_mean_distance_between_all_states)+", "       +\
+        str(my_weight_given_to_hamiltonian_path_perimeter)+")"
+    
+    # Manufacture the processed_data matrix
+    curr_index_in_processed_data = 0
+    for pro in range(len(processed_data)):
+        if  ((pro == 0) and (my_weight_given_to_area_spanned_by_qubit_states > 0.0)) or \
+            ((pro == 1) and (my_weight_given_to_mean_distance_between_all_states > 0.0)) or \
+            ((pro == 2) and (my_weight_given_to_hamiltonian_path_perimeter > 0.0)):
+            
+            # Make the current parameter grid.
+            curr_2d_grid = np.zeros([len(integration_window_start_arr),len(integration_window_stop_arr)])
+            where_am_i = 0
+            for out_loop in range(len(integration_window_start_arr)):
+                for in_loop in range(len(integration_window_stop_arr)):
+                    curr_2d_grid[out_loop][in_loop] = (list_of_current_complex_datasets[where_am_i])[pro]
+                    where_am_i += 1
+            
+            # Update processed_data.
+            processed_data[curr_index_in_processed_data] = curr_2d_grid
+            curr_index_in_processed_data += 1
+        
     # Data to be stored.
     hdf5_steps = [
-        'integration_window_start_arr', "s",
         'integration_window_stop_arr', "s",
+        'integration_window_start_arr', "s",
     ]
     hdf5_singles = [
-        # TODO
-    ]
-    hdf5_logs = [
-        'weighed_areas', "(FS)²",
-        'weighed_means', "FS",
-        'weighed_perimeters', "FS",
+        'readout_stimulus_port', "",
+        'readout_sampling_port', "",
+        'readout_freq', "Hz",
+        'readout_amp', "FS",
+        'readout_duration', "s",
+        
+        'sampling_duration', "s",
+        'readout_sampling_delay', "s",
+        'repetition_delay', "s",
+        
+        'integation_window_start_min', "s",
+        'integation_window_start_max', "s",
+        'num_integration_window_start_steps', "",
+        
+        'integation_window_stop_min', "s",
+        'integation_window_stop_max', "s",
+        'num_integration_window_stop_steps', "",
+        
+        'control_port', "",
+        'control_amp_01', "FS",
+        'control_freq_01', "Hz",
+        'control_duration_01', "s",
+        'control_amp_12', "FS",
+        'control_freq_12', "Hz",
+        'control_duration_12', "s",
+        
+        #'coupler_dc_port', "",
+        'coupler_dc_bias', "FS",
+        'added_delay_for_bias_tee', "s",
+        
+        'num_averages', "",
+        'num_shots_per_state', "",
+        'resonator_transmon_pair_id_number', "",
+        
+        'my_weight_given_to_area_spanned_by_qubit_states', "",
+        'my_weight_given_to_mean_distance_between_all_states', "",
+        'my_weight_given_to_hamiltonian_path_perimeter', "",
     ]
     
-    assert 1 == 0, "Not finished." # TODO
+    ## NOTE! The hdf5_logs table has been made in a special way for this file.
+    
+    # Ensure the keyed elements above are valid.
+    assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+        "Error: non-even amount of keys and units provided. " + \
+        "Someone likely forgot a comma."
+    
+    # Stylistically rework underscored characters in the axes dict.
+    axes = stylise_axes(axes)
+    
+    # Create step lists
+    ext_keys = []
+    for ii in range(0,len(hdf5_steps),2):
+        ext_keys.append( get_dict_for_step_list(
+            step_entry_name   = hdf5_steps[ii],
+            step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+            step_entry_unit   = hdf5_steps[ii+1],
+            axes = axes,
+            axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+        ))
+    for jj in range(0,len(hdf5_singles),2):
+        ext_keys.append( get_dict_for_step_list(
+            step_entry_name   = hdf5_singles[jj],
+            step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+            step_entry_unit   = hdf5_singles[jj+1],
+        ))
+    for qq in range(len(axes['y_scaler'])):
+        if (axes['y_scaler'])[qq] != 1.0:
+            ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+        if (axes['y_offset'])[qq] != 0.0:
+            try:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+            except IndexError:
+                # The user is likely stepping a multiplexed readout with seperate plot exports.
+                if (axes['y_unit'])[qq] != 'default':
+                    print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                else:
+                    print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+    
+    # Create log lists
+    log_dict_list = []
+    for kk in range(0,len(hdf5_logs),2):
+        if (len(hdf5_logs)/2 > 1):
+            if not ( ('Probability for state |') in hdf5_logs[kk] ):
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+        log_dict_list.append( get_dict_for_log_list(
+            log_entry_name = hdf5_logs[kk],
+            unit           = hdf5_logs[kk+1],
+            log_is_complex = save_complex_data,
+            axes = axes
+        ))
     
     # Export the complex data (in a Log Browser compatible format).
     string_arr_to_return = export_processed_data_to_file(
@@ -212,17 +340,17 @@ def optimise_integration_window_g_e_f(
         ext_keys = ext_keys,
         log_dict_list = log_dict_list,
         
-        time_vector = time_vector,
         processed_data = processed_data,
-        fetched_data_arr = fetched_data_arr,
         fetched_data_scale = axes['y_scaler'],
         fetched_data_offset = axes['y_offset'],
         
+        #time_vector = time_vector,   # Nothing to export here.
+        #fetched_data_arr = [],       # Nothing to export here.
         timestamp = get_timestamp_string(),
-        append_to_log_name_before_timestamp = 'optimal_result',
+        append_to_log_name_before_timestamp = 'readout_integration_window',
         append_to_log_name_after_timestamp = '',
         use_log_browser_database = use_log_browser_database,
-        suppress_log_browser_export = suppress_log_browser_export_of_final_optimal_data,
+        suppress_log_browser_export = False,
     )
     
 def perform_readout_optimisation_g_e_f(
@@ -286,6 +414,9 @@ def perform_readout_optimisation_g_e_f(
         The final, stored plot, will be the "winning" plot that had the
         optimum readout given the user's settings.
     '''
+    
+    ## Input sanitation
+    assert type(resonator_transmon_pair_id_number) == int, "Error: the argument resonator_transmon_pair_id_number expects an int, but a "+str(type(resonator_transmon_pair_id_number))+" was provided."
     
     # Declare resonator frequency stepping array.
     resonator_freq_arr = np.linspace(readout_freq_start, readout_freq_stop, num_readout_freq_steps)
@@ -577,6 +708,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
     save_complex_data = True
     
     ## Input sanitisation
+    assert type(resonator_transmon_pair_id_number) == int, "Error: the argument resonator_transmon_pair_id_number expects an int, but a "+str(type(resonator_transmon_pair_id_number))+" was provided."
     
     # Acquire legal values regarding the coupler port settings.
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
