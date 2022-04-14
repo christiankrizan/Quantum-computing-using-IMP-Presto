@@ -25,7 +25,9 @@ from data_exporter import \
     get_dict_for_log_list, \
     save, \
     export_processed_data_to_file
-from data_discriminator import calculate_and_update_resonator_value
+from data_discriminator import \
+    calculate_area_mean_and_perimeter, \
+    update_discriminator_settings_with_value
 
 
 def optimise_integration_window_g_e_f(
@@ -116,13 +118,25 @@ def optimise_integration_window_g_e_f(
     save_complex_data = False
     
     # Acquire all complex data.
+    # For this, it makes sense to get a time estimate.
+    average_duration_per_point = 0.0
+    num_tick_tocks = 0
+    total_dur = 0.0
     for curr_integration_start in integration_window_start_arr:
         for curr_integration_stop in integration_window_stop_arr:
+            tick = time.time() # Get a time estimate.
+            
+            # Reset the dataset
+            current_complex_dataset = ''
+            
             # Take care of illegal sweep values
             if curr_integration_stop <= curr_integration_start:
                 area_spanned = np.array(0.0)
                 mean_state_distance = np.array(0.0)
                 hamiltonian_path_perimeter = np.array(0.0)
+                
+                # Print time remaining?
+                print_time_remaining = False
             else:
                 current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
                     ip_address = ip_address,
@@ -163,19 +177,51 @@ def optimise_integration_window_g_e_f(
                 
                 # current_complex_dataset will be a char array. Convert to string.
                 current_complex_dataset = "".join(current_complex_dataset)
-            
+                
                 # Analyse the complex dataset, without ruining the stored
                 # discriminator settings.
                 area_spanned, mean_state_distance, hamiltonian_path_perimeter = \
-                    calculate_and_update_resonator_value( \
-                        path_to_data = os.path.abspath(current_complex_dataset),
-                        do_not_update_discriminator_settings = True
+                    calculate_area_mean_and_perimeter( \
+                        path_to_data = os.path.abspath(current_complex_dataset)
                     )
+                
+                # We no longer need this data file, so we should clean
+                # up the hard drive space.
+                attempt = 0
+                max_attempts = 5
+                success = False
+                while (attempt < max_attempts) and (not success):
+                    try:
+                        os.remove(os.path.abspath(current_complex_dataset))
+                        success = True
+                    except FileNotFoundError:
+                        attempt += 1
+                        time.sleep(0.2)
+                if (not success):
+                    raise OSError("Error: could not delete data file "+str(os.path.abspath(current_complex_dataset))+" after "+str(max_attempts)+" attempts. Halting.")
                 
                 # Typecasting to numpy.
                 area_spanned = np.array(area_spanned)
                 mean_state_distance = np.array(mean_state_distance)
                 hamiltonian_path_perimeter = np.array(hamiltonian_path_perimeter)
+                
+                # Print time remaining?
+                print_time_remaining = True
+                
+            tock = time.time() # Get a time estimate.
+            num_tick_tocks += 1
+            total_dur += (tock - tick)
+            average_duration_per_point = total_dur / num_tick_tocks
+            calc_s = ((len(integration_window_start_arr)*len(integration_window_stop_arr))-num_tick_tocks)*average_duration_per_point
+            if (calc_s != 0.0) and print_time_remaining:
+                print("\n\n##############################\nEstimated true time remaining:")
+                if calc_s < 60.0:
+                    print(str(round(calc_s,2))+" seconds.")
+                elif calc_s < 3600.0:
+                    calc_m = int(calc_s // 60.0)
+                    calc_s %= 60
+                    print(str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds.")
+                print("##############################\n")
             
             # Append the area spanned, mean state distance gotten, and the perimeter spanned by this particular dataset.
             # The weights can be applied at this stage.
@@ -193,9 +239,6 @@ def optimise_integration_window_g_e_f(
     # curr_integration_stop columns. Every pixel will then contain
     # the [weighted area, weighted_mean_distance, weighted_perimeter] for
     # that pixel. Meaning we will be able to export 3 plots.
-    
-    ## TODO mash things into processed_data
-    print(str(list_of_current_complex_datasets))
     
     # How many plots should be exported?
     hdf5_logs = []
@@ -471,7 +514,10 @@ def perform_readout_optimisation_g_e_f(
         current_complex_dataset = "".join(current_complex_dataset)
         
         # Analyse the complex dataset.
-        area_spanned, mean_state_distance, hamiltonian_path_perimeter = calculate_and_update_resonator_value( os.path.abspath(current_complex_dataset) )
+        area_spanned, mean_state_distance, hamiltonian_path_perimeter = \
+            calculate_area_mean_and_perimeter( \
+                path_to_data = os.path.abspath(current_complex_dataset)
+            )
         
         # Append what dataset was built
         list_of_current_complex_datasets.append([current_complex_dataset, area_spanned, mean_state_distance, hamiltonian_path_perimeter])
@@ -486,13 +532,13 @@ def perform_readout_optimisation_g_e_f(
     biggest_mean_state_distance_idx = np.argmax( list_of_current_complex_datasets[:,2] )
     biggest_perimeter_idx           = np.argmax( list_of_current_complex_datasets[:,3] )
     
-    if (biggest_area_idx == biggest_mean_state_distance_idx) and (biggest_area_idx == biggest_perimeter_idx):
-        print("\nThe most optimal readout is seen in \""+list_of_current_complex_datasets[biggest_area_idx,0]+"\". This readout wins in every category." )
-    else:
-        print("\n")
-        print( "\""+list_of_current_complex_datasets[biggest_area_idx,0]+"\" had the biggest spanned area." )
-        print( "\""+list_of_current_complex_datasets[biggest_mean_state_distance_idx,0]+"\" had the biggest mean intra-state distance." )
-        print( "\""+list_of_current_complex_datasets[biggest_perimeter_idx,0]+"\" had the biggest perimeter." )
+    ##if (biggest_area_idx == biggest_mean_state_distance_idx) and (biggest_area_idx == biggest_perimeter_idx):
+    ##    print("\nThe most optimal readout is seen in \""+list_of_current_complex_datasets[biggest_area_idx,0]+"\". This readout wins in every category." )
+    ##else:
+    ##    print("\n")
+    ##    print( "\""+list_of_current_complex_datasets[biggest_area_idx,0]+"\" had the biggest spanned area." )
+    ##    print( "\""+list_of_current_complex_datasets[biggest_mean_state_distance_idx,0]+"\" had the biggest mean intra-state distance." )
+    ##    print( "\""+list_of_current_complex_datasets[biggest_perimeter_idx,0]+"\" had the biggest perimeter." )
     
     # Now applying weights, to figure out the optimal.
     weighted_area = (list_of_current_complex_datasets[biggest_area_idx,1]).astype(np.float64) * my_weight_given_to_area_spanned_by_qubit_states
@@ -512,7 +558,7 @@ def perform_readout_optimisation_g_e_f(
     # Get the optimal readout frequency for this resonator.
     with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
         optimal_readout_freq = h5f.attrs["readout_freq"]
-        #print("The optimal readout frequency is: "+str(optimal_readout_freq)+" Hz.")
+        ##print("The optimal readout frequency is: "+str(optimal_readout_freq)+" Hz.")
     
     # Load the complex data from the winner, and re-store this in a new file.
     with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
@@ -523,6 +569,15 @@ def perform_readout_optimisation_g_e_f(
         ## Create a hacky-like array structure for storage's sake.
         prepared_qubit_states = h5f["prepared_qubit_states"][()]
         shot_arr = h5f["shot_arr"][()]
+    
+    # At this point, we may also update the discriminator settings JSON.
+    update_discriminator_settings_with_value(
+        path_to_data = os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0])
+    )
+    calculate_area_mean_and_perimeter(
+        path_to_data = os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]),
+        update_discriminator_settings_json = True
+    )
     
     # Declare arrays and scalars that will be used for the export.
     analysed_areas = (list_of_current_complex_datasets[:,1]).astype(np.float64)

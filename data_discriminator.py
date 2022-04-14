@@ -43,41 +43,37 @@ def initiate_discriminator_settings_file(
         json.dump(json_dict, json_file, indent = 4)
 
 
-def calculate_and_update_resonator_value(
+def calculate_population_centres(
+    processed_data
+    ):
+    ''' From supplied data, calculate the centre for the populations held
+        within.
+        
+        NOTE! For now, only a single resonator is analysed
+        from the processed data. This is likely a TODO.
+    '''
+    centre = []
+    for row in range(len( (processed_data[0])[:] )):
+        # Run a complex mean on all complex values.
+        curr_data  = (processed_data[0])[row,:]
+        centre.append( np.mean(curr_data) )
+    
+    # Return list of centre coordinates.
+    return centre
+    
+
+def update_discriminator_settings_with_value(
     path_to_data,
     resonator_transmon_pair = None,
-    do_not_update_discriminator_settings = False,
     ):
-    ''' Update the discrimination.json file based on supplied data.
+    ''' Update the discrimination values based on supplied data.
+        And, save the update to disk if you so please.
     '''
     
     # Load the file at path_to_data.
     with h5py.File(os.path.abspath(path_to_data), 'r') as h5f:
         processed_data = h5f["processed_data"][()]
         prepared_qubit_states = h5f["prepared_qubit_states"][()]
-        
-        ## # Automatically establish what state was gathered?
-        ## if readout_state != None:
-        ##     # No: use the user-provided readout state.
-        ##     readout_state = int(readout_state)
-        ## else:
-        ##     # Yes: then find out the state from the read file.
-        ##     readout_state_found = False
-        ##     readout_state_numerical = 0
-        ##     for state_char in ['g','e','f','h']:
-        ##         if not readout_state_found:
-        ##             try:
-        ##                 readout_state_frequency = h5f.attrs["readout_freq_"+state_char+"_state"]
-        ##                 readout_state_found = True
-        ##             except KeyError:
-        ##                 readout_state_numerical += 1
-        ##     assert readout_state_found, "Error: could not establish what state the readout was done in. States |g⟩, |e⟩, |f⟩, |h⟩ were considered."
-        ##     readout_state = int(readout_state_numerical)
-        ''' TODO: Make sure that when collecting IQ plane data,
-        to what extent does it matter that the IQ data for the individual
-        state centres have been collected using single-resonator readout?
-        Should there be a step here where values for several resonators
-        are picked out?'''
         
         # Automatically establish what resonator-transmon pair was used?
         if resonator_transmon_pair != None:
@@ -106,13 +102,8 @@ def calculate_and_update_resonator_value(
                 # The returned value is not an integer. Make it into one.
                 resonator_transmon_pair = int(resonator_transmon_pair[0])
     
-    # Analyse. NOTE! For now, only a single resonator is analysed
-    # from the processed data. This is likely a TODO.
-    centre = []
-    for row in range(len( (processed_data[0])[:] )):
-        # Run a complex mean on all complex values.
-        curr_data  = (processed_data[0])[row,:]
-        centre.append( np.mean(curr_data) )
+    # Calculate population centres from supplied data.
+    centre = calculate_population_centres(processed_data)
     
     # Get JSON.
     loaded_json_data = load_discriminator_settings(resonator_transmon_pair)
@@ -127,8 +118,8 @@ def calculate_and_update_resonator_value(
             # There is no need to re-save data into the loaded_json_data array.
             curr_dict.update( \
                 { \
-                    'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_real' : centre[jj].real, \
-                    'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_imag' : centre[jj].imag  \
+                    'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_real': centre[jj].real, \
+                    'qubit_state_'+str(prepared_qubit_states[jj])+'_centre_imag': centre[jj].imag  \
                 }
             )
         except KeyError:
@@ -147,13 +138,8 @@ def calculate_and_update_resonator_value(
                 }
             )
     
-    # Save updated JSON?
-    if (not do_not_update_discriminator_settings):
-        save_discriminator_settings(loaded_json_data)
-    
-    # Also get the area (and more) spanned by the qubit states for
-    # this resonator. This value can also be returned.
-    return find_area_and_mean_distance_between_all_qubit_states(resonator_transmon_pair)
+    # Save settings.
+    save_discriminator_settings(loaded_json_data)
     
 
 def discriminate(
@@ -257,16 +243,14 @@ def discriminate(
     return extracted_data, num_states_in_system
     
     
-def find_area_and_mean_distance_between_all_qubit_states(
-    resonator_transmon_pair
+def calculate_area_mean_and_perimeter(
+    path_to_data,
+    update_discriminator_settings_json = False,
+    resonator_transmon_pair = None,
     ):
     ''' Acquire the area and perimeter spanned by the readout states
-        for a given resonator. Also, update the JSON settings file.
-        Area * perimeter will typically have the unit cubic volt [V^3].
+        for a given data file.
     '''
-    
-    # Get JSON.
-    loaded_json_data = load_discriminator_settings(resonator_transmon_pair)
     
     # For all qubit states in the readout, gather area and perimeter
     # where possible.
@@ -274,10 +258,41 @@ def find_area_and_mean_distance_between_all_qubit_states(
     mean_distance_between_all_states = []
     hamiltonian_path_perimeter = []
     
-    # Check the number of complex coordinates provided.
-    resonator_dict = loaded_json_data['resonator_'+str(resonator_transmon_pair)]
-    curr_investigated_dict = (resonator_dict)['qubit_states']
-    no_qubit_states = len(curr_investigated_dict) // 2
+    # Load the file at path_to_data.
+    with h5py.File(os.path.abspath(path_to_data), 'r') as h5f:
+        processed_data = h5f["processed_data"][()]
+        prepared_qubit_states = h5f["prepared_qubit_states"][()]
+        
+        # Automatically establish what resonator-transmon pair was used?
+        if resonator_transmon_pair != None:
+            # No: use the user-provided readout state.
+            resonator_transmon_pair = int(resonator_transmon_pair)
+        else:
+            # Yes: then get current resonator-transmon-pair from the read file.
+            try:
+                resonator_transmon_pair = h5f.attrs["resonator_transmon_pair_id_number"]
+            except KeyError:
+                raise KeyError( \
+                    "Fatal error! The function for updating the "            +\
+                    "discriminator settings was called without specifying "  +\
+                    "what resonator-transmon pair the data "                 +\
+                    "in the supplied filepath belongs to. "                  +\
+                    "But, the data file at the supplied filepath "           +\
+                    "contains no explicit information regarding what "       +\
+                    "resonator-transmon pair was used for taking the data. " +\
+                    "Check the resonator frequency of this file, and "       +\
+                    "then manually call this function again with the "       +\
+                    "resonator-transmon pair argument correctly set.")
+            
+            # Assert that the datatype of the resonator_transmon_pair
+            # is valid. This fact could depend on Labber bugs for instance.
+            if (not isinstance(resonator_transmon_pair, int)):
+                # The returned value is not an integer. Make it into one.
+                resonator_transmon_pair = int(resonator_transmon_pair[0])
+    
+    # Calculate population centres from supplied data.
+    centre = calculate_population_centres(processed_data)
+    no_qubit_states = len(centre)
     
     # Check whether the program can find and area and a mean distance
     # between all states given the acquired data.
@@ -289,20 +304,18 @@ def find_area_and_mean_distance_between_all_qubit_states(
             # If there are <= 1 states to look at, then one can not span
             # an area for the readout done in |n>. Nor a perimeter.
             print( \
-                "Warning: the discriminator_settings.json file for resonator "   +\
-                str(resonator_transmon_pair)+" does not contain a sufficient "   +\
-                "number of qubit states for calculating an area nor a mean "     +\
-                "distance between all states (№ states = "                       +\
-                str(no_qubit_states) + "). Returning \"None\" and \"None\".")
+                "Warning: the file at "+str(path_to_data)+" does not contain"+\
+                " a sufficient number of qubit states for calculating an "   +\
+                "area nor a mean distance between all states. (№ states = "  +\
+                str(no_qubit_states)+"). Returning \"None\" and \"None\".")
         else:
             # If there are 2 states to look at, then at least a vector
             # can be acquired giving the length between the two states.
             print( \
-                "Warning: the discriminator_settings.json file for resonator "   +\
-                str(resonator_transmon_pair)+" only contains a sufficient "      +\
-                "number of states for calculating a mean distance between "      +\
-                "two states (№ states = "+str(no_qubit_states)+"). The "         +\
-                "returned area will be \"None\".")
+                "Warning: the file at "+str(path_to_data)+" only contains "  +\
+                "a sufficient number of states for calculating a mean "      +\
+                "distance between two states (№ states = "                   +\
+                str(no_qubit_states)+"). The returned area will be \"None\".")
             curr_mean_distance_between_all_states = -1
     else:
         # We have a sufficient number of states acquired. Remove the None
@@ -325,9 +338,12 @@ def find_area_and_mean_distance_between_all_qubit_states(
     vertices_y_arr = []
     vertices = np.array([])
     for pp in range( no_qubit_states ):
-        vertices_x_arr.append(curr_investigated_dict['qubit_state_'+str(pp)+'_centre_real'])
-        vertices_y_arr.append(curr_investigated_dict['qubit_state_'+str(pp)+'_centre_imag'])
-        vertices = np.append( vertices, (vertices_x_arr[pp] + vertices_y_arr[pp]*1j) )
+        ##vertices_x_arr.append(curr_investigated_dict['qubit_state_'+str(pp)+'_centre_real'])
+        ##vertices_y_arr.append(curr_investigated_dict['qubit_state_'+str(pp)+'_centre_imag'])
+        ##vertices = np.append( vertices, (vertices_x_arr[pp] + vertices_y_arr[pp]*1j) )
+        vertices_x_arr.append((centre[pp]).real)
+        vertices_y_arr.append((centre[pp]).imag)
+        vertices = np.append( vertices, centre[pp] )
     
     # Should a spanned area be calculated?
     if curr_area_spanned_by_qubit_states != None:
@@ -380,48 +396,53 @@ def find_area_and_mean_distance_between_all_qubit_states(
     mean_distance_between_all_states = curr_mean_distance_between_all_states
     hamiltonian_path_perimeter = curr_hamiltonian_path_perimeter
     
-    # Update the local JSON that will be saved to file.
-    try:
-        analysis_dict = resonator_dict['analysis']
-    except KeyError:
-        resonator_dict.update( \
-            {'analysis': {} }  \
-        )
-        analysis_dict = resonator_dict['analysis']
-    if curr_area_spanned_by_qubit_states != None:
-        analysis_dict.update( \
-            {'area_spanned_by_qubit_states': curr_area_spanned_by_qubit_states} \
-        )
-    else:
-        try:
-            del analysis_dict['area_spanned_by_qubit_states']
-        except KeyError:
-            # The key did not exist, this is OK.
-            pass
-    if curr_mean_distance_between_all_states != None:
-        analysis_dict.update( \
-            {'mean_distance_between_all_states': curr_mean_distance_between_all_states} \
-        )
-    else:
-        try:
-            del analysis_dict['mean_distance_between_all_states']
-        except KeyError:
-            # The key did not exist, this is OK.
-            pass
-    if curr_hamiltonian_path_perimeter != None:
-        analysis_dict.update( \
-            {'hamiltonian_path_perimeter': curr_hamiltonian_path_perimeter} \
-        )
-    else:
-        try:
-            del analysis_dict['hamiltonian_path_perimeter']
-        except KeyError:
-            # The key did not exist, this is OK.
-            pass
-        
+    # Update the local JSON that will be saved to file?
+    if update_discriminator_settings_json:
     
-    # Save calculated settings
-    save_discriminator_settings(loaded_json_data)
+        # Load JSON.
+        loaded_json_data = load_discriminator_settings(resonator_transmon_pair)
+        resonator_dict = loaded_json_data['resonator_'+str(resonator_transmon_pair)]
+        
+        try:
+            analysis_dict = resonator_dict['analysis']
+        except KeyError:
+            resonator_dict.update( \
+                {'analysis': {} }  \
+            )
+            analysis_dict = resonator_dict['analysis']
+        if curr_area_spanned_by_qubit_states != None:
+            analysis_dict.update( \
+                {'area_spanned_by_qubit_states': curr_area_spanned_by_qubit_states} \
+            )
+        else:
+            try:
+                del analysis_dict['area_spanned_by_qubit_states']
+            except KeyError:
+                # The key did not exist, this is OK.
+                pass
+        if curr_mean_distance_between_all_states != None:
+            analysis_dict.update( \
+                {'mean_distance_between_all_states': curr_mean_distance_between_all_states} \
+            )
+        else:
+            try:
+                del analysis_dict['mean_distance_between_all_states']
+            except KeyError:
+                # The key did not exist, this is OK.
+                pass
+        if curr_hamiltonian_path_perimeter != None:
+            analysis_dict.update( \
+                {'hamiltonian_path_perimeter': curr_hamiltonian_path_perimeter} \
+            )
+        else:
+            try:
+                del analysis_dict['hamiltonian_path_perimeter']
+            except KeyError:
+                # The key did not exist, this is OK.
+                pass
+        
+        # Save calculated settings
+        save_discriminator_settings(loaded_json_data)
     
     return area_spanned_by_qubit_states, mean_distance_between_all_states, hamiltonian_path_perimeter
     
