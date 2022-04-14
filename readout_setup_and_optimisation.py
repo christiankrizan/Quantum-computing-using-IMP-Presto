@@ -28,6 +28,7 @@ from data_exporter import \
 from data_discriminator import \
     calculate_area_mean_and_perimeter, \
     update_discriminator_settings_with_value
+from time_remaining_printer import show_user_time_remaining
 
 
 def optimise_integration_window_g_e_f(
@@ -212,16 +213,10 @@ def optimise_integration_window_g_e_f(
             num_tick_tocks += 1
             total_dur += (tock - tick)
             average_duration_per_point = total_dur / num_tick_tocks
-            calc_s = ((len(integration_window_start_arr)*len(integration_window_stop_arr))-num_tick_tocks)*average_duration_per_point
-            if (calc_s != 0.0) and print_time_remaining:
-                print("\n\n##############################\nEstimated true time remaining:")
-                if calc_s < 60.0:
-                    print(str(round(calc_s,2))+" seconds.")
-                elif calc_s < 3600.0:
-                    calc_m = int(calc_s // 60.0)
-                    calc_s %= 60
-                    print(str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds.")
-                print("##############################\n")
+            calc = ((len(integration_window_start_arr)*len(integration_window_stop_arr))-num_tick_tocks)*average_duration_per_point
+            if (calc != 0.0) and print_time_remaining:
+                # Print "true" time remaining.
+                show_user_time_remaining(calc)
             
             # Append the area spanned, mean state distance gotten, and the perimeter spanned by this particular dataset.
             # The weights can be applied at this stage.
