@@ -139,76 +139,94 @@ def optimise_integration_window_g_e_f(
                 # Print time remaining?
                 print_time_remaining = False
             else:
-                current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
-                    ip_address = ip_address,
-                    ext_clk_present = ext_clk_present,
-                    
-                    readout_stimulus_port = readout_stimulus_port,
-                    readout_sampling_port = readout_sampling_port,
-                    readout_freq = readout_freq,
-                    readout_amp = readout_amp,
-                    readout_duration = readout_duration,
-                    
-                    sampling_duration = sampling_duration,
-                    readout_sampling_delay = readout_sampling_delay,
-                    repetition_delay = repetition_delay,
-                    integration_window_start = curr_integration_start, # Sweep parameter!
-                    integration_window_stop  = curr_integration_stop,  # Sweep parameter!
-                    
-                    control_port = control_port,
-                    control_amp_01 = control_amp_01,
-                    control_freq_01 = control_freq_01,
-                    control_duration_01 = control_duration_01,
-                    control_amp_12 = control_amp_12,
-                    control_freq_12 = control_freq_12,
-                    control_duration_12 = control_duration_12,
-                    
-                    coupler_dc_port = coupler_dc_port,
-                    coupler_dc_bias = coupler_dc_bias,
-                    added_delay_for_bias_tee = added_delay_for_bias_tee,
-                    
-                    num_averages = num_averages,
-                    num_shots_per_state = num_shots_per_state,
-                    resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
-                    
-                    use_log_browser_database = use_log_browser_database,
-                    suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
-                    axes = axes
-                )
-                
-                # current_complex_dataset will be a char array. Convert to string.
-                current_complex_dataset = "".join(current_complex_dataset)
-                
-                # Analyse the complex dataset, without ruining the stored
-                # discriminator settings.
-                area_spanned, mean_state_distance, hamiltonian_path_perimeter = \
-                    calculate_area_mean_and_perimeter( \
-                        path_to_data = os.path.abspath(current_complex_dataset)
+                # We are on the lookout for the device crashing,
+                # see TODO in the except-clause.
+                try:
+                    current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
+                        ip_address = ip_address,
+                        ext_clk_present = ext_clk_present,
+                        
+                        readout_stimulus_port = readout_stimulus_port,
+                        readout_sampling_port = readout_sampling_port,
+                        readout_freq = readout_freq,
+                        readout_amp = readout_amp,
+                        readout_duration = readout_duration,
+                        
+                        sampling_duration = sampling_duration,
+                        readout_sampling_delay = readout_sampling_delay,
+                        repetition_delay = repetition_delay,
+                        integration_window_start = curr_integration_start, # Sweep parameter!
+                        integration_window_stop  = curr_integration_stop,  # Sweep parameter!
+                        
+                        control_port = control_port,
+                        control_amp_01 = control_amp_01,
+                        control_freq_01 = control_freq_01,
+                        control_duration_01 = control_duration_01,
+                        control_amp_12 = control_amp_12,
+                        control_freq_12 = control_freq_12,
+                        control_duration_12 = control_duration_12,
+                        
+                        coupler_dc_port = coupler_dc_port,
+                        coupler_dc_bias = coupler_dc_bias,
+                        added_delay_for_bias_tee = added_delay_for_bias_tee,
+                        
+                        num_averages = num_averages,
+                        num_shots_per_state = num_shots_per_state,
+                        resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
+                        
+                        use_log_browser_database = use_log_browser_database,
+                        suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
+                        axes = axes
                     )
+                    
+                    # current_complex_dataset will be a char array. Convert to string.
+                    current_complex_dataset = "".join(current_complex_dataset)
+                    
+                    # Analyse the complex dataset, without ruining the stored
+                    # discriminator settings.
+                    area_spanned, mean_state_distance, hamiltonian_path_perimeter = \
+                        calculate_area_mean_and_perimeter( \
+                            path_to_data = os.path.abspath(current_complex_dataset)
+                        )
                 
-                # We no longer need this data file, so we should clean
-                # up the hard drive space.
-                attempt = 0
-                max_attempts = 5
-                success = False
-                while (attempt < max_attempts) and (not success):
-                    try:
-                        os.remove(os.path.abspath(current_complex_dataset))
-                        success = True
-                    except FileNotFoundError:
-                        attempt += 1
-                        time.sleep(0.2)
-                if (not success):
-                    raise OSError("Error: could not delete data file "+str(os.path.abspath(current_complex_dataset))+" after "+str(max_attempts)+" attempts. Halting.")
+                    # We no longer need this data file, so we should clean
+                    # up the hard drive space.
+                    attempt = 0
+                    max_attempts = 5
+                    success = False
+                    while (attempt < max_attempts) and (not success):
+                        try:
+                            os.remove(os.path.abspath(current_complex_dataset))
+                            success = True
+                        except FileNotFoundError:
+                            attempt += 1
+                            time.sleep(0.2)
+                    if (not success):
+                        raise OSError("Error: could not delete data file "+str(os.path.abspath(current_complex_dataset))+" after "+str(max_attempts)+" attempts. Halting.")
+
+                    # Typecasting to numpy.
+                    area_spanned = np.array(area_spanned)
+                    mean_state_distance = np.array(mean_state_distance)
+                    hamiltonian_path_perimeter = np.array(hamiltonian_path_perimeter)
+                    
+                    # Print time remaining?
+                    print_time_remaining = True
                 
-                # Typecasting to numpy.
-                area_spanned = np.array(area_spanned)
-                mean_state_distance = np.array(mean_state_distance)
-                hamiltonian_path_perimeter = np.array(hamiltonian_path_perimeter)
-                
-                # Print time remaining?
-                print_time_remaining = True
-                
+                except ConnectionRefusedError:
+                    
+                    # If the Presto drops the connection for whatever reason
+                    # that has not been figured out yet, return 0.
+                    # (2022-04-17: it's an IMP-confirmed bug)
+                    area_spanned = np.array(0.0)
+                    mean_state_distance = np.array(0.0)
+                    hamiltonian_path_perimeter = np.array(0.0)
+                    
+                    # Print time remaining?
+                    print_time_remaining = False
+                    
+                    # TODO Error due to a device bug, still confirmed 2022-04-17.
+                    print("DEVICE ERROR: ConnectionRefusedError: the Presto device dropped the Ethernet connection and must be restarted manually.")
+            
             tock = time.time() # Get a time estimate.
             num_tick_tocks += 1
             total_dur += (tock - tick)
