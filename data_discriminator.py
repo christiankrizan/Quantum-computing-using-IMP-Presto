@@ -61,6 +61,27 @@ def calculate_population_centres(
     # Return list of centre coordinates.
     return centre
     
+def calculate_readout_fidelity(
+    data_to_process,
+    state_centre_coordinates_list
+    ):
+    ''' From the given data set and the state centre coordinates, calculate
+        a readout fidelity.
+        
+        Expected format on state_centre_coordinates_list:
+            [ complex coordinate of |0>,
+              complex coordinate of |1>,
+              complex coordinate of |2>
+           ]                               etc. for n states.
+        
+        Readout fidelity F_RO = ( SUM(<m|m>) / N )  for N number of states |m>
+        
+        Example:    With N=3 states |0>, |1>, |2> you'd get:
+                    F_RO = (<0|0> + <1|1> + <2|2>) / 3
+    '''
+    print("TODO: The function that calculates readout fidelity is not finished. Returning a fixed P = 0.313")
+    return 0.313
+
 
 def update_discriminator_settings_with_value(
     path_to_data,
@@ -243,7 +264,7 @@ def discriminate(
     return extracted_data, num_states_in_system
     
     
-def calculate_area_mean_and_perimeter(
+def calculate_area_mean_perimeter_fidelity(
     path_to_data,
     update_discriminator_settings_json = False,
     resonator_transmon_pair = None,
@@ -252,11 +273,12 @@ def calculate_area_mean_and_perimeter(
         for a given data file.
     '''
     
-    # For all qubit states in the readout, gather area and perimeter
-    # where possible.
+    # For all qubit states in the readout, gather spanned area, perimeter,
+    # mean distance between all states, and readout fidelity where possible.
     area_spanned_by_qubit_states = []
     mean_distance_between_all_states = []
     hamiltonian_path_perimeter = []
+    readout_fidelity = []
     
     # Load the file at path_to_data.
     with h5py.File(os.path.abspath(path_to_data), 'r') as h5f:
@@ -294,35 +316,47 @@ def calculate_area_mean_and_perimeter(
     centre = calculate_population_centres(processed_data)
     no_qubit_states = len(centre)
     
+    # Calculate the readout fidelity from supplied data.
+    readout_fidelity = calculate_readout_fidelity(
+        data_to_process = processed_data,
+        state_centre_coordinates_list = centre
+    )
+    
     # Check whether the program can find and area and a mean distance
     # between all states given the acquired data.
     curr_area_spanned_by_qubit_states = None
     curr_mean_distance_between_all_states = None
     curr_hamiltonian_path_perimeter = None
+    ##curr_readout_fidelity = None # Taken care of earlier up the code.
     if no_qubit_states <= 2:
         if no_qubit_states <= 1:
             # If there are <= 1 states to look at, then one can not span
             # an area for the readout done in |n>. Nor a perimeter.
             print( \
                 "Warning: the file at "+str(path_to_data)+" does not contain"+\
-                " a sufficient number of qubit states for calculating an "   +\
-                "area nor a mean distance between all states. (№ states = "  +\
-                str(no_qubit_states)+"). Returning \"None\" and \"None\".")
+                " a sufficient number of qubit states for calculating "   +\
+                "area, distance between states, nor a readout fidelity."+\
+                " (№ states = "+str(no_qubit_states)+"). Returning several "+\
+                "\"None\" values.")
         else:
             # If there are 2 states to look at, then at least a vector
             # can be acquired giving the length between the two states.
+            # And, a readout fidelity.
             print( \
                 "Warning: the file at "+str(path_to_data)+" only contains "  +\
-                "a sufficient number of states for calculating a mean "      +\
-                "distance between two states (№ states = "                   +\
-                str(no_qubit_states)+"). The returned area will be \"None\".")
+                "a sufficient number of states for calculating a readout "   +\
+                "fidelity, and a mean distance between two states (№ states "+\
+                "= "+str(no_qubit_states)+"). The returned area will be "    +\
+                "\"None\".")
             curr_mean_distance_between_all_states = -1
+            ##curr_readout_fidelity = -1 # Taken care of earlier up the code.
     else:
         # We have a sufficient number of states acquired. Remove the None
         # status to signal down below that the area and mean state distance
         # will be calculated.
         curr_area_spanned_by_qubit_states = -1
         curr_mean_distance_between_all_states = -1
+        ##curr_readout_fidelity = -1 # Taken care of earlier up the code.
     
     # TODO: Currently, this script does not calculate the Hamiltonian path
     # for all states, other than for the simplest possible scenario
@@ -444,7 +478,7 @@ def calculate_area_mean_and_perimeter(
         # Save calculated settings
         save_discriminator_settings(loaded_json_data)
     
-    return area_spanned_by_qubit_states, mean_distance_between_all_states, hamiltonian_path_perimeter
+    return area_spanned_by_qubit_states, mean_distance_between_all_states, hamiltonian_path_perimeter, readout_fidelity
     
     
 def get_file_path_of_discrimination_json():

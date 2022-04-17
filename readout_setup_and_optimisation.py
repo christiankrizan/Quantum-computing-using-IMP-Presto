@@ -26,7 +26,7 @@ from data_exporter import \
     save, \
     export_processed_data_to_file
 from data_discriminator import \
-    calculate_area_mean_and_perimeter, \
+    calculate_area_mean_perimeter_fidelity, \
     update_discriminator_settings_with_value
 from time_remaining_printer import show_user_time_remaining
 
@@ -84,9 +84,10 @@ def optimise_integration_window_g_e_f(
         "z_unit":   'default',
         },
     
-    my_weight_given_to_area_spanned_by_qubit_states = 1.0,
+    my_weight_given_to_area_spanned_by_qubit_states = 0.0,
     my_weight_given_to_mean_distance_between_all_states = 0.0,
-    my_weight_given_to_hamiltonian_path_perimeter = 0.0
+    my_weight_given_to_hamiltonian_path_perimeter = 0.0,
+    my_weight_given_to_readout_fidelity = 1.0
     ):
     ''' Perform complex domain readout using swept integration window
         start and stop times. This function will generate one complex-plane
@@ -184,8 +185,8 @@ def optimise_integration_window_g_e_f(
                     
                     # Analyse the complex dataset, without ruining the stored
                     # discriminator settings.
-                    area_spanned, mean_state_distance, hamiltonian_path_perimeter = \
-                        calculate_area_mean_and_perimeter( \
+                    area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity = \
+                        calculate_area_mean_perimeter_fidelity( \
                             path_to_data = os.path.abspath(current_complex_dataset)
                         )
                 
@@ -208,6 +209,7 @@ def optimise_integration_window_g_e_f(
                     area_spanned = np.array(area_spanned)
                     mean_state_distance = np.array(mean_state_distance)
                     hamiltonian_path_perimeter = np.array(hamiltonian_path_perimeter)
+                    readout_fidelity = np.array(readout_fidelity)
                     
                     # Print time remaining?
                     print_time_remaining = True
@@ -220,6 +222,7 @@ def optimise_integration_window_g_e_f(
                     area_spanned = np.array(0.0)
                     mean_state_distance = np.array(0.0)
                     hamiltonian_path_perimeter = np.array(0.0)
+                    readout_fidelity = np.array(0.0)
                     
                     # Print time remaining?
                     print_time_remaining = False
@@ -236,15 +239,18 @@ def optimise_integration_window_g_e_f(
                 # Print "true" time remaining.
                 show_user_time_remaining(calc)
             
-            # Append the area spanned, mean state distance gotten, and the perimeter spanned by this particular dataset.
-            # The weights can be applied at this stage.
+            # Append the area spanned, mean state distance gotten,
+            # the perimeter spanned by this particular dataset, and the
+            # readout fidelity. The weights are applied at this stage.
             weighted_area = area_spanned.astype(np.float64) * my_weight_given_to_area_spanned_by_qubit_states
             weighted_mean_distance = mean_state_distance.astype(np.float64) * my_weight_given_to_mean_distance_between_all_states
             weighted_perimeter = hamiltonian_path_perimeter.astype(np.float64) * my_weight_given_to_hamiltonian_path_perimeter
+            weighted_readout_fidelity = readout_fidelity.astype(np.float64) * my_weight_given_to_readout_fidelity
             list_of_current_complex_datasets.append([ \
                 weighted_area, \
                 weighted_mean_distance, \
-                weighted_perimeter \
+                weighted_perimeter, \
+                weighted_readout_fidelity \
             ])
     
     # The list of current_complex_datasets was swept in 2 axes.
@@ -254,31 +260,38 @@ def optimise_integration_window_g_e_f(
     # that pixel. Meaning we will be able to export 3 plots.
     
     # How many plots should be exported?
+    # Prepare the variable num_weights_in_function_to_check, it's used later.
     hdf5_logs = []
+    num_weights_in_function_to_check = 4
     if my_weight_given_to_area_spanned_by_qubit_states > 0.0:
-        hdf5_logs.append('weighed_areas')
+        hdf5_logs.append('Spanned areas')
         hdf5_logs.append("(FS)²")
     if my_weight_given_to_mean_distance_between_all_states > 0.0:
-        hdf5_logs.append('weighed_means')
+        hdf5_logs.append('Mean of every distance between states')
         hdf5_logs.append("FS")
     if my_weight_given_to_hamiltonian_path_perimeter > 0.0:
-        hdf5_logs.append('weighed_perimeters')
+        hdf5_logs.append('Smallest perimeter spanned by states')
         hdf5_logs.append("FS")
+    if my_weight_given_to_readout_fidelity > 0.0:
+        hdf5_logs.append('Readout fidelity')
+        hdf5_logs.append("")
     processed_data = [[]] * (len(hdf5_logs) // 2)
     assert len(hdf5_logs) != 0, \
-        "Error: no non-zero data can be exported using the user-provided" +\
-        " readout population score weights: " +\
-        "(area, mean dist., perimeter) = (" +\
+        "Error: no non-zero data can be exported using the user-provided " +\
+        "readout population score weights: " +\
+        "(area, mean dist., perimeter, readout fidelity) = (" +\
         str(my_weight_given_to_area_spanned_by_qubit_states)+", "           +\
         str(my_weight_given_to_mean_distance_between_all_states)+", "       +\
-        str(my_weight_given_to_hamiltonian_path_perimeter)+")"
+        str(my_weight_given_to_hamiltonian_path_perimeter)+", "             +\
+        str(my_weight_given_to_readout_fidelity)+")"
     
     # Manufacture the processed_data matrix
     curr_index_in_processed_data = 0
-    for pro in range(len(processed_data)):
+    for pro in range(num_weights_in_function_to_check):
         if  ((pro == 0) and (my_weight_given_to_area_spanned_by_qubit_states > 0.0)) or \
             ((pro == 1) and (my_weight_given_to_mean_distance_between_all_states > 0.0)) or \
-            ((pro == 2) and (my_weight_given_to_hamiltonian_path_perimeter > 0.0)):
+            ((pro == 2) and (my_weight_given_to_hamiltonian_path_perimeter > 0.0)) or \
+            ((pro == 3) and (my_weight_given_to_readout_fidelity > 0.0)):
             
             # Make the current parameter grid.
             curr_2d_grid = np.zeros([len(integration_window_start_arr),len(integration_window_stop_arr)])
@@ -291,7 +304,7 @@ def optimise_integration_window_g_e_f(
             # Update processed_data.
             processed_data[curr_index_in_processed_data] = curr_2d_grid
             curr_index_in_processed_data += 1
-        
+    
     # Data to be stored.
     hdf5_steps = [
         'integration_window_stop_arr', "s",
@@ -335,6 +348,7 @@ def optimise_integration_window_g_e_f(
         'my_weight_given_to_area_spanned_by_qubit_states', "",
         'my_weight_given_to_mean_distance_between_all_states', "",
         'my_weight_given_to_hamiltonian_path_perimeter', "",
+        'my_weight_given_to_readout_fidelity', "",
     ]
     
     ## NOTE! The hdf5_logs table has been made in a special way for this file.
@@ -527,8 +541,9 @@ def perform_readout_optimisation_g_e_f(
         current_complex_dataset = "".join(current_complex_dataset)
         
         # Analyse the complex dataset.
+        assert 1 == 0, 'TODO: added readout_fidelity as a return to be unpacked by this subroutine, but the calling function has not been updated.'
         area_spanned, mean_state_distance, hamiltonian_path_perimeter = \
-            calculate_area_mean_and_perimeter( \
+            calculate_area_mean_perimeter_fidelity( \
                 path_to_data = os.path.abspath(current_complex_dataset)
             )
         
@@ -587,7 +602,7 @@ def perform_readout_optimisation_g_e_f(
     update_discriminator_settings_with_value(
         path_to_data = os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0])
     )
-    calculate_area_mean_and_perimeter(
+    calculate_area_mean_perimeter_fidelity(
         path_to_data = os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]),
         update_discriminator_settings_json = True
     )
