@@ -63,7 +63,8 @@ def calculate_population_centres(
     
 def calculate_readout_fidelity(
     data_to_process,
-    state_centre_coordinates_list
+    state_centre_coordinates_list,
+    prepared_qubit_states,
     ):
     ''' From the given data set and the state centre coordinates, calculate
         a readout fidelity.
@@ -79,8 +80,72 @@ def calculate_readout_fidelity(
         Example:    With N=3 states |0>, |1>, |2> you'd get:
                     F_RO = (<0|0> + <1|1> + <2|2>) / 3
     '''
-    print("TODO: The function that calculates readout fidelity is not finished. Returning a fixed P = 0.313")
-    return 0.313
+    
+    ## Currently, only one readout resonator is accounted for. Likely a TODO.
+    
+    # We will return a single value, corresponding to the average state
+    # readout fidelity.
+    readout_fidelity = 0.0
+    
+    # (data_to_process[0])[0] contains every shot prepared in |0>
+    # (data_to_process[0])[1] contains every shot prepared in |1>
+    # (data_to_process[0])[2] contains every shot prepared in |2>
+    # ... or, some other states "temporarily mapped" to index 0 1 2 .. n
+    #     in the user-supplied n-long list "prepared_qubit_states".
+    
+    # discretised_results will be the same matrix, but every item in the whole
+    # matrix has been state discriminated, according to user-provided
+    # coordinates.
+    discretised_results = [[]] * len(data_to_process[0])
+    for ii_all_prepared_states in range(len( data_to_process[0] )):
+        
+        # Current vector to be added in discretised_results.
+        current_vector = np.zeros(len( (data_to_process[0])[0] ))
+        
+        # For all shots:
+        for jj_all_shots_fired in range(len( (data_to_process[0])[0] )):
+            
+            # Get current item for some prepared readout state.
+            current_item = ((data_to_process[0])[ii_all_prepared_states])[jj_all_shots_fired]
+            
+            # Discretise and add.
+            assigned = np.argmin(np.abs(state_centre_coordinates_list - current_item))
+            current_vector[jj_all_shots_fired] = prepared_qubit_states[assigned]
+        
+        # Add vector to discretised results
+        discretised_results[ii_all_prepared_states] = current_vector.astype('int32')
+        
+    # discretised_results is now a matrix where every row corresponds
+    # to some prepared state. The readout fidelity formula is given in the
+    # function description above.
+    sum_of_all_individual_readout_fidelities = 0.0
+    number_of_fidelities_calculated = 0
+    for kk_all_prepared_states in range(len( discretised_results )):
+        
+        # What state was prepared?
+        the_prepared_state = prepared_qubit_states[kk_all_prepared_states]
+        
+        # Get P( n | n )
+        strikes = 0
+        try:
+            strikes = (np.bincount( discretised_results[kk_all_prepared_states] ))[the_prepared_state]
+        except IndexError:
+            # The bincount did not go as high as
+            # the highest prepared state in the system. So strikes = 0.
+            pass
+        
+        ## Uncomment here to see the specific readout fidelity
+        ## for a particular prepared state.
+        ## print(str( strikes / len( discretised_results[0] ) ))
+        
+        # Sum this value to the readout fidelity.
+        # We will divide the 
+        sum_of_all_individual_readout_fidelities += strikes / len( discretised_results[0] )
+        number_of_fidelities_calculated += 1
+    
+    # Calculate readout fidelity and return.
+    readout_fidelity = sum_of_all_individual_readout_fidelities / number_of_fidelities_calculated
+    return readout_fidelity
 
 
 def update_discriminator_settings_with_value(
@@ -319,7 +384,8 @@ def calculate_area_mean_perimeter_fidelity(
     # Calculate the readout fidelity from supplied data.
     readout_fidelity = calculate_readout_fidelity(
         data_to_process = processed_data,
-        state_centre_coordinates_list = centre
+        state_centre_coordinates_list = centre,
+        prepared_qubit_states = prepared_qubit_states,
     )
     
     # Check whether the program can find and area and a mean distance
