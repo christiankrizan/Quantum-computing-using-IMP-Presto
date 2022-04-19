@@ -136,6 +136,7 @@ def optimise_integration_window_g_e_f(
                 area_spanned = np.array(0.0)
                 mean_state_distance = np.array(0.0)
                 hamiltonian_path_perimeter = np.array(0.0)
+                readout_fidelity = np.array(0.0)
                 
                 # Print time remaining?
                 print_time_remaining = False
