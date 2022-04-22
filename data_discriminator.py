@@ -291,7 +291,7 @@ def discriminate(
             extracted_data = h5f["processed_data"][()]
     else:
         # Then the user provided the data raw.
-        assert (not isinstance(data_or_filepath_to_data, str)), "Error: the discriminator was provided a string type. Expected raw data. The provided variable was: "+str(extracted_data)
+        assert (not isinstance(data_or_filepath_to_data, str)), "Error: the discriminator was provided a string type. Expected raw data. The provided variable was: "+str(data_or_filepath_to_data)
         extracted_data = data_or_filepath_to_data
     
     # Prepare the highest_state_in_system variable.
