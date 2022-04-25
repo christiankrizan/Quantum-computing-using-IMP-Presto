@@ -475,9 +475,10 @@ def perform_readout_optimisation_g_e_f(
         "z_unit":   'default',
         },
     
-    my_weight_given_to_area_spanned_by_qubit_states = 1.0,
+    my_weight_given_to_area_spanned_by_qubit_states = 0.0,
     my_weight_given_to_mean_distance_between_all_states = 0.0,
-    my_weight_given_to_hamiltonian_path_perimeter = 0.0
+    my_weight_given_to_hamiltonian_path_perimeter = 0.0,
+    my_weight_given_to_readout_fidelity = 1.0
     ):
     ''' Perform complex domain readout optimisation. This function will
         generate one complex-plane dataset per resonator frequency step,
@@ -485,6 +486,8 @@ def perform_readout_optimisation_g_e_f(
         The final, stored plot, will be the "winning" plot that had the
         optimum readout given the user's settings.
     '''
+    
+    assert 1 == 0, "Halted. The functionality for returning highest readout fidelity (all states considered) expects a shot_arr metric. But this routine does not yield anything akin to shot_arr at this time. This is a TODO!"
     
     ## Input sanitation
     assert type(resonator_transmon_pair_id_number) == int, "Error: the argument resonator_transmon_pair_id_number expects an int, but a "+str(type(resonator_transmon_pair_id_number))+" was provided."
@@ -542,14 +545,13 @@ def perform_readout_optimisation_g_e_f(
         current_complex_dataset = "".join(current_complex_dataset)
         
         # Analyse the complex dataset.
-        assert 1 == 0, 'TODO: added readout_fidelity as a return to be unpacked by this subroutine, but the calling function has not been updated.'
-        area_spanned, mean_state_distance, hamiltonian_path_perimeter = \
+        area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity = \
             calculate_area_mean_perimeter_fidelity( \
                 path_to_data = os.path.abspath(current_complex_dataset)
             )
         
         # Append what dataset was built
-        list_of_current_complex_datasets.append([current_complex_dataset, area_spanned, mean_state_distance, hamiltonian_path_perimeter])
+        list_of_current_complex_datasets.append([current_complex_dataset, area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity])
         
     # We now have a dataset, showing resonator frequencies vs. area spanned
     # by the states, the mean distance between states in the complex plane,
@@ -560,6 +562,7 @@ def perform_readout_optimisation_g_e_f(
     biggest_area_idx                = np.argmax( list_of_current_complex_datasets[:,1] )
     biggest_mean_state_distance_idx = np.argmax( list_of_current_complex_datasets[:,2] )
     biggest_perimeter_idx           = np.argmax( list_of_current_complex_datasets[:,3] )
+    biggest_fidelity_idx            = np.argmax( list_of_current_complex_datasets[:,4] )
     
     ##if (biggest_area_idx == biggest_mean_state_distance_idx) and (biggest_area_idx == biggest_perimeter_idx):
     ##    print("\nThe most optimal readout is seen in \""+list_of_current_complex_datasets[biggest_area_idx,0]+"\". This readout wins in every category." )
@@ -568,21 +571,25 @@ def perform_readout_optimisation_g_e_f(
     ##    print( "\""+list_of_current_complex_datasets[biggest_area_idx,0]+"\" had the biggest spanned area." )
     ##    print( "\""+list_of_current_complex_datasets[biggest_mean_state_distance_idx,0]+"\" had the biggest mean intra-state distance." )
     ##    print( "\""+list_of_current_complex_datasets[biggest_perimeter_idx,0]+"\" had the biggest perimeter." )
+    ##    print( "\""+list_of_current_complex_datasets[biggest_fidelity_idx,0]+"\" had the biggest readout fidelity." )
     
     # Now applying weights, to figure out the optimal.
     weighted_area = (list_of_current_complex_datasets[biggest_area_idx,1]).astype(np.float64) * my_weight_given_to_area_spanned_by_qubit_states
     weighted_mean_distance = (list_of_current_complex_datasets[biggest_mean_state_distance_idx,2]).astype(np.float64) * my_weight_given_to_mean_distance_between_all_states
     weighted_perimeter = (list_of_current_complex_datasets[biggest_perimeter_idx,3]).astype(np.float64) * my_weight_given_to_hamiltonian_path_perimeter
-    biggest_metric = np.max([weighted_area, weighted_mean_distance, weighted_perimeter])
+    weighted_readout_fidelity = (list_of_current_complex_datasets[biggest_fidelity_idx,4]).astype(np.float64) * my_weight_given_to_readout_fidelity
+    biggest_metric = np.max([weighted_area, weighted_mean_distance, weighted_perimeter, weighted_readout_fidelity])
     
     # Decide on the winner
     if biggest_metric == weighted_area:
         optimal_choice_idx = biggest_area_idx
     elif biggest_metric == weighted_mean_distance:
         optimal_choice_idx = biggest_mean_state_distance_idx
-    else:
+    elif biggest_metric == weighted_perimeter:
         optimal_choice_idx = biggest_perimeter_idx
-    print("\nAfter weighing the metrics, entry " + list_of_current_complex_datasets[optimal_choice_idx,0]+" is hereby crowned as the optimal readout. (Scores: [Area, Inter-state distance, Perimeter] = "+str([weighted_area, weighted_mean_distance, weighted_perimeter])+")")
+    else:
+        optimal_choice_idx = biggest_fidelity_idx
+    print("\nAfter weighing the metrics, entry " + list_of_current_complex_datasets[optimal_choice_idx,0]+" is hereby crowned as the optimal readout. (Scores: [Area, Inter-state distance, Perimeter] = "+str([weighted_area, weighted_mean_distance, weighted_perimeter, weighted_readout_fidelity])+")")
     
     # Get the optimal readout frequency for this resonator.
     with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
@@ -612,9 +619,11 @@ def perform_readout_optimisation_g_e_f(
     analysed_areas = (list_of_current_complex_datasets[:,1]).astype(np.float64)
     analysed_means = (list_of_current_complex_datasets[:,2]).astype(np.float64)
     analysed_perimeters = (list_of_current_complex_datasets[:,3]).astype(np.float64)
+    analysed_fidelities = (list_of_current_complex_datasets[:,4]).astype(np.float64)
     weighed_areas = (list_of_current_complex_datasets[:,1]).astype(np.float64) * my_weight_given_to_area_spanned_by_qubit_states
     weighed_means = (list_of_current_complex_datasets[:,2]).astype(np.float64) * my_weight_given_to_mean_distance_between_all_states
     weighed_perimeters = (list_of_current_complex_datasets[:,3]).astype(np.float64) * my_weight_given_to_hamiltonian_path_perimeter
+    weighed_fidelities = (list_of_current_complex_datasets[:,4]).astype(np.float64) * my_weight_given_to_readout_fidelity
     
     # Data to be stored.
     hdf5_steps = [
@@ -660,9 +669,11 @@ def perform_readout_optimisation_g_e_f(
         #'analysed_areas', "(FS)²",  TODO! Add capability of exporting other logs in the data exporter.
         #'analysed_means', "FS",
         #'analysed_perimeters', "FS",
+        #'analysed_fidelities', "",
         #'weighed_areas', "(FS)²",
         #'weighed_means', "FS",
         #'weighed_perimeters', "FS",
+        #'weighed_readout_fidelities', "",
     ]
     
     # Ensure the keyed elements above are valid.
