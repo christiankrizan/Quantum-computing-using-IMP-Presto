@@ -487,8 +487,6 @@ def perform_readout_optimisation_g_e_f(
         optimum readout given the user's settings.
     '''
     
-    assert 1 == 0, "Halted. The functionality for returning highest readout fidelity (all states considered) expects a shot_arr metric. But this routine does not yield anything akin to shot_arr at this time. This is a TODO!"
-    
     ## Input sanitation
     assert type(resonator_transmon_pair_id_number) == int, "Error: the argument resonator_transmon_pair_id_number expects an int, but a "+str(type(resonator_transmon_pair_id_number))+" was provided."
     
@@ -604,7 +602,20 @@ def perform_readout_optimisation_g_e_f(
         
         ## Create a hacky-like array structure for storage's sake.
         prepared_qubit_states = h5f["prepared_qubit_states"][()]
-        shot_arr = h5f["shot_arr"][()]
+        try:
+            shot_arr = h5f["shot_arr"][()]
+        except KeyError:
+            # The shot arr may either just be a single entry long, in which
+            # the Data exporter likely stored the value as an attribute.
+            # Or, the user could have renamed the vector via argument.
+            # In either case, we may generate the vector here.
+            num_shots_per_state = (h5f.attrs["num_shots_per_state"])[0]
+            shot_arr = np.linspace(  \
+                1,                   \
+                num_shots_per_state, \
+                num_shots_per_state  \
+            )
+        
     
     # At this point, we may also update the discriminator settings JSON.
     update_discriminator_settings_with_value(
