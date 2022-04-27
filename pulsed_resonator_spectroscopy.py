@@ -1206,7 +1206,358 @@ def find_f_ro1_sweep_coupler(
     
     return string_arr_to_return
     
+
+def find_f_ro1_sweep_power(
+    ip_address,
+    ext_clk_present,
     
+    readout_stimulus_port,
+    readout_sampling_port,
+    readout_freq_nco,
+    readout_freq_centre_if,
+    readout_freq_span,
+    readout_duration,
+    
+    sampling_duration,
+    readout_sampling_delay,
+    repetition_delay,
+    integration_window_start,
+    integration_window_stop,
+    
+    control_port,
+    control_amp_01,
+    control_freq_01,
+    control_duration_01,
+    
+    num_freqs,
+    num_averages,
+    
+    num_amplitudes,
+    readout_amp_min = -1.0,
+    readout_amp_max = +1.0,
+    
+    save_complex_data = True,
+    use_log_browser_database = True,
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
+    ):
+    ''' Plot the readout frequency versus swept readout amplitude, pulsed.
+        The readout power is swept for the |1>-state.
+    '''
+    
+    ## Initial array declaration
+    
+    # Declare amplitude array for sweeping the power
+    readout_amp_arr = np.linspace(readout_amp_min, readout_amp_max, num_amplitudes)
+    
+    
+    # Instantiate the interface
+    print("\nConnecting to "+str(ip_address)+"...")
+    with pulsed.Pulsed(
+        force_reload =   True,
+        address      =   ip_address,
+        ext_ref_clk  =   ext_clk_present,
+        adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
+        adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dry_run      =   False
+    ) as pls:
+        print("Connected. Setting up...")
+        
+        # Readout output and input ports
+        pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
+        pls.hardware.set_dac_current(readout_stimulus_port, 40_500)
+        pls.hardware.set_inv_sinc(readout_stimulus_port, 0)
+        
+        # Control ports
+        pls.hardware.set_dac_current(control_port, 40_500)
+        pls.hardware.set_inv_sinc(control_port, 0)
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
+        
+        if (integration_window_stop - integration_window_start) < plo_clk_T:
+            integration_window_stop = integration_window_start + plo_clk_T
+            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        
+        ''' Setup mixers '''
+        
+        # Readout port
+        pls.hardware.configure_mixer(
+            freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
+            in_ports  = readout_sampling_port,
+            out_ports = readout_stimulus_port,
+            sync      = False,
+        )
+        # Control port mixer
+        pls.hardware.configure_mixer(
+            freq      = control_freq_01,
+            out_ports = control_port,
+            sync      = True,
+        )
+        
+        
+        ''' Setup scale LUTs '''
+        
+        # Readout amplitude
+        pls.setup_scale_lut(
+            output_ports    = readout_stimulus_port,
+            group           = 0,
+            scales          = readout_amp_arr,
+        )
+        # Control port amplitude sweep for pi_01
+        pls.setup_scale_lut(
+            output_ports    = control_port,
+            group           = 0,
+            scales          = control_amp_01,
+        )
+        
+        
+        ### Setup readout pulse ###
+        
+        # Setup readout pulse envelope
+        readout_pulse = pls.setup_long_drive(
+            output_port =   readout_stimulus_port,
+            group       =   0,
+            duration    =   readout_duration,
+            amplitude   =   1.0,
+            amplitude_q =   1.0,
+            rise_time   =   0e-9,
+            fall_time   =   0e-9
+        )
+
+        # Setup readout carrier, this tone will be swept in frequency.
+        # The user provides an intended span.
+        f_start = readout_freq_centre_if - readout_freq_span / 2
+        f_stop  = readout_freq_centre_if + readout_freq_span / 2
+        readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
+        
+        # Use the lower sideband. Note the minus sign.
+        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
+        
+        # Setup LUT
+        pls.setup_freq_lut(
+            output_ports = readout_stimulus_port,
+            group        = 0,
+            frequencies  = readout_freq_if_arr,
+            phases       = np.full_like(readout_freq_if_arr, 0.0),
+            phases_q     = np.full_like(readout_freq_if_arr, +np.pi / 2), # +pi/2 = LSB
+        )
+        
+        ### Setup pulse "control_pulse_pi_01" ###
+        
+        # Setup control pulse envelopes
+        control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template
+        control_envelope_01 = sin2(control_ns_01)
+        control_pulse_pi_01 = pls.setup_template(
+            output_port = control_port,
+            group       = 0,
+            template    = control_envelope_01,
+            template_q  = control_envelope_01,
+            envelope    = True,
+        )
+        # Setup control pulse carrier, considering that there is a digital mixer
+        pls.setup_freq_lut(
+            output_ports = control_port,
+            group        = 0,
+            frequencies  = 0.0,
+            phases       = 0.0,
+            phases_q     = 0.0,
+        )
+        
+        ### Setup sampling window ###
+        pls.set_store_ports(readout_sampling_port)
+        pls.set_store_duration(sampling_duration)
+        
+        
+        #################################
+        ''' PULSE SEQUENCE STARTS HERE'''
+        #################################
+
+        # Start of sequence
+        T = 0.0  # s
+        
+        # For every resonator stimulus pulse frequency to sweep over:
+        for ii in range(num_freqs):
+            
+            # Prepare state |e>
+            pls.reset_phase(T, control_port)
+            pls.output_pulse(T, control_pulse_pi_01)
+            T += control_duration_01
+            
+            # Commence readout, swept in frequency.
+            pls.reset_phase(T, readout_stimulus_port)
+            pls.output_pulse(T, readout_pulse)
+            pls.store(T + readout_sampling_delay) # Sampling window
+            T += readout_duration
+            
+            # Move to next scanned frequency
+            pls.next_frequency(T, readout_stimulus_port)
+            
+            # Wait for decay
+            T += repetition_delay
+            
+        # Move to next amplitude
+        pls.next_scale(T, readout_stimulus_port)
+        
+        # Move to next iteration.
+        T += repetition_delay
+        
+        
+        ################################
+        ''' EXPERIMENT EXECUTES HERE '''
+        ################################
+
+        # Average the measurement over 'num_averages' averages
+        pls.run(
+            period          =   T,
+            repeat_count    =   num_amplitudes,
+            num_averages    =   num_averages,
+            print_time      =   True,
+        )
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
+    if not pls.dry_run:
+        time_vector, fetched_data_arr = pls.get_store_data()
+        
+        print("Saving data")        
+        
+        ###########################################
+        ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
+        ###########################################
+        
+        # Data to be stored.
+        hdf5_steps = [
+            'readout_pulse_freq_arr', "Hz",
+            'readout_amp_arr', "FS",
+        ]
+        hdf5_singles = [
+            'readout_stimulus_port', "",
+            'readout_sampling_port', "",
+            'readout_freq_nco', "Hz",
+            'readout_freq_centre_if', "Hz",
+            'readout_freq_span', "Hz",
+            'readout_duration', "s",
+            
+            'sampling_duration', "s",
+            'readout_sampling_delay', "s",
+            'repetition_delay', "s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
+            
+            'control_port', "",
+            'control_amp_01', "FS",
+            'control_freq_01', "Hz",
+            'control_duration_01', "s",
+
+            'num_freqs', "",
+            'num_amplitudes', "",
+            'num_averages', "",
+            
+            'readout_amp_min', "FS",
+            'readout_amp_max', "FS",
+        ]
+        hdf5_logs = [
+            'fetched_data_arr', "FS",
+        ]
+        
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
+        
+        # Stylistically rework underscored characters in the axes dict.
+        axes = stylise_axes(axes)
+        
+        # Create step lists
+        ext_keys = []
+        for ii in range(0,len(hdf5_steps),2):
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
+        for jj in range(0,len(hdf5_singles),2):
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
+        for kk in range(0,len(hdf5_logs),2):
+            if len(hdf5_logs)/2 > 1:
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
+        
+        # Save data!
+        string_arr_to_return += save(
+            timestamp = get_timestamp_string(),
+            ext_keys = ext_keys,
+            log_dict_list = log_dict_list,
+            
+            time_vector = time_vector,
+            fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
+            
+            filepath_of_calling_script = os.path.realpath(__file__),
+            use_log_browser_database = use_log_browser_database,
+            
+            integration_window_start = integration_window_start,
+            integration_window_stop = integration_window_stop,
+            inner_loop_size = num_freqs,
+            outer_loop_size = num_amplitudes,
+            
+            save_complex_data = save_complex_data,
+            append_to_log_name_before_timestamp = 'ro1_power_sweep',
+            append_to_log_name_after_timestamp  = '',
+            select_resonator_for_single_log_export = '',
+        )
+    
+    return string_arr_to_return
+
+
 def find_f_ro2_sweep_coupler(
     ip_address,
     ext_clk_present,
@@ -1261,7 +1612,7 @@ def find_f_ro2_sweep_coupler(
         "z_unit":   'default',
         }
     ):
-    ''' Find the optimal readout frequency for reading out qubits in state |1>,
+    ''' Find the optimal readout frequency for reading out qubits in state |2>,
         as a function of a swept pairwise coupler bias.
     '''
     
@@ -2118,7 +2469,7 @@ def find_f_ro2_sweep_power(
             outer_loop_size = num_amplitudes,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = 'ro0_power_sweep',
+            append_to_log_name_before_timestamp = 'ro2_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         )
