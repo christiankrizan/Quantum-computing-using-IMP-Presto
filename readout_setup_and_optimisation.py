@@ -190,7 +190,7 @@ def optimise_integration_window_g_e_f(
                         calculate_area_mean_perimeter_fidelity( \
                             path_to_data = os.path.abspath(current_complex_dataset)
                         )
-                
+                    
                     # We no longer need this data file, so we should clean
                     # up the hard drive space.
                     attempt = 0
@@ -205,7 +205,7 @@ def optimise_integration_window_g_e_f(
                             time.sleep(0.2)
                     if (not success):
                         raise OSError("Error: could not delete data file "+str(os.path.abspath(current_complex_dataset))+" after "+str(max_attempts)+" attempts. Halting.")
-
+                    
                     # Typecasting to numpy.
                     area_spanned = np.array(area_spanned)
                     mean_state_distance = np.array(mean_state_distance)
@@ -483,12 +483,24 @@ def perform_readout_optimisation_g_e_f(
     ''' Perform complex domain readout optimisation. This function will
         generate one complex-plane dataset per resonator frequency step,
         unless the Log Browser output is suppressed.
+        
         The final, stored plot, will be the "winning" plot that had the
         optimum readout given the user's settings.
+        
+        Since the amount of stored data will be enormous, only four files
+        will be kept as the measurement runs, corresponding to
+        whichever metric was the highest.
     '''
     
     ## Input sanitation
     assert type(resonator_transmon_pair_id_number) == int, "Error: the argument resonator_transmon_pair_id_number expects an int, but a "+str(type(resonator_transmon_pair_id_number))+" was provided."
+    
+    ## Check that at least some kind of data will be saved.
+    if  (my_weight_given_to_area_spanned_by_qubit_states == 0) and \
+        (my_weight_given_to_mean_distance_between_all_states == 0) and \
+        (my_weight_given_to_hamiltonian_path_perimeter == 0) and \
+        (my_weight_given_to_readout_fidelity == 0):
+        raise AttributeError("Error: All user-argument weights are set to 0, there is nothing to optimise since everything will be 0. No data will be saved. Halting.")
     
     # Declare resonator frequency stepping array.
     resonator_freq_arr = np.linspace(readout_freq_start, readout_freq_stop, num_readout_freq_steps)
@@ -500,8 +512,27 @@ def perform_readout_optimisation_g_e_f(
     # complex values.
     save_complex_data = True
     
+    # Prepare variables for keeping track of what time to print out.
+    num_tick_tocks = 0
+    total_dur = 0
+    
+    # And, declare variables to keep track of what files' data to keep.
+    currently_best_weighted_area = 0.0
+    currently_best_weighted_mean_distance = 0.0
+    currently_best_weighted_perimeter = 0.0
+    currently_best_weighted_fidelity = 0.0
+    name_of_file_with_best_area = ''
+    name_of_file_with_best_mean_distance = ''
+    name_of_file_with_best_perimeter = ''
+    name_of_file_with_best_fidelity = ''
+    
     # Acquire all complex data.
     for curr_ro_freq in resonator_freq_arr:
+        
+        # Get a time estimate for printing "time remaining" to the user.
+        tick = time.time()
+        
+        # Grab data.
         current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
             ip_address = ip_address,
             ext_clk_present = ext_clk_present,
@@ -538,7 +569,7 @@ def perform_readout_optimisation_g_e_f(
             suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
             axes = axes
         )
-        
+    
         # current_complex_dataset will be a char array. Convert to string.
         current_complex_dataset = "".join(current_complex_dataset)
         
@@ -550,6 +581,126 @@ def perform_readout_optimisation_g_e_f(
         
         # Append what dataset was built
         list_of_current_complex_datasets.append([current_complex_dataset, area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity])
+        
+        # Figure out whether the data is save-worthy.
+        # If the data fails all checks, destroy the current data.
+        current_data_is_save_worthy = False
+        if (area_spanned*my_weight_given_to_area_spanned_by_qubit_states > currently_best_weighted_area) and (my_weight_given_to_area_spanned_by_qubit_states > 0):
+            # This file is better. Save it, delete the old one.
+            current_data_is_save_worthy = True
+            
+            # Delete!
+            if name_of_file_with_best_area != '':
+                attempt = 0
+                max_attempts = 5
+                success = False
+                while (attempt < max_attempts) and (not success):
+                    try:
+                        os.remove(os.path.abspath(name_of_file_with_best_area))
+                        success = True
+                    except FileNotFoundError:
+                        attempt += 1
+                        time.sleep(0.2)
+                if (not success):
+                    raise OSError("Error: could not delete data file "+str(os.path.abspath(name_of_file_with_best_area))+" after "+str(max_attempts)+" attempts. Halting.")
+            
+            # Update status quo
+            currently_best_weighted_area = area_spanned*my_weight_given_to_area_spanned_by_qubit_states
+            name_of_file_with_best_area = current_complex_dataset
+            
+        if (mean_state_distance*my_weight_given_to_mean_distance_between_all_states > currently_best_weighted_mean_distance) and (my_weight_given_to_mean_distance_between_all_states > 0):
+            # This file is better. Save it, delete the old one.
+            current_data_is_save_worthy = True
+            
+            # Delete!
+            if name_of_file_with_best_mean_distance != '':
+                attempt = 0
+                max_attempts = 5
+                success = False
+                while (attempt < max_attempts) and (not success):
+                    try:
+                        os.remove(os.path.abspath(name_of_file_with_best_mean_distance))
+                        success = True
+                    except FileNotFoundError:
+                        attempt += 1
+                        time.sleep(0.2)
+                if (not success):
+                    raise OSError("Error: could not delete data file "+str(os.path.abspath(name_of_file_with_best_mean_distance))+" after "+str(max_attempts)+" attempts. Halting.")
+            
+            # Update status quo
+            currently_best_weighted_mean_distance = mean_state_distance*my_weight_given_to_mean_distance_between_all_states
+            name_of_file_with_best_mean_distance = current_complex_dataset
+            
+        if (hamiltonian_path_perimeter*my_weight_given_to_hamiltonian_path_perimeter > currently_best_weighted_perimeter) and (my_weight_given_to_hamiltonian_path_perimeter > 0):
+            # This file is better. Save it, delete the old one.
+            current_data_is_save_worthy = True
+            
+            # Delete!
+            if name_of_file_with_best_perimeter != '':
+                attempt = 0
+                max_attempts = 5
+                success = False
+                while (attempt < max_attempts) and (not success):
+                    try:
+                        os.remove(os.path.abspath(name_of_file_with_best_perimeter))
+                        success = True
+                    except FileNotFoundError:
+                        attempt += 1
+                        time.sleep(0.2)
+                if (not success):
+                    raise OSError("Error: could not delete data file "+str(os.path.abspath(name_of_file_with_best_perimeter))+" after "+str(max_attempts)+" attempts. Halting.")
+            
+            # Update status quo
+            currently_best_weighted_perimeter = hamiltonian_path_perimeter*my_weight_given_to_hamiltonian_path_perimeter
+            name_of_file_with_best_perimeter = current_complex_dataset
+            
+        if (readout_fidelity*my_weight_given_to_readout_fidelity > currently_best_weighted_fidelity) and (my_weight_given_to_readout_fidelity > 0):
+            # This file is better. Save it, delete the old one.
+            current_data_is_save_worthy = True
+            
+            # Delete!
+            if name_of_file_with_best_fidelity != '':
+                attempt = 0
+                max_attempts = 5
+                success = False
+                while (attempt < max_attempts) and (not success):
+                    try:
+                        os.remove(os.path.abspath(name_of_file_with_best_fidelity))
+                        success = True
+                    except FileNotFoundError:
+                        attempt += 1
+                        time.sleep(0.2)
+                if (not success):
+                    raise OSError("Error: could not delete data file "+str(os.path.abspath(name_of_file_with_best_fidelity))+" after "+str(max_attempts)+" attempts. Halting.")
+            
+            # Update status quo
+            currently_best_weighted_fidelity = readout_fidelity*my_weight_given_to_readout_fidelity
+            name_of_file_with_best_fidelity = current_complex_dataset
+            
+        # The acquired data was not better at all. Discard it.
+        if (not current_data_is_save_worthy):
+            # The recent data is irrelevant, kill it.
+            attempt = 0
+            max_attempts = 5
+            success = False
+            while (attempt < max_attempts) and (not success):
+                try:
+                    os.remove(os.path.abspath(current_complex_dataset))
+                    success = True
+                except FileNotFoundError:
+                    attempt += 1
+                    time.sleep(0.2)
+            if (not success):
+                raise OSError("Error: could not delete data file "+str(os.path.abspath(current_complex_dataset))+" after "+str(max_attempts)+" attempts. Halting.")
+        
+        tock = time.time() # Get a time estimate.
+        num_tick_tocks += 1
+        total_dur += (tock - tick)
+        average_duration_per_point = total_dur / num_tick_tocks
+        calc = (len(resonator_freq_arr)-num_tick_tocks)*average_duration_per_point
+        if (calc != 0.0):
+            # Print "true" time remaining.
+            show_user_time_remaining(calc)
         
     # We now have a dataset, showing resonator frequencies vs. area spanned
     # by the states, the mean distance between states in the complex plane,
@@ -621,7 +772,7 @@ def perform_readout_optimisation_g_e_f(
     update_discriminator_settings_with_value(
         path_to_data = os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0])
     )
-    calculate_area_mean_perimeter_fidelity(
+    area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity = calculate_area_mean_perimeter_fidelity(
         path_to_data = os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]),
         update_discriminator_settings_json = True
     )
@@ -643,6 +794,10 @@ def perform_readout_optimisation_g_e_f(
     ]
     hdf5_singles = [
         'optimal_readout_freq', "Hz",
+        'area_spanned', "(FS)²",
+        'mean_state_distance', "FS",
+        'hamiltonian_path_perimeter', "FS",
+        'readout_fidelity', "",
         
         'readout_stimulus_port', "",
         'readout_sampling_port', "",
@@ -674,6 +829,12 @@ def perform_readout_optimisation_g_e_f(
         'readout_freq_start', "Hz",
         'readout_freq_stop', "Hz",
         'num_readout_freq_steps', "",
+        
+        'my_weight_given_to_area_spanned_by_qubit_states', "",
+        'my_weight_given_to_mean_distance_between_all_states', "",
+        'my_weight_given_to_hamiltonian_path_perimeter', "",
+        'my_weight_given_to_readout_fidelity', "",
+        
     ]
     hdf5_logs = [
         'fetched_data_arr', "FS",
