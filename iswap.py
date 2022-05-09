@@ -244,7 +244,6 @@ def iswap_sweep_duration_and_detuning(
             )
         
         
-        
         ### Setup readout pulses ###
         
         # Setup readout pulse envelope
