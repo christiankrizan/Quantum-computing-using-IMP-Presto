@@ -164,6 +164,7 @@ def save(
     select_resonator_for_single_log_export = '',
     force_matrix_reshape_flip_row_and_column = False,
     suppress_log_browser_export = False,
+    save_raw_time_data = False,
     
     log_browser_tag = 'krizan',
     log_browser_user = 'Christian Križan',
@@ -212,6 +213,7 @@ def save(
         # the (representable) segments of the discretised frequency axis.
         dt = time_vector[1] - time_vector[0]
         num_samples = len(integration_indices)
+        ##num_samples = 25*len(integration_indices)
         freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
         
         # Get IF frequencies, so that we can pick out indices in the FFT array.
@@ -251,9 +253,15 @@ def save(
         '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples'''
         for _item in integration_indices_list:
             if len(_item) <= 1:
-                print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you may experience a weird offset on your Y-axis.") # TODO
-                resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples
-                processed_data.append( 2 * resp_fft[:, _item[0]] )
+                resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1)
+                '''arr_to_fft = fetched_data_arr[:, 0, integration_indices]
+                new_arr = []
+                for row in range(len(arr_to_fft)):
+                    new_arr.append(np.append(arr_to_fft[row], np.zeros([1,len(arr_to_fft[0])*24])))
+                new_arr = np.array(new_arr)
+                resp_fft = np.fft.fft(new_arr, axis=-1)'''
+                
+                processed_data.append( 2/num_samples * resp_fft[:, _item[0]] ) # TODO: Should, or should not, the num_samples part be modified after zero-padding the data?
             else:
                 print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.") # TODO
                 print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you may experience a weird offset on your Y-axis.") # TODO
@@ -311,19 +319,22 @@ def save(
     
     # Has the user set up the calling script so that the X and Z axes are
     # reversed? I.e. "the graph is rotated -90° in the Log Browser."
-    if (len(ext_keys) > 1) and (inner_loop_size != outer_loop_size):
-        first_dict  = ext_keys[0]
-        second_dict = ext_keys[1]
-        if (len(first_dict.get('values')) == outer_loop_size) and (len(second_dict.get('values')) == inner_loop_size) and (not force_matrix_reshape_flip_row_and_column):
-            
-            print("Detected external key reversal in the calling script."+\
-            " Will flip axes "+first_dict.get('name')+" and "+\
-            second_dict.get('name')+". Note! This message is not from "+\
-            "the \"force_matrix_reshape_flip_row_and_column\" flag!")
-            
-            tempflip = inner_loop_size
-            inner_loop_size = outer_loop_size
-            outer_loop_size = tempflip
+    if (not force_matrix_reshape_flip_row_and_column):
+        if (len(ext_keys) > 1) and (inner_loop_size != outer_loop_size):
+            first_dict  = ext_keys[0]
+            second_dict = ext_keys[1]
+            if (len(first_dict.get('values')) == outer_loop_size):
+                if (len(second_dict.get('values')) == inner_loop_size):
+                    ##if (len(first_dict.get('values')) == outer_loop_size) and (len(second_dict.get('values')) == inner_loop_size) and (not force_matrix_reshape_flip_row_and_column):
+                    
+                    print("Detected external key reversal in the calling script."+\
+                    " Will flip axes "+first_dict.get('name')+" and "+\
+                    second_dict.get('name')+". Note! This message is not from "+\
+                    "the \"force_matrix_reshape_flip_row_and_column\" flag!")
+                    
+                    tempflip = inner_loop_size
+                    inner_loop_size = outer_loop_size
+                    outer_loop_size = tempflip
     
     # And, save either complex or magnitude data with/without some
     # scale and offset. Reshape the data to account for repeats.
@@ -539,8 +550,8 @@ def save(
         use_log_browser_database = use_log_browser_database,
         suppress_log_browser_export = suppress_log_browser_export,
         select_resonator_for_single_log_export = select_resonator_for_single_log_export,
-        resonator_freq_if_arrays_to_fft = resonator_freq_if_arrays_to_fft,
-        source_code_of_executing_file = source_code_of_executing_file
+        source_code_of_executing_file = source_code_of_executing_file,
+        save_raw_time_data = save_raw_time_data
     )
     
     # Return the .h5 save path to the calling script
@@ -556,7 +567,7 @@ def export_processed_data_to_file(
     fetched_data_scale,
     fetched_data_offset,
     
-    timestamp,
+    timestamp = 0,
     time_vector = [],
     fetched_data_arr = [],
     log_browser_tag = 'krizan',
@@ -566,12 +577,17 @@ def export_processed_data_to_file(
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     select_resonator_for_single_log_export = '',
-    resonator_freq_if_arrays_to_fft = [],
     source_code_of_executing_file = '',
+    save_raw_time_data = False
     ):
     ''' Take the supplied (processed) data, and export it to Labber's
         Log Browser (if possible) and as a .hdf5 file using H5PY.
     '''
+    
+    # First, check if the timestamp is valid.
+    if timestamp == 0:
+        # Invalid. Make valid.
+        timestamp = get_timestamp_string()
     
     # Fetch the save folder for the data to be exported.
     full_folder_path_where_data_will_be_saved, \
@@ -708,14 +724,100 @@ def export_processed_data_to_file(
         
         if len(time_vector) != 0:
             h5f.create_dataset("time_vector",  data = time_vector)
-        if len(fetched_data_arr) != 0:
+        if (len(fetched_data_arr) != 0) and (save_raw_time_data):
             h5f.create_dataset("fetched_data_arr", data = fetched_data_arr)
         h5f.create_dataset("processed_data", data = processed_data)
         h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
         h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)
         
+        # h5f content for export data file stitching:
+        ##h5f.create_dataset("ext_keys", data = ext_keys)
+        ##h5f.create_dataset("log_dict_list", data = log_dict_list)
+        h5f.create_dataset("filepath_of_calling_script", data = filepath_of_calling_script)
+        
         print("Data saved using H5PY, see " + save_path_h5py)
     
     # Return the .h5 save path to the calling function
     return save_path_h5py
+    
+def stitch_exported_data_files(
+    list_of_h5_files_to_stitch,
+    log_browser_tag = 'krizan',
+    log_browser_user = 'Christian Križan',
+    use_log_browser_database = True,
+    suppress_log_browser_export = False,
+    select_resonator_for_single_log_export = ''
+    ):
+    ''' For all .h5 files in the .h5 file list argument,
+        grab all data and stitch together one export.
+        Then, delete all old files.
+    '''
+    try:
+        assert len(list_of_h5_files_to_stitch) != 0, \
+            "Error: the stitched routine was called for exported data files. " + \
+            "But, no data filepaths were provided."
+    except TypeError as e:
+        raise TypeError("Error: the data export stitcher was called with a non-list argument. The full type error is: \n"+str(e))
+    
+    # Treat every provided item in the list!
+    for current_filepath_item_in_list in list_of_h5_files_to_stitch:
+        
+        # Open the current file. Gather its stats.
+        ## TODO OPEN AND GATHER
+        if (1 == 1): # TODO
+        
+            # Update the filepath_of_calling_script variable.
+            ## TODO GET filepath_of_calling_script
+            
+            # Get the data_scale and data_offset variables.
+            # Important! Check so that these do not differ from earlier imports.
+            ##TODO fetched_data_scale,
+            ##TODO fetched_data_offset,
+            
+            # Import time_vector if the vector exists. Update running
+            # vector in that case.
+            ## time_vector IF EXISTS
+            
+            # If there is raw time data, tell the user that this data will
+            # not be stitched, because the purpose of the stitcher is
+            # to keep files manageable, and not fill up the memory with hundreds
+            # of gigabytes.
+            ## IF fetched_data_arr EXISTS; PRINT WARNING AND EXPLAIN.
+            
+            # What shall the name of the final stitched export be? As of now.
+            ## MAKE STRING current_filepath_item_in_list SET THIS AS NAME OF FINAL EXPORT
+            ## Then, append "stitched" in the very end.
+            
+            # Cut open the ext_keys and log_dict_list variables.
+            # These are now used for figuring out how your new dataset
+            # is supposed to look like.
+            ## TODO2:   Well this information is only contained within one
+            ##          of these two files anyway? ext_keys, right?
+            
+            ## TODO3:   WELL! The two pieces above in the data_exporter:
+            ##                h5f.create_dataset("ext_keys", data = ext_keys)
+            ##                h5f.create_dataset("log_dict_list", data = log_dict_list)
+            ##          ... cannot easily be made into h5py just like that.
+            ##          They will have to be inserted some other way.
+            
+            ## TODO Cut open ext_keys and log_dict_list
+            
+            # The processed_data data from this file will now be appended to
+            # a running list.
+            ## Append processed_data array TODO
+            pass
+    
+    # Export combined data!
+    # Make a timestamp string for this export.
+    timestamp = get_timestamp_string()
+    ## TODO EXPORT THINGS
+    name_of_stitched_export = 'TODO'
+    
+    # Now, delete the old files.
+    for item_to_delete in list_of_h5_files_to_stitch:
+        # TODO DELETE!
+        pass #TODO
+    
+    return name_of_stitched_export
+    
     
