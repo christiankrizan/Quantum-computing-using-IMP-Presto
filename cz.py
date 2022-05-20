@@ -642,6 +642,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     states_to_discriminate_between = ['20'],
     
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1226,6 +1227,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         )
     
     return string_arr_to_return

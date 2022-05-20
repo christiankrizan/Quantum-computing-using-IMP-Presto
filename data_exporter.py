@@ -913,10 +913,34 @@ def stitch(
             # Get values.
             curr_processed_data = h5f["processed_data"][()]
             
+            # First, grab static measurement variables first.
+            # This way, we can "repair" a measurement with only a single
+            # "swept" datapoint.
+            ##list_of_unswept_keys = [] # See outside of the with-case
+            ##unswept_content      = [] # See outside of the with-case
+            for item in h5f.attrs.keys():
+                if  ((item != 'ext_keys') and \
+                    (item != 'log_dict_list') ):
+                    # There was an unswept parameter that might need appendage.
+                    if not (item in list_of_unswept_keys):
+                        list_of_unswept_keys.append(str(item))
+                        unswept_content.append(h5f.attrs[str(item)])
+            
             # Store what x- and z axes are being used, in order to look
             # out for overwrites.
-            previous_x_axes.append(swept_content[0])
-            previous_z_axes.append(swept_content[1])
+            try:
+                previous_x_axes.append(swept_content[0])
+            except IndexError:
+                # There are apparently *no* swept values.
+                # Grab the first value of the unswept ones.
+                swept_content[0] = unswept_content[0]
+                previous_x_axes.append(swept_content[0])
+            try:
+                previous_z_axes.append(swept_content[0])
+            except IndexError:
+                # There is only a single swept value.
+                swept_content[1] = unswept_content[1]
+                previous_z_axes.append(swept_content[1])
             
             # Remember, processed_data consists of n entries for n resonators.
             # Every entry processed_data[n] contains the XZ canvas for that
@@ -994,17 +1018,6 @@ def stitch(
                     # There are no common axes. All hope is lost; all data entries must be interleaved.
                     raise NotImplementedError("Halted! Interleaving data is currently not supported.") # TODO
                     
-            # Second step, grab static measurement variables.
-            ##list_of_unswept_keys = [] # See outside of the with-case
-            ##unswept_content      = [] # See outside of the with-case
-            for item in h5f.attrs.keys():
-                if  ((item != 'ext_keys') and \
-                    (item != 'log_dict_list') ):
-                    # There was an unswept parameter that might need appendage.
-                    if not (item in list_of_unswept_keys):
-                        list_of_unswept_keys.append(str(item))
-                        unswept_content.append(h5f.attrs[str(item)])
-            
             # Get initial values for the ext_keys and log_dict_list keys.
             if ext_keys == []:
                 ext_keys = json.loads( h5f.attrs["ext_keys"] )
