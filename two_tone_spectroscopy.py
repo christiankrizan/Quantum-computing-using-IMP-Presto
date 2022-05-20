@@ -230,7 +230,7 @@ def pulsed01_flux_sweep(
         
         # Use the lower sideband. Note the minus sign.
         control_pulse_01_freq_arr = control_freq_01_nco - control_freq_01_if_arr
-
+        
         # Setup LUT
         pls.setup_freq_lut(
             output_ports    = control_port,

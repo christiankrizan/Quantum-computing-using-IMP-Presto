@@ -3006,7 +3006,7 @@ def duration_sweep_oscillation12_ro1(
                     # Let the record show that I wanted to write a Unicode ket
                     # instead of the '>' character, but the Log Browser's
                     # support for anything non-bland is erratic at best.
-                    hdf5_logs.append("%")
+                    hdf5_logs.append("")
             save_complex_data = False
         except NameError:
             pass # Fine, no state discrimnation.

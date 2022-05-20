@@ -187,8 +187,8 @@ def find_f_ro0_sweep_coupler(
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
-        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
+        # Use the upper sideband. Note the plus sign.
+        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -196,7 +196,7 @@ def find_f_ro0_sweep_coupler(
             group        = 0,
             frequencies  = readout_freq_if_arr,
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, +np.pi / 2), # +pi/2 = LSB
+            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
         )
         
         ### Setup pulse "coupler_bias_tone" ###
@@ -539,8 +539,8 @@ def find_f_ro0_sweep_power(
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
-        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
+        # Use the upper sideband. Note the plus sign.
+        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -548,7 +548,7 @@ def find_f_ro0_sweep_power(
             group        = 0,
             frequencies  = readout_freq_if_arr,
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, +np.pi / 2), # +pi/2 = LSB
+            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
         )
         
         ### Setup sampling window ###
@@ -903,8 +903,8 @@ def find_f_ro1_sweep_coupler(
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
-        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
+        # Use the upper sideband. Note the plus sign.
+        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -912,7 +912,7 @@ def find_f_ro1_sweep_coupler(
             group        = 0,
             frequencies  = readout_freq_if_arr,
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, +np.pi / 2), # +pi/2 = LSB
+            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
         )
         
         
@@ -1348,8 +1348,8 @@ def find_f_ro1_sweep_power(
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
-        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
+        # Use the upper sideband. Note the plus sign.
+        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -1357,7 +1357,7 @@ def find_f_ro1_sweep_power(
             group        = 0,
             frequencies  = readout_freq_if_arr,
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, +np.pi / 2), # +pi/2 = LSB
+            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
         )
         
         ### Setup pulse "control_pulse_pi_01" ###
@@ -1682,6 +1682,7 @@ def find_f_ro2_sweep_coupler(
             integration_window_stop = integration_window_start + plo_clk_T
             print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
+        
         ''' Setup mixers '''
         
         # Readout port
@@ -1756,8 +1757,8 @@ def find_f_ro2_sweep_coupler(
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
-        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
+        # Use the upper sideband. Note the plus sign.
+        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -1765,7 +1766,7 @@ def find_f_ro2_sweep_coupler(
             group        = 0,
             frequencies  = readout_freq_if_arr,
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, +np.pi / 2), # +pi/2 = LSB
+            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
         )
         
         
@@ -2241,8 +2242,8 @@ def find_f_ro2_sweep_power(
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
-        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
+        # Use the upper sideband. Note the plus sign.
+        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -2250,7 +2251,7 @@ def find_f_ro2_sweep_power(
             group        = 0,
             frequencies  = readout_freq_if_arr,
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, +np.pi / 2), # +pi/2 = LSB
+            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
         )
         
         ### Setup pulse "control_pulse_pi_01" and "control_pulse_pi_12" ###

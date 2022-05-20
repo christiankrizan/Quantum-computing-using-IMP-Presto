@@ -103,6 +103,8 @@ def optimise_integration_window_g_e_f(
         pixel.
     '''
     
+    assert 1 == 0, "Halted! The subroutine get_complex_data_for_readout_optimisation_g_e_f has been modified, but the integration window optimisation routine has not yet been updated to reflect the changes to USB NCO in said subroutine."
+    
     ## Input sanitation
     assert type(resonator_transmon_pair_id_number) == int, "Error: the argument resonator_transmon_pair_id_number expects an int, but a "+str(type(resonator_transmon_pair_id_number))+" was provided."
     
@@ -430,7 +432,11 @@ def perform_readout_optimisation_g_e_f(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_amp,
+    readout_freq_A_static,
+    readout_amp_A,
+    readout_freq_B_start,
+    readout_freq_B_stop,
+    readout_amp_B,
     readout_duration,
     
     sampling_duration,
@@ -455,8 +461,6 @@ def perform_readout_optimisation_g_e_f(
     num_shots_per_state,
     resonator_transmon_pair_id_number,
     
-    readout_freq_start,
-    readout_freq_stop,
     num_readout_freq_steps,
     
     use_log_browser_database = True,
@@ -490,6 +494,7 @@ def perform_readout_optimisation_g_e_f(
         Since the amount of stored data will be enormous, only four files
         will be kept as the measurement runs, corresponding to
         whichever metric was the highest.
+        
     '''
     
     ## Input sanitation
@@ -503,7 +508,7 @@ def perform_readout_optimisation_g_e_f(
         raise AttributeError("Error: All user-argument weights are set to 0, there is nothing to optimise since everything will be 0. No data will be saved. Halting.")
     
     # Declare resonator frequency stepping array.
-    resonator_freq_arr = np.linspace(readout_freq_start, readout_freq_stop, num_readout_freq_steps)
+    resonator_freq_arr = np.linspace(readout_freq_B_start, readout_freq_B_stop, num_readout_freq_steps)
     
     # All output complex data plots will be stored for reference later on.
     list_of_current_complex_datasets = []
@@ -539,8 +544,10 @@ def perform_readout_optimisation_g_e_f(
             
             readout_stimulus_port = readout_stimulus_port,
             readout_sampling_port = readout_sampling_port,
-            readout_freq = curr_ro_freq,
-            readout_amp = readout_amp,
+            readout_freq_A = readout_freq_A_static,
+            readout_amp_A = readout_amp_A,
+            readout_freq_B = curr_ro_freq, # Note: swept here!
+            readout_amp_B = readout_amp_B,
             readout_duration = readout_duration,
             
             sampling_duration = sampling_duration,
@@ -742,7 +749,8 @@ def perform_readout_optimisation_g_e_f(
     
     # Get the optimal readout frequency for this resonator.
     with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
-        optimal_readout_freq = h5f.attrs["readout_freq"]
+        optimal_readout_freq = h5f.attrs["readout_freq_B"] ## TODO! Note that the get_complex_data_for_readout_optimisation_g_e_f is not generating a file with the full multiplexed readout. Only readout_freq_B is swept in the measurement. This "semi-multiplexed" fact is a TODO.
+        '''optimal_readout_freq = h5f.attrs["readout_freq"]''' # Deprecated, mixing needed.
         ##print("The optimal readout frequency is: "+str(optimal_readout_freq)+" Hz.")
     
     # Load the complex data from the winner, and re-store this in a new file.
@@ -801,7 +809,11 @@ def perform_readout_optimisation_g_e_f(
         
         'readout_stimulus_port', "",
         'readout_sampling_port', "",
-        'readout_amp', "FS",
+        'readout_freq_A_static', "Hz",
+        'readout_amp_A', "FS",
+        'readout_freq_B_start', "Hz",
+        'readout_freq_B_stop', "Hz",
+        'readout_amp_B', "FS",
         'readout_duration', "s",
         
         'sampling_duration', "s",
@@ -826,8 +838,6 @@ def perform_readout_optimisation_g_e_f(
         'num_shots_per_state', "",
         'resonator_transmon_pair_id_number', "",
         
-        'readout_freq_start', "Hz",
-        'readout_freq_stop', "Hz",
         'num_readout_freq_steps', "",
         
         'my_weight_given_to_area_spanned_by_qubit_states', "",
@@ -926,8 +936,10 @@ def get_complex_data_for_readout_optimisation_g_e_f(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_freq,
-    readout_amp,
+    readout_freq_A,
+    readout_amp_A,
+    readout_freq_B,
+    readout_amp_B,
     readout_duration,
     
     sampling_duration,
@@ -1026,9 +1038,12 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         
         ''' Setup mixers '''
         
-        # Readout port
+        # Readout port, multiplexed, calculate an optimal NCO frequency.
+        high_res  = max( [readout_freq_A, readout_freq_B] )
+        low_res   = min( [readout_freq_A, readout_freq_B] )
+        readout_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
-            freq      = readout_freq,
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             sync      = False,
@@ -1052,13 +1067,18 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         
         ''' Setup scale LUTs '''
         
-        # Readout amplitude
+        # Readout port amplitude
         pls.setup_scale_lut(
             output_ports    = readout_stimulus_port,
             group           = 0,
-            scales          = readout_amp,
+            scales          = readout_amp_A,
         )
-        # Control port amplitude sweep for pi_01
+        pls.setup_scale_lut(
+            output_ports    = readout_stimulus_port,
+            group           = 1,
+            scales          = readout_amp_B,
+        )
+        # Control port amplitudes
         pls.setup_scale_lut(
             output_ports    = control_port,
             group           = 0,
@@ -1080,23 +1100,41 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         
         ### Setup readout pulse ###
         
-        # Setup readout pulse envelope
-        readout_pulse = pls.setup_long_drive(
-            output_port =   readout_stimulus_port,
-            group       =   0,
-            duration    =   readout_duration,
-            amplitude   =   1.0,
-            amplitude_q =   1.0,
-            rise_time   =   0e-9,
-            fall_time   =   0e-9
+        # Setup readout pulse envelopes
+        readout_pulse_A = pls.setup_long_drive(
+            output_port = readout_stimulus_port,
+            group       = 0,
+            duration    = readout_duration,
+            amplitude   = 1.0,
+            amplitude_q = 1.0,
+            rise_time   = 0e-9,
+            fall_time   = 0e-9
         )
-        # Setup readout carrier, considering that there is a digital mixer
+        readout_pulse_B = pls.setup_long_drive(
+            output_port = readout_stimulus_port,
+            group       = 1,
+            duration    = readout_duration,
+            amplitude   = 1.0,
+            amplitude_q = 1.0,
+            rise_time   = 0e-9,
+            fall_time   = 0e-9
+        )
+        # Setup readout carriers, considering the multiplexed readout NCO.
+        readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_A)
+        readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_B)
         pls.setup_freq_lut(
-            output_ports =  readout_stimulus_port,
-            group        =  0,
-            frequencies  =  0.0,
-            phases       =  0.0,
-            phases_q     =  0.0,
+            output_ports = readout_stimulus_port,
+            group        = 0,
+            frequencies  = readout_freq_if_A,
+            phases       = np.full_like(readout_freq_if_A, 0.0),
+            phases_q     = np.full_like(readout_freq_if_A, -np.pi/2), # USB!  ##+np.pi/2, # LSB
+        )
+        pls.setup_freq_lut(
+            output_ports = readout_stimulus_port,
+            group        = 1,
+            frequencies  = readout_freq_if_B,
+            phases       = np.full_like(readout_freq_if_B, 0.0),
+            phases_q     = np.full_like(readout_freq_if_B, -np.pi/2), # USB!  ##+np.pi/2, # LSB
         )
         
         
@@ -1203,9 +1241,9 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         
         ''' State |0> '''
         
-        # Read out, while the qubit is in |0>
+        # Read out multiplexed, while the qubit is in |0>
         pls.reset_phase(T, readout_stimulus_port)
-        pls.output_pulse(T, readout_pulse)
+        pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
         pls.store(T + readout_sampling_delay) # Sampling window
         T += readout_duration
         
@@ -1219,9 +1257,9 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         pls.output_pulse(T, control_pulse_pi_01)
         T += control_duration_01
         
-        # Commence readout
+        # Read out multiplexed, while the qubit is in |1>
         pls.reset_phase(T, readout_stimulus_port)
-        pls.output_pulse(T, readout_pulse)
+        pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
         pls.store(T + readout_sampling_delay) # Sampling window
         T += readout_duration
         
@@ -1240,9 +1278,9 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         pls.output_pulse(T, control_pulse_pi_12)
         T += control_duration_12
         
-        # Commence readout
+        # Read out multiplexed, while the qubit is in |2>
         pls.reset_phase(T, readout_stimulus_port)
-        pls.output_pulse(T, readout_pulse)
+        pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
         pls.store(T + readout_sampling_delay) # Sampling window
         T += readout_duration
         
@@ -1290,8 +1328,10 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         hdf5_singles = [
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
-            'readout_freq', "Hz",
-            'readout_amp', "FS",
+            'readout_freq_A', "Hz",
+            'readout_amp_A', "FS",
+            'readout_freq_B', "Hz",
+            'readout_amp_B', "FS",
             'readout_duration', "s",
             
             'sampling_duration', "s",
@@ -1318,7 +1358,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             'resonator_transmon_pair_id_number', "",
         ]
         hdf5_logs = [
-            'fetched_data_arr', "FS",
+            'fetched_data_arr', "FS", # Note that there is a multiplexed readout pulse, TODO: but only one signal is analysed per iteration.
         ]
         
         # Ensure the keyed elements above are valid.
@@ -1381,7 +1421,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [],
+            resonator_freq_if_arrays_to_fft = [readout_freq_if_B], # TODO: This script should be made multiplexed, check whether the state discrimination (and data_exporter.py) can handle that.
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1398,6 +1438,8 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             select_resonator_for_single_log_export = '',
             force_matrix_reshape_flip_row_and_column = True,
             suppress_log_browser_export = suppress_log_browser_export,
+            
+            save_raw_time_data = True
         )
     
     return string_arr_to_return
