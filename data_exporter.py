@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import h5py
+import json
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
@@ -212,8 +213,8 @@ def save(
         # fetched_data_arr trace. freq_arr contains the centres of
         # the (representable) segments of the discretised frequency axis.
         dt = time_vector[1] - time_vector[0]
-        num_samples = len(integration_indices)
-        ##num_samples = 25*len(integration_indices)
+        '''num_samples = len(integration_indices)'''
+        num_samples = 25*len(integration_indices)
         freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
         
         # Get IF frequencies, so that we can pick out indices in the FFT array.
@@ -250,18 +251,18 @@ def save(
         # will return may identical indices.
         # Ie. something like [124, 124, 124, 124, 124, 125, 125, 125, 125]
         # Instead, we should demodulate the collected data.
-        '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1) / num_samples'''
         for _item in integration_indices_list:
             if len(_item) <= 1:
-                resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1)
-                '''arr_to_fft = fetched_data_arr[:, 0, integration_indices]
+                '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1)'''
+                arr_to_fft = fetched_data_arr[:, 0, integration_indices]
                 new_arr = []
                 for row in range(len(arr_to_fft)):
                     new_arr.append(np.append(arr_to_fft[row], np.zeros([1,len(arr_to_fft[0])*24])))
                 new_arr = np.array(new_arr)
-                resp_fft = np.fft.fft(new_arr, axis=-1)'''
+                resp_fft = np.fft.fft(new_arr, axis=-1)
                 
-                processed_data.append( 2/num_samples * resp_fft[:, _item[0]] ) # TODO: Should, or should not, the num_samples part be modified after zero-padding the data?
+                '''processed_data.append( 2/num_samples * resp_fft[:, _item[0]] )'''
+                processed_data.append( 2/(num_samples/25) * resp_fft[:, _item[0]] ) # TODO: Should, or should not, the num_samples part be modified after zero-padding the data?
             else:
                 print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.") # TODO
                 print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you may experience a weird offset on your Y-axis.") # TODO
@@ -730,27 +731,59 @@ def export_processed_data_to_file(
         h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
         h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)
         
-        # h5f content for export data file stitching:
-        ##h5f.create_dataset("ext_keys", data = ext_keys)
-        ##h5f.create_dataset("log_dict_list", data = log_dict_list)
+        # h5f content for export data file stitching!
+        # ext_keys will contain a lot of numpy arrays, which are not
+        # JSON-compatible. These must be converted to the Python list datatype.
+        h5f.attrs["ext_keys"] = json.dumps(convert_numpy_entries_in_ext_keys_to_list(ext_keys), indent = 4)
+        h5f.attrs["log_dict_list"] = json.dumps(log_dict_list, indent = 4) 
         h5f.create_dataset("filepath_of_calling_script", data = filepath_of_calling_script)
         
         print("Data saved using H5PY, see " + save_path_h5py)
     
     # Return the .h5 save path to the calling function
     return save_path_h5py
+
+
+def convert_numpy_entries_in_ext_keys_to_list( ext_keys_to_convert ):
+    ''' Takes the ext_keys dict, and converts all numpy
+        entries in the list to JSON-compatible Python lists.
+        This subroutine enables storing ext_keys in h5py-compatible .h5 files.
+        Storing ext_keys removes a large number of problems when
+        stitching data files.
+    '''
+    # ext_keys is a list of dicts.
+    for ce in range(len(ext_keys_to_convert)):
+        current_entry = (ext_keys_to_convert[ce]).copy()
+        if type(current_entry['values']) == list:
+            # Then do nothing.
+            pass
+        else:
+            current_entry['values'] = current_entry['values'].tolist()
+            ext_keys_to_convert[ce] = current_entry.copy()
+        del current_entry
     
-def stitch_exported_data_files(
+    # Note the copy()-dance. Now, return the result.
+    return (ext_keys_to_convert.copy())
+
+
+def stitch(
     list_of_h5_files_to_stitch,
+    delete_old_files_after_stitching = False,
+    halt_if_x_and_z_axes_are_identical = True, # Halt to ensure there is no overwrite because of poor user arguments.
+    use_this_scale = [1.0],
+    use_this_offset = [0.0],
     log_browser_tag = 'krizan',
     log_browser_user = 'Christian Križan',
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     select_resonator_for_single_log_export = ''
     ):
-    ''' For all .h5 files in the .h5 file list argument,
+    ''' A function previously known as "stitch_exported_data_files."
+    
+        For all .h5 files in the .h5 file list argument,
         grab all data and stitch together one export.
-        Then, delete all old files.
+        
+        Finally, delete all old files if requested.
     '''
     try:
         assert len(list_of_h5_files_to_stitch) != 0, \
@@ -759,65 +792,279 @@ def stitch_exported_data_files(
     except TypeError as e:
         raise TypeError("Error: the data export stitcher was called with a non-list argument. The full type error is: \n"+str(e))
     
+    # There may be different scales and offsets in the files.
+    # We'll keep a running tab to make sure these scales and offsets do
+    # not differ.
+    running_scale  = []
+    running_offset = []
+    ## TODO: Grab the scale and offset data, and re-scale + re-offset the data.
+    ##       The arguments use_this_scale and use_this_offset have been
+    ##       prepared for this purpose.
+    
+    # There may be different time traces in the files.
+    # We'll keep track so that no data files have data collected at
+    # different time trace settings.
+    running_vector_of_time = []
+    ## TODO: Somehow, stitch things together even if the data is
+    ##       collected at non-identical times.
+    
+    # There will be an attempt at grabbing a filepath for data exporting.
+    filepath_of_calling_script = []
+    
+    # Prepare lists that will be appended onto in the upcoming with-case loop.
+    list_of_swept_keys = []
+    swept_content      = []
+    list_of_unswept_keys = []
+    unswept_content      = []
+    
+    # Prepare a canvas. Its X and Z sizes are the sizes of the swept keys.
+    # These axes represent the swept keys. While, the content of the entry
+    # (so Y) is the processed_data entry for this XZ key.
+    canvas = []
+    canvas_axis_x = []
+    canvas_axis_z = []
+    previous_x_axes = []
+    previous_z_axes = []
+    
+    # Prepare ext_keys and log_dict_list, these variables will be
+    # dictified later.
+    ext_keys = []
+    log_dict_list = []
+    
     # Treat every provided item in the list!
     for current_filepath_item_in_list in list_of_h5_files_to_stitch:
         
-        # Open the current file. Gather its stats.
-        ## TODO OPEN AND GATHER
-        if (1 == 1): # TODO
-        
-            # Update the filepath_of_calling_script variable.
-            ## TODO GET filepath_of_calling_script
+        # Get data.
+        with h5py.File(current_filepath_item_in_list, 'r') as h5f:
             
-            # Get the data_scale and data_offset variables.
-            # Important! Check so that these do not differ from earlier imports.
-            ##TODO fetched_data_scale,
-            ##TODO fetched_data_offset,
+            # Notify the user.
+            print("Stitching file: "+str(current_filepath_item_in_list))
             
-            # Import time_vector if the vector exists. Update running
-            # vector in that case.
-            ## time_vector IF EXISTS
+            # Did this file have a scale set for its data?
+            try:
+                scale = h5f["User_set_scale_to_Y_axis"][()]
+                if running_scale == []:
+                    running_scale = scale
+                else:
+                    if not (scale == running_scale).all():
+                        raise NotImplementedError("File \""+current_filepath_item_in_list+"\" has a different scale than all previous files in the stitching; the stitcher does currently not support re-scaling.")
+            except KeyError:
+                # "There is no scale, Gromit."
+                pass
             
-            # If there is raw time data, tell the user that this data will
-            # not be stitched, because the purpose of the stitcher is
-            # to keep files manageable, and not fill up the memory with hundreds
-            # of gigabytes.
-            ## IF fetched_data_arr EXISTS; PRINT WARNING AND EXPLAIN.
+            # Did this file have an offset to its data?
+            try:
+                offset = h5f["User_set_offset_to_Y_axis"][()]
+                if running_offset == []:
+                    running_offset = offset
+                else:
+                    if not (offset == running_offset).all():
+                        raise NotImplementedError("File \""+current_filepath_item_in_list+"\" has a different offset than all previous files in the stitching; the stitcher does currently not support re-offsetting the data files.")
+            except KeyError:
+                # "There is no offset, Gromit."
+                pass
             
-            # What shall the name of the final stitched export be? As of now.
-            ## MAKE STRING current_filepath_item_in_list SET THIS AS NAME OF FINAL EXPORT
-            ## Then, append "stitched" in the very end.
+            # Make sure that the time traces are compatible.
+            try:
+                vector_of_time = h5f["time_vector"][()]
+                if running_vector_of_time == []:
+                    running_vector_of_time = vector_of_time
+                else:
+                    if not (vector_of_time == running_vector_of_time).all():
+                        raise NotImplementedError("File \""+current_filepath_item_in_list+"\" contains data collected with a time trace, that in turn differs from every other time trace in all other stitched files. Currently, the data stitcher does not support data collected with different time traces. In practice, time traces will be identical if the sampling rate and sampling window length are identical between the two measurements.")
+            except KeyError:
+                # "There is no time, Gromit."
+                pass
             
-            # Cut open the ext_keys and log_dict_list variables.
-            # These are now used for figuring out how your new dataset
-            # is supposed to look like.
-            ## TODO2:   Well this information is only contained within one
-            ##          of these two files anyway? ext_keys, right?
+            # Get filepath and file name for making a file export.
+            if filepath_of_calling_script == []:
+                try:
+                    filepath_of_calling_script = os.path.abspath((h5f["filepath_of_calling_script"][()]).decode('UTF-8'))
+                except KeyError:
+                    # "There is no path, Gromit."
+                    filepath_of_calling_script = os.path.realpath(__file__)
             
-            ## TODO3:   WELL! The two pieces above in the data_exporter:
-            ##                h5f.create_dataset("ext_keys", data = ext_keys)
-            ##                h5f.create_dataset("log_dict_list", data = log_dict_list)
-            ##          ... cannot easily be made into h5py just like that.
-            ##          They will have to be inserted some other way.
+            # Grab data! List all .keys(), remove the known culprits,
+            # and make arrays.
+            ##list_of_swept_keys = [] # See outside of the with-case
+            ##swept_content      = [] # See outside of the with-case
+            for item in h5f.keys():
+                if item.startswith('fetched_data_arr'):
+                    # Raw data will not be stitched, that's kind of the point.
+                    print("WARNING: File \""+current_filepath_item_in_list+"\" contains raw data. This data will not be excluded from the stitched-together file export. The whole point of having the data stitcher is to avoid loading the primary PC memory with hundreds of gibibytes of data.")
+                elif ( \
+                    (item != 'time_vector') and \
+                    (item != 'processed_data') and \
+                    (item != 'User_set_scale_to_Y_axis') and \
+                    (item != 'User_set_offset_to_Y_axis') and \
+                    (item != 'filepath_of_calling_script') ):
+                    
+                    if not (item in list_of_swept_keys):
+                        # There was a swept parameter that should be added.
+                        list_of_swept_keys.append(str(item))
+                        swept_content.append(h5f[str(item)][()])
+                    else:
+                        # The swept quantity was in the previous list.
+                        # Let's update its values.
+                        swept_content[list_of_swept_keys.index(str(item))] = (h5f[str(item)][()])
             
-            ## TODO Cut open ext_keys and log_dict_list
+            ## Update the canvas with new values!
             
-            # The processed_data data from this file will now be appended to
-            # a running list.
-            ## Append processed_data array TODO
-            pass
+            # Get values.
+            curr_processed_data = h5f["processed_data"][()]
+            
+            # Store what x- and z axes are being used, in order to look
+            # out for overwrites.
+            previous_x_axes.append(swept_content[0])
+            previous_z_axes.append(swept_content[1])
+            
+            # Remember, processed_data consists of n entries for n resonators.
+            # Every entry processed_data[n] contains the XZ canvas for that
+            # resonator (or, discriminated state).
+            
+            # Figure out how many resonator (or discriminated state) entries
+            # the processed data contains, and what index_x and index_z to
+            # insert at.
+            if len(canvas) == 0:
+                # Simple choice.
+                canvas = curr_processed_data
+                canvas_axis_x = swept_content[0]
+                canvas_axis_z = swept_content[1]
+            else:
+                # Not so simple choice, there are already entries in the
+                # canvas.
+                if ((canvas_axis_x == swept_content[0]).all()):
+                    ## All x-values are identical. Should we simply append more rows?
+                    # Ensure that the order is correct (entries fall / rise)
+                    if  (((swept_content[1])[0] > canvas_axis_z[-1]) and
+                        ((swept_content[1])[-1] > canvas_axis_z[0])):
+                        # My new entries all rise from where the canvas stops.
+                        new_canvas = []
+                        for res in range(len(canvas)):
+                            new_canvas.append(np.append(canvas[res], curr_processed_data[res], axis = 0))
+                        canvas = np.array(new_canvas)
+                        canvas_axis_z = np.append(canvas_axis_z, swept_content[1])
+                    elif (((swept_content[1])[-1] < canvas_axis_z[0]) and
+                         ((swept_content[1])[0] < canvas_axis_z[-1])):
+                        # My new entries all fall below the previous entries
+                        # in the canvas.
+                        new_canvas = []
+                        for res in range(len(canvas)):
+                            new_canvas.append(np.append(curr_processed_data[res], canvas[res], axis = 0))
+                        canvas = np.array(new_canvas)
+                        canvas_axis_z = np.append(swept_content[1], canvas_axis_z)
+                    elif (swept_content[1] in previous_z_axes):
+                        # We detected an overwrite risk! Halt?
+                        if halt_if_x_and_z_axes_are_identical:
+                            raise ValueError("Halted! Overwrite risk detected. The file \""+str(current_filepath_item_in_list)+"\" has an identical x-axis to all other previous files, but the new file's z-axis risks overwriting data that has already been added. Set the function argument \"halt_if_x_and_z_axes_are_identical = False\" to ignore and attempt to append the new data anyway.")
+                        # At this point, we try to simply append new resonator / discrimination entries and hope for the best.
+                        canvas = np.append(canvas, curr_processed_data, axis = 0)
+                    else:
+                        raise NotImplementedError("Halted! Interleaving data is currently not supported.") # TODO
+                elif ((canvas_axis_z == swept_content[1]).all()):
+                    ## All z-values are identical. Should we simply append more columns?
+                    # Ensure that the order is correct (entries fall / rise)
+                    if  (((swept_content[0])[0] > canvas_axis_x[-1]) and
+                        ((swept_content[0])[-1] > canvas_axis_x[0])):
+                        # My new entries all rise from where the canvas stops.
+                        new_canvas = []
+                        for res in range(len(canvas)):
+                            new_canvas.append(np.append(canvas[res], curr_processed_data[res], axis = -1)) # N.B. appended column-wise
+                        canvas = np.array(new_canvas)
+                        canvas_axis_x = np.append(canvas_axis_x, swept_content[0])
+                    elif (((swept_content[0])[-1] < canvas_axis_x[0]) and
+                         ((swept_content[0])[0] < canvas_axis_x[-1])):
+                        # My new entries all fall below the previous entries
+                        # in the canvas.
+                        new_canvas = []
+                        for res in range(len(canvas)):
+                            new_canvas.append(np.append(curr_processed_data[res], canvas[res], axis = -1)) # N.B. appended column-wise
+                        canvas = np.array(new_canvas)
+                        canvas_axis_x = np.append(swept_content[0], canvas_axis_x)
+                    elif (swept_content[0] in previous_x_axes):
+                        # We detected an overwrite risk! Halt?
+                        if halt_if_x_and_z_axes_are_identical:
+                            raise ValueError("Halted! Overwrite risk detected. The file \""+str(current_filepath_item_in_list)+"\" has an identical z-axis to all other previous files, but the new file's x-axis risks overwriting data that has already been added. Set the function argument \"halt_if_x_and_z_axes_are_identical = False\" to ignore and attempt to append the new data anyway.")
+                        # At this point, we try to simply append new resonator / discrimination entries and hope for the best.
+                        for res in range(len(curr_processed_data)):
+                            canvas = np.append(canvas, curr_processed_data, axis = 0) # N.B. should be axis = 0, not 1.
+                    else:
+                        raise NotImplementedError("Halted! Interleaving data is currently not supported.") # TODO
+                else:
+                    # There are no common axes. All hope is lost; all data entries must be interleaved.
+                    raise NotImplementedError("Halted! Interleaving data is currently not supported.") # TODO
+                    
+            # Second step, grab static measurement variables.
+            ##list_of_unswept_keys = [] # See outside of the with-case
+            ##unswept_content      = [] # See outside of the with-case
+            for item in h5f.attrs.keys():
+                if  ((item != 'ext_keys') and \
+                    (item != 'log_dict_list') ):
+                    # There was an unswept parameter that might need appendage.
+                    if not (item in list_of_unswept_keys):
+                        list_of_unswept_keys.append(str(item))
+                        unswept_content.append(h5f.attrs[str(item)])
+            
+            # Get initial values for the ext_keys and log_dict_list keys.
+            if ext_keys == []:
+                ext_keys = json.loads( h5f.attrs["ext_keys"] )
+            elif log_dict_list == []:
+                log_dict_list = json.loads( h5f.attrs["log_dict_list"] )
+    
+    # Prepare the ext_keys and log_dict_list from the stitched data files.
+    for li in range(len(ext_keys)):
+        list_item_dict = ext_keys[li].copy()
+        if list_item_dict['name'] in list_of_swept_keys:
+            # This value in the ext_keys list has been changed, and must
+            # be updated in order not to get a Labber Log Browser error.
+            # The Log browser error, like many Labber API errors,
+            # will be indistinct and unhelpful. The issue is that there
+            # is no correct key entry corresponding to the new plot axes.
+            # We must make these axes here (by updating ext_keys correctly).
+            idx_of_new_value = list_of_swept_keys.index( list_item_dict['name'] )
+            if idx_of_new_value == 0:
+                list_item_dict['values'] = canvas_axis_x
+            elif idx_of_new_value == 1:
+                list_item_dict['values'] = canvas_axis_z
+            else:
+                list_item_dict['values'] = swept_content[idx_of_new_value]
+                # TODO: Now, how should you deal with static values
+                # that change from measurement to measurement, like
+                # "coupler_bias_min" and "coupler_bias_max"?
+                # Currently, I have chosen to ignore it.
+        ext_keys[li] = list_item_dict.copy()
+        del list_item_dict
     
     # Export combined data!
-    # Make a timestamp string for this export.
-    timestamp = get_timestamp_string()
-    ## TODO EXPORT THINGS
-    name_of_stitched_export = 'TODO'
+    filepath_to_exported_h5_file = export_processed_data_to_file(
+        filepath_of_calling_script = filepath_of_calling_script,
+    
+        ext_keys = ext_keys,
+        log_dict_list = log_dict_list,
+        
+        processed_data = canvas,
+        fetched_data_scale = running_scale,
+        fetched_data_offset = running_offset,
+        
+        timestamp = get_timestamp_string(),
+        time_vector = running_vector_of_time,
+        fetched_data_arr = [],
+        log_browser_tag = log_browser_tag,
+        log_browser_user = log_browser_user,
+        append_to_log_name_before_timestamp = '_stitched',
+        append_to_log_name_after_timestamp = '',
+        use_log_browser_database = use_log_browser_database,
+        suppress_log_browser_export = suppress_log_browser_export,
+        select_resonator_for_single_log_export = select_resonator_for_single_log_export,
+        save_raw_time_data = False
+    )
     
     # Now, delete the old files.
-    for item_to_delete in list_of_h5_files_to_stitch:
-        # TODO DELETE!
-        pass #TODO
+    if delete_old_files_after_stitching:
+        raise NotImplementedError("Halted! Deleting old files not yet implemented.")
+        for item_to_delete in list_of_h5_files_to_stitch:
+            # TODO DELETE!
+            pass #TODO
     
-    return name_of_stitched_export
-    
+    return filepath_to_exported_h5_file
     
