@@ -214,7 +214,7 @@ def save(
         # the (representable) segments of the discretised frequency axis.
         dt = time_vector[1] - time_vector[0]
         '''num_samples = len(integration_indices)'''
-        num_samples = 25*len(integration_indices)
+        num_samples = 8*len(integration_indices)
         freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
         
         # Get IF frequencies, so that we can pick out indices in the FFT array.
@@ -257,12 +257,17 @@ def save(
                 arr_to_fft = fetched_data_arr[:, 0, integration_indices]
                 new_arr = []
                 for row in range(len(arr_to_fft)):
-                    new_arr.append(np.append(arr_to_fft[row], np.zeros([1,len(arr_to_fft[0])*24])))
+                    new_arr.append(np.append(arr_to_fft[row], np.zeros([1,len(arr_to_fft[0])*7])))
                 new_arr = np.array(new_arr)
                 resp_fft = np.fft.fft(new_arr, axis=-1)
                 
+                # At this point, to clear up memory, we should clear out
+                # new_arr, arr_to_fft, and possibly also fetched_data_arr
+                del new_arr
+                del arr_to_fft
+                
                 '''processed_data.append( 2/num_samples * resp_fft[:, _item[0]] )'''
-                processed_data.append( 2/(num_samples/25) * resp_fft[:, _item[0]] ) # TODO: Should, or should not, the num_samples part be modified after zero-padding the data?
+                processed_data.append( 2/(num_samples/8) * resp_fft[:, _item[0]] ) # TODO: Should, or should not, the num_samples part be modified after zero-padding the data?
             else:
                 print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.") # TODO
                 print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you may experience a weird offset on your Y-axis.") # TODO
@@ -316,7 +321,11 @@ def save(
     else:
         # The user is only interested in time trace data.
         processed_data.append( fetched_data_arr[:, 0, :] )
-        
+    
+    # Clear out fetched_data_arr if it's not needed anymore, to save on memory.
+    if not save_raw_time_data:
+        del fetched_data_arr
+        fetched_data_arr = []
     
     # Has the user set up the calling script so that the X and Z axes are
     # reversed? I.e. "the graph is rotated -90° in the Log Browser."
@@ -710,6 +719,12 @@ def export_processed_data_to_file(
     savefile_string_h5py = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.h5'
     save_path_h5py = os.path.join(full_folder_path_where_data_will_be_saved, savefile_string_h5py)
     
+    # Make a check whether there is a single-point log value that should not
+    # be saved as an attribute.
+    single_entry_logs = []
+    for qq in range(len(log_dict_list)):
+        single_entry_logs.append( (log_dict_list[qq])['name'] )
+    
     # Create a H5PY-styled hdf5 file.
     with h5py.File(save_path_h5py, 'w') as h5f:
         if source_code_of_executing_file != '':
@@ -718,6 +733,7 @@ def export_processed_data_to_file(
             for kk, sourcecode_line in enumerate(source_code_of_executing_file):
                 dataset[kk] = sourcecode_line
         for ff in range(len(ext_keys)):
+            ##if ((np.array((ext_keys[ff])['values'])).shape == (1,)) and ( not ((ext_keys[ff])['name'] in single_entry_logs)):
             if (np.array((ext_keys[ff])['values'])).shape == (1,):
                 h5f.attrs[(ext_keys[ff])['name']] = (ext_keys[ff])['values']
             else:
@@ -737,6 +753,8 @@ def export_processed_data_to_file(
         h5f.attrs["ext_keys"] = json.dumps(convert_numpy_entries_in_ext_keys_to_list(ext_keys), indent = 4)
         h5f.attrs["log_dict_list"] = json.dumps(log_dict_list, indent = 4) 
         h5f.create_dataset("filepath_of_calling_script", data = filepath_of_calling_script)
+        h5f.create_dataset("First_key_that_was_swept", data = (ext_keys[0])['name']) # Denote which value was the first one to be swept.
+        h5f.create_dataset("Second_key_that_was_swept", data = (ext_keys[1])['name']) # Denote which value was the second one to be swept.
         
         print("Data saved using H5PY, see " + save_path_h5py)
     
@@ -897,12 +915,59 @@ def stitch(
                     (item != 'processed_data') and \
                     (item != 'User_set_scale_to_Y_axis') and \
                     (item != 'User_set_offset_to_Y_axis') and \
-                    (item != 'filepath_of_calling_script') ):
+                    (item != 'filepath_of_calling_script') and \
+                    (item != 'First_key_that_was_swept') and \
+                    (item != 'Second_key_that_was_swept') ):
                     
+                    # Was this parameter one that's assumed to be an
+                    # axis in Labber's Log Browser? Then move it to
+                    # place 0 or 1.
+                    first_key = str((h5f["First_key_that_was_swept"][()]).decode("utf-8"))
+                    second_key = str((h5f["Second_key_that_was_swept"][()]).decode("utf-8"))
+                    first_key_found = False
+                    
+                    # If the entry at first_key, or second_key, was stored
+                    # as an attribute, then said value should go in
+                    # unswept_content, not swept content.
+                    try:
+                        dummy1 = h5f[ first_key ][()]
+                        del dummy1
+                    except KeyError:
+                        # The value is an attribute.
+                        first_key = "FIRST_KEY_IS_NOT_A_SWEPT_VALUE"
+                        ## TODO:    But this entry should still be at the
+                        ##          first place of the unswept_content list!
+                    try:
+                        dummy2 = h5f[ second_key ][()]
+                        del dummy2
+                    except KeyError:
+                        # The value is an attribute.
+                        second_key = "SECOND_KEY_IS_NOT_A_SWEPT_VALUE"
+                        ## TODO:    But this entry should still be at the
+                        ##          second place of the unswept_content list!
+                    
+                    # Let's get the swept values.
                     if not (item in list_of_swept_keys):
                         # There was a swept parameter that should be added.
-                        list_of_swept_keys.append(str(item))
-                        swept_content.append(h5f[str(item)][()])
+                        if (item == first_key):
+                            # This item must be in the start.
+                            list_of_swept_keys.insert(0,str(item))
+                            swept_content.insert(0,h5f[str(item)][()])
+                            first_key_found = True
+                        elif (item == second_key):
+                            if first_key_found:
+                                # Then insert at position 2, so [1]
+                                list_of_swept_keys.insert(1,str(item))
+                                swept_content.insert(1,h5f[str(item)][()])
+                            else:
+                                # Then insert in the very beginning, so [0]
+                                list_of_swept_keys.insert(0,str(item))
+                                swept_content.insert(0,h5f[str(item)][()])
+                        else:
+                            # Just append this swept item to the list anyhow.
+                            list_of_swept_keys.append(str(item))
+                            swept_content.append(h5f[str(item)][()])
+                        
                     else:
                         # The swept quantity was in the previous list.
                         # Let's update its values.
@@ -957,7 +1022,7 @@ def stitch(
             else:
                 # Not so simple choice, there are already entries in the
                 # canvas.
-                if ((canvas_axis_x == swept_content[0]).all()):
+                if np.array_equal(canvas_axis_x, swept_content[0]):
                     ## All x-values are identical. Should we simply append more rows?
                     # Ensure that the order is correct (entries fall / rise)
                     if  (((swept_content[1])[0] > canvas_axis_z[-1]) and
@@ -985,7 +1050,7 @@ def stitch(
                         canvas = np.append(canvas, curr_processed_data, axis = 0)
                     else:
                         raise NotImplementedError("Halted! Interleaving data is currently not supported.") # TODO
-                elif ((canvas_axis_z == swept_content[1]).all()):
+                elif np.array_equal(canvas_axis_z, swept_content[1]):
                     ## All z-values are identical. Should we simply append more columns?
                     # Ensure that the order is correct (entries fall / rise)
                     if  (((swept_content[0])[0] > canvas_axis_x[-1]) and
