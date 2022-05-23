@@ -175,18 +175,21 @@ def randomised_benchmarking_01_single_qubit(
             freq      = readout_freq,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixer
         pls.hardware.configure_mixer(
             freq      = control_freq_01,
             out_ports = control_port,
+            tune      = True,
             sync      = False,
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
             freq      = 0.0,
             out_ports = coupler_dc_port,
+            tune      = True,
             sync      = True,  # Sync here
         )
         

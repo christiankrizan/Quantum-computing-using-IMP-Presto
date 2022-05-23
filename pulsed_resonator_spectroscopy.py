@@ -140,6 +140,7 @@ def find_f_ro0_sweep_coupler(
             freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -147,6 +148,7 @@ def find_f_ro0_sweep_coupler(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         
@@ -506,6 +508,7 @@ def find_f_ro0_sweep_power(
             freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = True, # Sync here
         )
         
@@ -844,12 +847,14 @@ def find_f_ro1_sweep_coupler(
             freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False, # Sync at next call
         )
         # Control port mixer
         pls.hardware.configure_mixer(
             freq      = control_freq_01,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -857,6 +862,7 @@ def find_f_ro1_sweep_coupler(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         
@@ -1303,12 +1309,14 @@ def find_f_ro1_sweep_power(
             freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixer
         pls.hardware.configure_mixer(
             freq      = control_freq_01,
             out_ports = control_port,
+            tune      = True,
             sync      = True,
         )
         
@@ -1690,6 +1698,7 @@ def find_f_ro2_sweep_coupler(
             freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False, # Sync at next call
         )
         # Control port mixer
@@ -1699,6 +1708,7 @@ def find_f_ro2_sweep_coupler(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -1706,6 +1716,7 @@ def find_f_ro2_sweep_coupler(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         
@@ -2189,6 +2200,7 @@ def find_f_ro2_sweep_power(
             freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixer
@@ -2198,6 +2210,7 @@ def find_f_ro2_sweep_power(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = True,
         )
         

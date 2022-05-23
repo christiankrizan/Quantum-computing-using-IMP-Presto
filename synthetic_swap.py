@@ -159,17 +159,20 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
         pls.hardware.configure_mixer(
             freq      = control_freq_01_A,
             out_ports = control_port_A,
+            tune      = True,
             sync      = False,
         )
         pls.hardware.configure_mixer(
             freq      = control_freq_01_B,
             out_ports = control_port_B,
+            tune      = True,
             sync      = False,
         )
         # Coupler AC port, calculate an optimal NCO frequency.
@@ -179,12 +182,14 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
         pls.hardware.configure_mixer(
             freq      = coupler_ac_freq_nco, # Fixed value for this sweep.
             out_ports = coupler_ac_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         if coupler_dc_port != []:
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,
             )
         

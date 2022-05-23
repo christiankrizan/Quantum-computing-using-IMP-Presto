@@ -149,12 +149,14 @@ def pulsed01_flux_sweep(
             freq      = readout_freq,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixer
         pls.hardware.configure_mixer(
             freq      = control_freq_01_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -162,6 +164,7 @@ def pulsed01_flux_sweep(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,
             )
         
@@ -612,17 +615,20 @@ def pulsed01_flux_sweep_multiplexed_ro(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
         pls.hardware.configure_mixer(
             freq      = control_freq_01_A_nco,
             out_ports = control_port_A,
+            tune      = True,
             sync      = False,
         )
         pls.hardware.configure_mixer(
             freq      = control_freq_01_B_nco,
             out_ports = control_port_B,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -630,6 +636,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,
             )
         
@@ -1134,12 +1141,14 @@ def pulsed01_power_sweep(
             freq      = readout_freq,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixer
         pls.hardware.configure_mixer(
             freq      = control_freq_01_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -1147,6 +1156,7 @@ def pulsed01_power_sweep(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,
             )
         
@@ -1552,6 +1562,7 @@ def pulsed12_flux_sweep(
             freq      = readout_freq_excited,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixer
@@ -1561,6 +1572,7 @@ def pulsed12_flux_sweep(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -1568,6 +1580,7 @@ def pulsed12_flux_sweep(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,
             )
         

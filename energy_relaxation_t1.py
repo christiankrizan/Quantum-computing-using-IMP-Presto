@@ -158,18 +158,21 @@ def t1_sweep_flux(
             freq      = readout_freq,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False, # Sync at next call
         )
         # Control port mixer
         pls.hardware.configure_mixer(
             freq      = control_freq_01,
             out_ports = control_port,
+            tune      = True,
             sync      = False,
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
             freq      = 0.0,
             out_ports = coupler_dc_port,
+            tune      = True,
             sync      = True,  # Sync here
         )
         
@@ -615,17 +618,20 @@ def t1_sweep_flux_multiplexed_ro0(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
         pls.hardware.configure_mixer(
             freq      = control_freq_01_A,
             out_ports = control_port_A,
+            tune      = True,
             sync      = False,
         )
         pls.hardware.configure_mixer(
             freq      = control_freq_01_B,
             out_ports = control_port_B,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -633,6 +639,7 @@ def t1_sweep_flux_multiplexed_ro0(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         

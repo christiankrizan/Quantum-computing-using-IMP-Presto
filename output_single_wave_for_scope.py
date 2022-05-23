@@ -63,9 +63,10 @@ def outputSingleWave(
         
         # Control port mixer
         pls.hardware.configure_mixer(
-            freq        =   control_freq,
-            out_ports   =   control_port,
-            sync        =   True,  # Sync here
+            freq      = control_freq,
+            out_ports = control_port,
+            tune      = True,
+            sync      = True,  # Sync here
         )
 
 

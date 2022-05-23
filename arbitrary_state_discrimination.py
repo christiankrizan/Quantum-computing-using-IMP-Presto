@@ -146,17 +146,20 @@ def discriminate_state_11(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
         pls.hardware.configure_mixer(
             freq      = control_freq_01_A,
             out_ports = control_port_A,
+            tune      = True,
             sync      = False,
         )
         pls.hardware.configure_mixer(
             freq      = control_freq_01_B,
             out_ports = control_port_B,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -164,6 +167,7 @@ def discriminate_state_11(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         
@@ -786,6 +790,7 @@ def discriminate_state_22(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
@@ -795,6 +800,7 @@ def discriminate_state_22(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco_A,
             out_ports = control_port_A,
+            tune      = True,
             sync      = False,
         )
         high_res_B  = max( [control_freq_01_B, control_freq_12_B] )
@@ -803,6 +809,7 @@ def discriminate_state_22(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco_B,
             out_ports = control_port_B,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -810,6 +817,7 @@ def discriminate_state_22(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         

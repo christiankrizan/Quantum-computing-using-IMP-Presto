@@ -449,6 +449,7 @@ def perform_readout_optimisation_g_e_f(
     control_amp_01,
     control_freq_01,
     control_duration_01,
+    
     control_amp_12,
     control_freq_12,
     control_duration_12,
@@ -1046,6 +1047,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
@@ -1055,6 +1057,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -1062,6 +1065,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         
@@ -1528,6 +1532,7 @@ def get_time_traces_for_g_e_f(
             freq      = readout_freq,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixer
@@ -1537,6 +1542,7 @@ def get_time_traces_for_g_e_f(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = True,
         )
         
@@ -1875,6 +1881,7 @@ def get_wire_to_readout_delay(
             freq      = readout_freq,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = True,
         )
         
@@ -2190,6 +2197,7 @@ def get_wire_to_readout_delay(
             freq      = readout_freq_g_state,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
@@ -2199,6 +2207,7 @@ def get_wire_to_readout_delay(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -2206,6 +2215,7 @@ def get_wire_to_readout_delay(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         
@@ -2671,6 +2681,7 @@ def get_wire_to_readout_delay(
             freq      = readout_freq_e_state,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
@@ -2680,6 +2691,7 @@ def get_wire_to_readout_delay(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -2687,6 +2699,7 @@ def get_wire_to_readout_delay(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         
@@ -3152,6 +3165,7 @@ def get_wire_to_readout_delay(
             freq      = readout_freq_f_state,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
+            tune      = True,
             sync      = False,
         )
         # Control port mixers
@@ -3161,6 +3175,7 @@ def get_wire_to_readout_delay(
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
+            tune      = True,
             sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
@@ -3168,6 +3183,7 @@ def get_wire_to_readout_delay(
             pls.hardware.configure_mixer(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
+                tune      = True,
                 sync      = True,  # Sync here
             )
         
