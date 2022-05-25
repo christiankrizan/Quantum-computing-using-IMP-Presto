@@ -408,10 +408,7 @@ def discriminate_state_11(
         try:
             if len(states_to_discriminate_between) > 0:
                 for statep in states_to_discriminate_between:
-                    hdf5_logs.append('Probability for state |'+statep+'>')
-                    # Let the record show that I wanted to write a Unicode ket
-                    # instead of the '>' character, but the Log Browser's
-                    # support for anything non-bland is erratic at best.
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
                     hdf5_logs.append("")
             save_complex_data = False
         except NameError:
@@ -1118,10 +1115,7 @@ def discriminate_state_22(
         try:
             if len(states_to_discriminate_between) > 0:
                 for statep in states_to_discriminate_between:
-                    hdf5_logs.append('Probability for state |'+statep+'>')
-                    # Let the record show that I wanted to write a Unicode ket
-                    # instead of the '>' character, but the Log Browser's
-                    # support for anything non-bland is erratic at best.
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
                     hdf5_logs.append("")
             save_complex_data = False
         except NameError:

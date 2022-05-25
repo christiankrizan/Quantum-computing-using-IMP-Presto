@@ -2501,8 +2501,6 @@ def tune_local_qubit_phases_of_iswap(
     
     
     
-    
-    
 def tune_coupler_drive_phase_of_iswap():
     ''' Tune the phase of the iSWAP coupler drive ("AC flux driveline")
         that applies an iSWAP gate between two pairwise-coupled qubits.

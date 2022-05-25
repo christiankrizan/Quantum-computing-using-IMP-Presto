@@ -43,12 +43,19 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
     integration_window_stop,
     
     control_port_A,
+    control_port_B,
+    
     control_amp_01_A,
     control_freq_01_A,
-    control_port_B,
     control_amp_01_B,
     control_freq_01_B,
     control_duration_01,
+    
+    control_amp_12_A,
+    control_freq_12_A,
+    control_amp_12_B,
+    control_freq_12_B,
+    control_duration_12,
     
     coupler_dc_port,
     coupler_dc_bias,
@@ -72,6 +79,7 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
     states_to_discriminate_between = ['20'],
     
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -163,14 +171,20 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
             sync      = False,
         )
         # Control port mixers
+        high_res_A  = max( [control_freq_01_A, control_freq_12_A] )
+        low_res_A   = min( [control_freq_01_A, control_freq_12_A] )
+        control_freq_nco_A = high_res_A - (high_res_A - low_res_A)/2 -250e6
         pls.hardware.configure_mixer(
-            freq      = control_freq_01_A,
+            freq      = control_freq_nco_A,
             out_ports = control_port_A,
             tune      = True,
             sync      = False,
         )
+        high_res_B  = max( [control_freq_01_B, control_freq_12_B] )
+        low_res_B   = min( [control_freq_01_B, control_freq_12_B] )
+        control_freq_nco_B = high_res_B - (high_res_B - low_res_B)/2 -250e6
         pls.hardware.configure_mixer(
-            freq      = control_freq_01_B,
+            freq      = control_freq_nco_B,
             out_ports = control_port_B,
             tune      = True,
             sync      = False,
@@ -214,9 +228,19 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
             scales          = control_amp_01_A,
         )
         pls.setup_scale_lut(
+            output_ports    = control_port_A,
+            group           = 1,
+            scales          = control_amp_12_A,
+        )
+        pls.setup_scale_lut(
             output_ports    = control_port_B,
             group           = 0,
             scales          = control_amp_01_B,
+        )
+        pls.setup_scale_lut(
+            output_ports    = control_port_B,
+            group           = 1,
+            scales          = control_amp_12_B,
         )
         # Coupler port amplitudes
         pls.setup_scale_lut(
@@ -294,20 +318,39 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
             template_q  = control_envelope_01,
             envelope    = True,
         )
-        # Setup control_pulse_pi_01 carrier tones, considering that there are digital mixers.
+        # Setup control pulse carrier tones, considering that there is a digital mixer
+        control_freq_if_01_A = np.abs(control_freq_nco_A - control_freq_01_A)
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = control_freq_if_01_A,
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = -np.pi/2, # USB!
         )
+        control_freq_if_12_A = np.abs(control_freq_nco_A - control_freq_12_A)
+        pls.setup_freq_lut(
+            output_ports = control_port_A,
+            group        = 1,
+            frequencies  = control_freq_if_12_A,
+            phases       = 0.0,
+            phases_q     = -np.pi/2, # USB!
+        )
+        # ... Now for the other control port
+        control_freq_if_01_B = np.abs(control_freq_nco_B - control_freq_01_B)
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = control_freq_if_01_B,
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = -np.pi/2, # USB!
+        )
+        control_freq_if_12_B = np.abs(control_freq_nco_B - control_freq_12_B)
+        pls.setup_freq_lut(
+            output_ports = control_port_B,
+            group        = 1,
+            frequencies  = control_freq_if_12_B,
+            phases       = 0.0,
+            phases_q     = -np.pi/2, # USB!
         )
         
         
@@ -412,14 +455,14 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
                 repetition_delay \
             )
         
-        # The inner loop is exactly 1 long.
+        # The inner loop is exactly 1 iteration long.
         ## for goes here, if needed.
         
         # Re-apply the coupler bias tone.
         if coupler_dc_port != []:
             pls.output_pulse(T, coupler_bias_tone)
         
-        # Put the system into state |10> (or |01>, if desired.)
+        # Put the system into state |10> (or |01>, if so desired.)
         pls.reset_phase(T, [control_port_A, control_port_B])
         pls.output_pulse(T, [control_pulse_pi_01_A, control_pulse_pi_01_B])
         T += control_duration_01
@@ -475,7 +518,7 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
         
         # Data to be stored.
         hdf5_steps = [
-            'discretised_result_arr', "FS",
+            'discretised_result_arr', "",
         ]
         hdf5_singles = [
             'readout_stimulus_port', "",
@@ -522,10 +565,7 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
         try:
             if len(states_to_discriminate_between) > 0:
                 for statep in states_to_discriminate_between:
-                    hdf5_logs.append('Probability for state |'+statep+'>')
-                    # Let the record show that I wanted to write a Unicode ket
-                    # instead of the '>' character, but the Log Browser's
-                    # support for anything non-bland is erratic at best.
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
                     hdf5_logs.append("")
             save_complex_data = False
         except NameError:
@@ -616,6 +656,8 @@ def iswap_then_cz20_no_virtual_z_added_state_probability(
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         )
     
     return string_arr_to_return
