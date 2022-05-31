@@ -394,7 +394,7 @@ def find_f_ro0_sweep_coupler(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -417,7 +417,7 @@ def find_f_ro0_sweep_coupler(
             append_to_log_name_before_timestamp = 'ro0' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     
@@ -693,7 +693,7 @@ def find_f_ro0_sweep_power(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -716,7 +716,7 @@ def find_f_ro0_sweep_power(
             append_to_log_name_before_timestamp = 'ro0_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     
@@ -1185,7 +1185,7 @@ def find_f_ro1_sweep_coupler(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1208,7 +1208,7 @@ def find_f_ro1_sweep_coupler(
             append_to_log_name_before_timestamp = 'ro1' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     
@@ -1538,7 +1538,7 @@ def find_f_ro1_sweep_power(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1561,7 +1561,7 @@ def find_f_ro1_sweep_power(
             append_to_log_name_before_timestamp = 'ro1_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
 
@@ -2070,7 +2070,7 @@ def find_f_ro2_sweep_coupler(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -2093,7 +2093,7 @@ def find_f_ro2_sweep_coupler(
             append_to_log_name_before_timestamp = 'ro2' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     
@@ -2463,7 +2463,7 @@ def find_f_ro2_sweep_power(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -2486,7 +2486,7 @@ def find_f_ro2_sweep_power(
             append_to_log_name_before_timestamp = 'ro2_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     

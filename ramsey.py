@@ -464,7 +464,7 @@ def ramsey01_readout0(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -487,7 +487,7 @@ def ramsey01_readout0(
             append_to_log_name_before_timestamp = '01_with_bias',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     
@@ -1460,7 +1460,7 @@ def ramsey12_readout1(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1483,7 +1483,7 @@ def ramsey12_readout1(
             append_to_log_name_before_timestamp = '12' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     

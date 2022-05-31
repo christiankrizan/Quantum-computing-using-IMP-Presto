@@ -448,7 +448,7 @@ def pulsed01_flux_sweep(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -472,7 +472,7 @@ def pulsed01_flux_sweep(
             append_to_log_name_before_timestamp = '01'+with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
         
     return string_arr_to_return
 
@@ -1000,7 +1000,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
             
             # Save data!
-            string_arr_to_return += save(
+            string_arr_to_return.append(save(
                 timestamp = get_timestamp_string(),
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
@@ -1023,7 +1023,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 append_to_log_name_before_timestamp = '01_sweep_bias_multiplexed',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
-            )
+            ))
 
     return string_arr_to_return
     
@@ -1916,7 +1916,7 @@ def pulsed12_flux_sweep(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1939,6 +1939,6 @@ def pulsed12_flux_sweep(
             append_to_log_name_before_timestamp = '12_sweep_bias',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
         
     return string_arr_to_return

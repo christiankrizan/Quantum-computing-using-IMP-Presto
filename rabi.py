@@ -448,7 +448,7 @@ def amplitude_sweep_oscillation01_ro0(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -472,7 +472,7 @@ def amplitude_sweep_oscillation01_ro0(
             append_to_log_name_before_timestamp = '01'+with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     
@@ -1003,7 +1003,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
                 ))
             
             # Save data!
-            string_arr_to_return += save(
+            string_arr_to_return.append(save(
                 timestamp = get_timestamp_string(),
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
@@ -1027,7 +1027,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
                 append_to_log_name_before_timestamp = '01'+with_or_without_bias_string+'_multiplexed',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
-            )
+            ))
     
     return string_arr_to_return
     
@@ -1519,7 +1519,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
                 ))
             
             # Save data!
-            string_arr_to_return += save(
+            string_arr_to_return.append(save(
                 timestamp = get_timestamp_string(),
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
@@ -1547,7 +1547,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
                 append_to_log_name_before_timestamp = '01'+with_or_without_bias_string+'_multiplexed',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
-            )
+            ))
     
     return string_arr_to_return
 
@@ -2023,7 +2023,7 @@ def amplitude_sweep_oscillation12_ro0(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -2047,7 +2047,7 @@ def amplitude_sweep_oscillation12_ro0(
             append_to_log_name_before_timestamp = '12' + with_or_without_bias_string + '_ro0',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     return string_arr_to_return
     
@@ -2547,7 +2547,7 @@ def amplitude_sweep_oscillation12_ro1(
             log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -2571,7 +2571,7 @@ def amplitude_sweep_oscillation12_ro1(
             append_to_log_name_before_timestamp = '12'+with_or_without_bias_string+'_ro1',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
         
     return string_arr_to_return
     
@@ -3084,7 +3084,7 @@ def duration_sweep_oscillation12_ro1(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -3108,7 +3108,7 @@ def duration_sweep_oscillation12_ro1(
             append_to_log_name_before_timestamp = '12_duration' + with_or_without_bias_string + '_ro1',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
         
     return string_arr_to_return
     
