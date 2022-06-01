@@ -849,8 +849,29 @@ def stitch(
     ext_keys = []
     log_dict_list = []
     
+    # This def is used later for comparison.
+    def check_if_subarray_of_bigger_array( arr_to_test, big_array ):
+        ''' Take array, for every element in big array,
+            see if the array is present.
+        '''
+        # Forced numpy typecasting
+        arr_to_test = np.array(arr_to_test)
+        big_array   = np.array(big_array)
+        
+        # Perform test
+        present = False
+        for curr_row in big_array:
+            if (arr_to_test == curr_row).all():
+                present = True
+        return present
+    
     # Treat every provided item in the list!
     for current_filepath_item_in_list in list_of_h5_files_to_stitch:
+        
+        # It is likely that the returned entry from some function is
+        # a list of characters. If so, remake them into a filepath.
+        if type(current_filepath_item_in_list) == list:
+            current_filepath_item_in_list = "".join(current_filepath_item_in_list)
         
         # Get data.
         with h5py.File(current_filepath_item_in_list, 'r') as h5f:
@@ -1001,10 +1022,10 @@ def stitch(
                 swept_content[0] = unswept_content[0]
                 previous_x_axes.append(swept_content[0])
             try:
-                previous_z_axes.append(swept_content[0])
+                previous_z_axes.append(swept_content[1])
             except IndexError:
                 # There is only a single swept value.
-                swept_content[1] = unswept_content[1]
+                swept_content.append(unswept_content[1])
                 previous_z_axes.append(swept_content[1])
             
             # Remember, processed_data consists of n entries for n resonators.
@@ -1042,7 +1063,11 @@ def stitch(
                             new_canvas.append(np.append(curr_processed_data[res], canvas[res], axis = 0))
                         canvas = np.array(new_canvas)
                         canvas_axis_z = np.append(swept_content[1], canvas_axis_z)
-                    elif (swept_content[1] in previous_z_axes):
+                    
+                    elif check_if_subarray_of_bigger_array(swept_content[1], previous_z_axes):
+                        ## TODO: The function above performs the following check.
+                        ## elif (swept_content[1] in previous_z_axes):
+                    
                         # We detected an overwrite risk! Halt?
                         if halt_if_x_and_z_axes_are_identical:
                             raise ValueError("Halted! Overwrite risk detected. The file \""+str(current_filepath_item_in_list)+"\" has an identical x-axis to all other previous files, but the new file's z-axis risks overwriting data that has already been added. Set the function argument \"halt_if_x_and_z_axes_are_identical = False\" to ignore and attempt to append the new data anyway.")
@@ -1070,7 +1095,11 @@ def stitch(
                             new_canvas.append(np.append(curr_processed_data[res], canvas[res], axis = -1)) # N.B. appended column-wise
                         canvas = np.array(new_canvas)
                         canvas_axis_x = np.append(swept_content[0], canvas_axis_x)
-                    elif (swept_content[0] in previous_x_axes):
+                    
+                    elif check_if_subarray_of_bigger_array(swept_content[0], previous_x_axes):
+                        ## TODO: The function above performs the following check.
+                        ##  elif (swept_content[0] == previous_x_axes).all():
+                        
                         # We detected an overwrite risk! Halt?
                         if halt_if_x_and_z_axes_are_identical:
                             raise ValueError("Halted! Overwrite risk detected. The file \""+str(current_filepath_item_in_list)+"\" has an identical z-axis to all other previous files, but the new file's x-axis risks overwriting data that has already been added. Set the function argument \"halt_if_x_and_z_axes_are_identical = False\" to ignore and attempt to append the new data anyway.")
