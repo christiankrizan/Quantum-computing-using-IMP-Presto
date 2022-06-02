@@ -407,9 +407,15 @@ def iswap_sweep_duration_and_detuning(
             pls.output_pulse(T, coupler_bias_tone)
             T += added_delay_for_bias_tee
         
+        # Define repetition counter for T.
+        repetition_counter = 1
+        
         # For every pulse duration to sweep over:
         for ii in iswap_total_pulse_duration_arr:
-
+            
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
+            
             # Redefine the iSWAP pulse's total duration,
             coupler_ac_duration_iswap = ii
             coupler_ac_pulse_iswap.set_total_duration(coupler_ac_duration_iswap)
@@ -443,15 +449,30 @@ def iswap_sweep_duration_and_detuning(
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
-            # Await a new repetition, after which a new coupler DC bias tone
-            # will be added - and a new frequency set for the readout tone.
-            T += repetition_delay
+            # Get our last time reference
+            T_last = T
+            
+            # Is the iteration longer than the repetition delay?
+            if (T_last - T_begin) >= repetition_delay:
+                while (T_last - T_begin) >= repetition_delay:
+                    # If this happens, then the iteration does not fit within
+                    # one decreed repetion period.
+                    T = repetition_delay * repetition_counter
+                    repetition_counter += 1
+                    
+                    # Move reference
+                    T_begin = T
+            else:
+                # Then all is good.
+                T = repetition_delay * repetition_counter
+                repetition_counter += 1
         
         # Move to the next scanned frequency
         pls.next_frequency(T, coupler_ac_port, group = 0)
         
         # Move to next iteration.
-        T += repetition_delay
+        T = repetition_delay * repetition_counter
+        repetition_counter += 1
         
         
         ################################
