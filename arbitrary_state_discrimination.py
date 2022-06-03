@@ -471,7 +471,7 @@ def discriminate_state_11(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -480,7 +480,7 @@ def discriminate_state_11(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -499,7 +499,7 @@ def discriminate_state_11(
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     ## TODO!! This latter part is a brute-force approach to also
     ## exporting complex plane readout blobs, along with the
@@ -629,7 +629,7 @@ def discriminate_state_11(
                 ))
             
             # Save data!
-            string_arr_to_return += save(
+            string_arr_to_return.append(save(
                 timestamp = get_timestamp_string(),
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
@@ -638,7 +638,7 @@ def discriminate_state_11(
                 fetched_data_arr = fetched_data_arr,
                 fetched_data_scale = axes['y_scaler'],
                 fetched_data_offset = axes['y_offset'],
-                resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
+                resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
                 
                 filepath_of_calling_script = os.path.realpath(__file__),
                 use_log_browser_database = use_log_browser_database,
@@ -657,7 +657,7 @@ def discriminate_state_11(
                 suppress_log_browser_export = suppress_log_browser_export,
                 
                 save_raw_time_data = False
-            )
+            ))
     
     return string_arr_to_return
     
@@ -861,7 +861,6 @@ def discriminate_state_22(
             )
         
         
-        
         ### Setup readout pulse ###
         
         # Setup readout pulse envelopes
@@ -1044,7 +1043,7 @@ def discriminate_state_22(
         
         # Await a new repetition, after which a new coupler DC bias tone
         # will be added - and a new frequency set for the readout tone.
-        T += repetition_delay
+        T = repetition_delay
         
         
         ################################
@@ -1178,7 +1177,7 @@ def discriminate_state_22(
             ))
         
         # Save data!
-        string_arr_to_return += save(
+        string_arr_to_return.append(save(
             timestamp = get_timestamp_string(),
             ext_keys = ext_keys,
             log_dict_list = log_dict_list,
@@ -1187,7 +1186,7 @@ def discriminate_state_22(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1206,7 +1205,7 @@ def discriminate_state_22(
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
-        )
+        ))
     
     ## TODO!! This latter part is a brute-force approach to also
     ## exporting complex plane readout blobs, along with the
@@ -1343,7 +1342,7 @@ def discriminate_state_22(
                 ))
             
             # Save data!
-            string_arr_to_return += save(
+            string_arr_to_return.append(save(
                 timestamp = get_timestamp_string(),
                 ext_keys = ext_keys,
                 log_dict_list = log_dict_list,
@@ -1352,7 +1351,7 @@ def discriminate_state_22(
                 fetched_data_arr = fetched_data_arr,
                 fetched_data_scale = axes['y_scaler'],
                 fetched_data_offset = axes['y_offset'],
-                resonator_freq_if_arrays_to_fft = [readout_freq_if_A, readout_freq_if_B],
+                resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
                 
                 filepath_of_calling_script = os.path.realpath(__file__),
                 use_log_browser_database = use_log_browser_database,
@@ -1371,6 +1370,6 @@ def discriminate_state_22(
                 suppress_log_browser_export = suppress_log_browser_export,
                 
                 save_raw_time_data = False
-            )
+            ))
     
     return string_arr_to_return

@@ -736,7 +736,9 @@ def iswap_then_cz_prep_10_cross_Ramsey(
     coupler_ac_freq_iswap,
     coupler_ac_single_edge_time_iswap,
     coupler_ac_plateau_duration_iswap,
-    coupler_ac_phase_adjustment_iswap_rad,
+    
+    phase_adjustment_coupler_ac_iswap,
+    phase_adjustment_coupler_ac_cz20,
     
     coupler_ac_amp_cz20,
     coupler_ac_freq_cz20,
@@ -1078,8 +1080,8 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             output_ports    = coupler_ac_port,
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_iswap),
-            phases          = coupler_ac_phase_adjustment_iswap_rad,
-            phases_q        = coupler_ac_phase_adjustment_iswap_rad + np.sign(coupler_ac_freq_if_iswap)*np.pi/2,
+            phases          = phase_adjustment_coupler_ac_iswap,
+            phases_q        = phase_adjustment_coupler_ac_iswap + np.sign(coupler_ac_freq_if_iswap)*np.pi/2,
         )
         
         
@@ -1104,8 +1106,8 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             output_ports    = coupler_ac_port,
             group           = 1,
             frequencies     = np.abs(coupler_ac_freq_if_cz20),
-            phases          = 0.0,
-            phases_q        = np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
+            phases          = phase_adjustment_coupler_ac_cz20,
+            phases_q        = phase_adjustment_coupler_ac_cz20 + np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
         )
         
         
@@ -1302,6 +1304,9 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             'coupler_ac_single_edge_time_cz20', "s",
             'coupler_ac_plateau_duration_cz20', "s",
             
+            'phase_adjustment_coupler_ac_iswap', "rad",
+            'phase_adjustment_coupler_ac_cz20', "rad",
+            
             'num_averages', "",
             
             'num_phases', "",
@@ -1448,12 +1453,14 @@ def synthetic_swap_prep_10_cross_Ramsey(
     coupler_ac_freq_iswap,
     coupler_ac_single_edge_time_iswap,
     coupler_ac_plateau_duration_iswap,
-    coupler_ac_phase_adjustment_iswap_rad,
     
     coupler_ac_amp_cz20,
     coupler_ac_freq_cz20,
     coupler_ac_single_edge_time_cz20,
     coupler_ac_plateau_duration_cz20,
+    
+    phase_adjustment_coupler_ac_iswap,
+    phase_adjustment_coupler_ac_cz20,
     
     num_averages,
     
@@ -1792,8 +1799,8 @@ def synthetic_swap_prep_10_cross_Ramsey(
             output_ports    = coupler_ac_port,
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_iswap),
-            phases          = coupler_ac_phase_adjustment_iswap_rad,
-            phases_q        = coupler_ac_phase_adjustment_iswap_rad + np.sign(coupler_ac_freq_if_iswap)*np.pi/2,
+            phases          = phase_adjustment_coupler_ac_iswap,
+            phases_q        = phase_adjustment_coupler_ac_iswap + np.sign(coupler_ac_freq_if_iswap)*np.pi/2,
         )
         
         
@@ -1818,8 +1825,8 @@ def synthetic_swap_prep_10_cross_Ramsey(
             output_ports    = coupler_ac_port,
             group           = 1,
             frequencies     = np.abs(coupler_ac_freq_if_cz20),
-            phases          = 0.0,
-            phases_q        = np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
+            phases          = phase_adjustment_coupler_ac_cz20,
+            phases_q        = phase_adjustment_coupler_ac_cz20 + np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
         )
         
         
@@ -1863,10 +1870,10 @@ def synthetic_swap_prep_10_cross_Ramsey(
             T += added_delay_for_bias_tee
             
             # Redefine the coupler bias tone duration.
+            # Note that only one 2q-gate's worth of duration is added.
             coupler_bias_tone.set_total_duration(
                 control_duration_01 + \
                 coupler_ac_duration_iswap + \
-                coupler_ac_duration_cz20 + \
                 control_duration_01 + \
                 readout_duration + \
                 repetition_delay \
@@ -2011,6 +2018,9 @@ def synthetic_swap_prep_10_cross_Ramsey(
             'coupler_ac_freq_cz20', "Hz",
             'coupler_ac_single_edge_time_cz20', "s",
             'coupler_ac_plateau_duration_cz20', "s",
+            
+            'phase_adjustment_coupler_ac_iswap', "rad",
+            'phase_adjustment_coupler_ac_cz20', "rad",
             
             'num_averages', "",
             

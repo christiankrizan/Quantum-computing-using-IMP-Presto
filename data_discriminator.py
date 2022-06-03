@@ -42,7 +42,6 @@ def initiate_discriminator_settings_file(
     with open(full_path_to_discriminator_settings_json, 'w') as json_file:
         json.dump(json_dict, json_file, indent = 4)
 
-
 def calculate_population_centres(
     processed_data
     ):
@@ -147,7 +146,6 @@ def calculate_readout_fidelity(
     readout_fidelity = sum_of_all_individual_readout_fidelities / number_of_fidelities_calculated
     return readout_fidelity
 
-
 def update_discriminator_settings_with_value(
     path_to_data,
     resonator_transmon_pair = None,
@@ -227,7 +225,6 @@ def update_discriminator_settings_with_value(
     # Save settings.
     save_discriminator_settings(loaded_json_data)
     
-
 def discriminate(
     states_that_will_be_checked,
     data_or_filepath_to_data,
@@ -327,8 +324,7 @@ def discriminate(
     num_states_in_system = highest_state_in_system + 1
     
     return extracted_data, num_states_in_system
-    
-    
+       
 def calculate_area_mean_perimeter_fidelity(
     path_to_data,
     update_discriminator_settings_json = False,
@@ -545,6 +541,20 @@ def calculate_area_mean_perimeter_fidelity(
         save_discriminator_settings(loaded_json_data)
     
     return area_spanned_by_qubit_states, mean_distance_between_all_states, hamiltonian_path_perimeter, readout_fidelity
+    
+def construct_state_from_quadrature_voltage(
+    ):
+    ''' Readout voltage quadratures can be used to reconstruct qubit states.
+        This has been shown here:
+        https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.043840
+        
+        You gather a **heavily averaged set of data**, note again: averaged.
+        Even before FFT.
+        
+        From this data set, we can create a mapping that maps quadrature
+        voltages into qubit states. A linearising map.
+    '''
+    raise NotImplementedError("Halted! This function is not finished.")
     
     
 def get_file_path_of_discrimination_json():
