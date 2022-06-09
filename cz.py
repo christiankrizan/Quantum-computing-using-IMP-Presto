@@ -16,6 +16,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
+from phase_calculator import get_legal_phase, bandsign
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -23,6 +24,7 @@ from data_exporter import \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save
+
 from time_remaining_printer import show_user_time_remaining
 
 def cz20_sweep_amplitude_and_detuning_for_t_half(
@@ -2143,14 +2145,14 @@ def cz20_Vz_ramsey_conditional_on_A(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -2210,14 +2212,14 @@ def cz20_Vz_ramsey_conditional_on_A(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
         ##pls.setup_freq_lut(
         ##    output_ports = control_port_A,
         ##    group        = 1,
         ##    frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_A)),
         ##    phases       = control_phase_arr,
-        ##    phases_q     = control_phase_arr + np.sign(control_freq_if_01_A)*np.pi/2,
+        ##    phases_q     = control_phase_arr + bandsign(control_freq_if_01_A),
         ##)
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -2225,14 +2227,14 @@ def cz20_Vz_ramsey_conditional_on_A(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 1,
             frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_B)),
             phases       = control_phase_arr,
-            phases_q     = control_phase_arr + np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = control_phase_arr + bandsign(control_freq_if_01_B),
         )
         
         ## Set up the CZ20 gate pulse
@@ -2257,7 +2259,7 @@ def cz20_Vz_ramsey_conditional_on_A(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_cz20),
             phases          = phase_adjustment_coupler_ac_cz20,
-            phases_q        = phase_adjustment_coupler_ac_cz20 + np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
+            phases_q        = phase_adjustment_coupler_ac_cz20 + bandsign(coupler_ac_freq_if_cz20),
         )
         
         
@@ -2553,16 +2555,13 @@ def cz20_tune_local_accumulated_phase(
     control_port_A,
     control_port_B,
     
-    ##control_amp_01_A,
-    control_amp_01_Vz_A,
+    control_amp_01_A,
     control_freq_01_A,
-    ##control_amp_01_B,
-    control_amp_01_Vz_B,
+    control_freq_nco_A,
+    control_amp_01_B,
     control_freq_01_B,
+    control_freq_nco_B,
     control_duration_01,
-    
-    control_freq_12_A,
-    control_freq_12_B,
     
     coupler_dc_port,
     coupler_dc_bias,
@@ -2575,6 +2574,10 @@ def cz20_tune_local_accumulated_phase(
     coupler_ac_freq_cz20,
     coupler_ac_single_edge_time_cz20,
     coupler_ac_plateau_duration_cz20,
+    
+    phase_adjustment_coupler_ac_cz20,
+    phase_adjustment_control_A_cz20,
+    phase_adjustment_control_B_cz20,
     
     num_averages,
     
@@ -2599,9 +2602,13 @@ def cz20_tune_local_accumulated_phase(
         }
     ):
     ''' Prepare |+0> (or |0+>), run a CZ_20, and finally run a pi/2 pulse
-        with a swept virtual phase. The resulting plot yields the
-        accumulated local phase.
+        with a swept virtual sigle-qubit phase. The resulting plot yields the
+        accumulated local phase for this qubit.
     '''
+    
+    # Halt if illegal arguments
+    if (control_amp_01_A != 0.0) and (control_amp_01_B != 0.0):
+        raise ValueError("Error! Tuning local qubit phases after executing a CZ gate requires a different input state than you have configured. Set one of your pi-pulse amplitudes to 0.")
     
     ## Input sanitisation
     
@@ -2614,6 +2621,9 @@ def cz20_tune_local_accumulated_phase(
     
     # Declare phase array for the last pi/2 to be swept
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
+    
+    # Declare what phases are available
+    phases_declared = np.linspace(0, 2*np.pi, 512)
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -2677,18 +2687,12 @@ def cz20_tune_local_accumulated_phase(
             sync      = False,
         )
         # Control port mixers
-        high_res_A  = max( [control_freq_01_A, control_freq_12_A] )
-        low_res_A   = min( [control_freq_01_A, control_freq_12_A] )
-        control_freq_nco_A = high_res_A - (high_res_A - low_res_A)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco_A,
             out_ports = control_port_A,
             tune      = True,
             sync      = False,
         )
-        high_res_B  = max( [control_freq_01_B, control_freq_12_B] )
-        low_res_B   = min( [control_freq_01_B, control_freq_12_B] )
-        control_freq_nco_B = high_res_B - (high_res_B - low_res_B)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco_B,
             out_ports = control_port_B,
@@ -2735,17 +2739,6 @@ def cz20_tune_local_accumulated_phase(
             group           = 0,
             scales          = control_amp_01_B,
         )
-        ''' Almost the same thing for the Vz-swept gates '''
-        pls.setup_scale_lut(
-            output_ports    = control_port_A,
-            group           = 1,
-            scales          = control_amp_01_Vz_A,
-        )
-        pls.setup_scale_lut(
-            output_ports    = control_port_B,
-            group           = 1,
-            scales          = control_amp_01_Vz_B,
-        )
         # Coupler port amplitudes
         pls.setup_scale_lut(
             output_ports    = coupler_ac_port,
@@ -2789,14 +2782,14 @@ def cz20_tune_local_accumulated_phase(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -2812,38 +2805,24 @@ def cz20_tune_local_accumulated_phase(
             template_q  = control_envelope_01,
             envelope    = True,
         )
-        ##control_pulse_pi_01_B = pls.setup_template(
-        ##    output_port = control_port_B,
-        ##    group       = 0,
-        ##    template    = control_envelope_01,
-        ##    template_q  = control_envelope_01,
-        ##    envelope    = True,
-        ##)
-        
-        ##control_pulse_pi_01_half_A = pls.setup_template(
-        ##    output_port = control_port_A,
-        ##    group       = 0,
-        ##    template    = control_envelope_01/2, # Halved!
-        ##    template_q  = control_envelope_01/2, # Halved!
-        ##    envelope    = True,
-        ##)
-        ##control_pulse_pi_01_half_Vz_A = pls.setup_template(
-        ##    output_port = control_port_A,
-        ##    group       = 1,
-        ##    template    = control_envelope_01/2, # Halved!
-        ##    template_q  = control_envelope_01/2, # Halved!
-        ##    envelope    = True,
-        ##)
-        control_pulse_pi_01_half_B = pls.setup_template(
+        control_pulse_pi_01_B = pls.setup_template(
             output_port = control_port_B,
+            group       = 0,
+            template    = control_envelope_01,
+            template_q  = control_envelope_01,
+            envelope    = True,
+        )
+        
+        control_pulse_pi_01_half_A = pls.setup_template(
+            output_port = control_port_A,
             group       = 0,
             template    = control_envelope_01/2, # Halved!
             template_q  = control_envelope_01/2, # Halved!
             envelope    = True,
         )
-        control_pulse_pi_01_half_Vz_B = pls.setup_template(
+        control_pulse_pi_01_half_B = pls.setup_template(
             output_port = control_port_B,
-            group       = 1,
+            group       = 0,
             template    = control_envelope_01/2, # Halved!
             template_q  = control_envelope_01/2, # Halved!
             envelope    = True,
@@ -2854,31 +2833,17 @@ def cz20_tune_local_accumulated_phase(
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 0,
-            frequencies  = np.abs(control_freq_if_01_A),
-            phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            frequencies  = np.full_like(phases_declared, np.abs(control_freq_if_01_A)),
+            phases       = phases_declared,
+            phases_q     = phases_declared + bandsign(control_freq_if_01_A),
         )
-        ##pls.setup_freq_lut(
-        ##    output_ports = control_port_A,
-        ##    group        = 1,
-        ##    frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_A)),
-        ##    phases       = control_phase_arr,
-        ##    phases_q     = control_phase_arr + np.sign(control_freq_if_01_A)*np.pi/2,
-        ##)
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 0,
-            frequencies  = np.abs(control_freq_if_01_B),
-            phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
-        )
-        pls.setup_freq_lut(
-            output_ports = control_port_B,
-            group        = 1,
-            frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_B)),
-            phases       = control_phase_arr,
-            phases_q     = control_phase_arr + np.sign(control_freq_if_01_B)*np.pi/2,
+            frequencies  = np.full_like(phases_declared, np.abs(control_freq_if_01_B)),
+            phases       = phases_declared,
+            phases_q     = phases_declared + bandsign(control_freq_if_01_B),
         )
         
         ## Set up the CZ20 gate pulse
@@ -2902,8 +2867,8 @@ def cz20_tune_local_accumulated_phase(
             output_ports    = coupler_ac_port,
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_cz20),
-            phases          = 0.0,
-            phases_q        = np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
+            phases          = phase_adjustment_coupler_ac_cz20,
+            phases_q        = phase_adjustment_coupler_ac_cz20 + bandsign(coupler_ac_freq_if_cz20),
         )
         
         
@@ -2958,50 +2923,63 @@ def cz20_tune_local_accumulated_phase(
         # Define repetition counter for T.
         repetition_counter = 1
         
-        # For both cases, where the control qubit can either be on/off
-        for turn_on_control_qubit in [True, False]:
-        
-            # For every phase value of the final pi-half gate:
-            for ii in range(num_phases):
-                
-                # Re-apply the coupler bias tone, to keep on playing once
-                # the bias tee has charged.
-                if coupler_dc_port != []:
-                    pls.output_pulse(T, coupler_bias_tone)
-                
-                # Reset phases
-                pls.reset_phase(T, [control_port_A, control_port_B, coupler_ac_port])
-                
-                # Prepare the input state
-                if turn_on_control_qubit:
-                    pls.output_pulse(T, control_pulse_pi_01_A)
-                    ## T += control_duration_01
-                    ## This delay is its seperate moment in this paper, I'm unsure why.
-                    ## https://journals.aps.org/pra/pdf/10.1103/PhysRevA.102.062408
-                
-                # Put qubit B in |+>
-                pls.output_pulse(T, control_pulse_pi_01_half_B)
-                T += control_duration_01
-                
-                # Apply CZ20 gate.
-                pls.output_pulse(T, coupler_ac_pulse_cz20)
-                T += coupler_ac_duration_cz20
-                
-                # Apply virtual-Z-swept pi/2 gate on qubit B.
-                pls.output_pulse(T, control_pulse_pi_01_half_Vz_B)
-                T += control_duration_01
-                
-                # Commence multiplexed readout
-                pls.reset_phase(T, readout_stimulus_port)
-                pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
-                pls.store(T + readout_sampling_delay) # Sampling window
-                T += readout_duration
-                
-                # Move to next phase in the sweep
-                pls.next_frequency(T, control_port_B, group = 1)
-                
-                # Await a new repetition, after which a new coupler DC bias tone
-                # will be added.
+        # For every phase value of the final pi-half gate:
+        for ii in range(num_phases):
+            
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
+            
+            # Re-apply the coupler bias tone, to keep on playing once
+            # the bias tee has charged.
+            if coupler_dc_port != []:
+                pls.output_pulse(T, coupler_bias_tone)
+            
+            # Reset phases
+            pls.reset_phase(T, [control_port_A, control_port_B, coupler_ac_port])
+            phase_A = 0.0 # rad
+            phase_B = 0.0 # rad
+            pls.select_frequency(T, np.where(phases_declared == phase_A)[0][0], control_port_A, group = 0)
+            pls.select_frequency(T, np.where(phases_declared == phase_B)[0][0], control_port_B, group = 0)
+            
+            # Prepare the input state, either |+0> or |0+>
+            pls.output_pulse(T, [control_pulse_pi_01_half_A, control_pulse_pi_01_half_B])
+            T += control_duration_01
+            
+            # Apply CZ20 gate.
+            pls.output_pulse(T, coupler_ac_pulse_cz20)
+            T += coupler_ac_duration_cz20
+            
+            # Apply virtual-Z
+            phase_A = get_legal_phase((phase_A + control_phase_arr[ii]), phases_declared)
+            phase_B = get_legal_phase((phase_B + control_phase_arr[ii]), phases_declared)
+            pls.select_frequency(T, np.where(phases_declared == phase_A)[0][0], control_port_A, group = 0)
+            pls.select_frequency(T, np.where(phases_declared == phase_B)[0][0], control_port_B, group = 0)
+            
+            # Appli pi/2 gate on the qubit prepared in |+>
+            pls.output_pulse(T, [control_pulse_pi_01_half_A, control_pulse_pi_01_half_B])
+            T += control_duration_01
+            
+            # Commence multiplexed readout
+            pls.reset_phase(T, readout_stimulus_port)
+            pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
+            pls.store(T + readout_sampling_delay) # Sampling window
+            T += readout_duration
+            
+            # Get our last time reference
+            T_last = T
+            
+            # Is the iteration longer than the repetition delay?
+            if (T_last - T_begin) >= repetition_delay:
+                while (T_last - T_begin) >= repetition_delay:
+                    # If this happens, then the iteration does not fit within
+                    # one decreed repetion period.
+                    T = repetition_delay * repetition_counter
+                    repetition_counter += 1
+                    
+                    # Move reference
+                    T_begin = T
+            else:
+                # Then all is good.
                 T = repetition_delay * repetition_counter
                 repetition_counter += 1
         
@@ -3056,12 +3034,11 @@ def cz20_tune_local_accumulated_phase(
             
             'control_amp_01_A', "FS",
             'control_freq_01_A', "Hz",
+            'control_freq_nco_A', "Hz",
             'control_amp_01_B', "FS",
             'control_freq_01_B', "Hz",
+            'control_freq_nco_B', "Hz",
             'control_duration_01', "s",
-            
-            'control_freq_12_A', "Hz",
-            'control_freq_12_B', "Hz",
             
             #'coupler_dc_port', "",
             'coupler_dc_bias', "FS",
@@ -3076,6 +3053,8 @@ def cz20_tune_local_accumulated_phase(
             'coupler_ac_plateau_duration_cz20', "s",
             
             'num_averages', "",
+            
+            'phase_adjustment_coupler_ac_cz20', "rad",
             
             'num_phases', "",
             'phase_sweep_rad_min', "rad",
@@ -3165,11 +3144,11 @@ def cz20_tune_local_accumulated_phase(
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
             inner_loop_size = num_phases,
-            outer_loop_size = 2, # One for the control qubit = |1>, one for |0>
+            outer_loop_size = 1,
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = 'conditional_Ramsey',
+            append_to_log_name_before_timestamp = 'tune_local_accumulated_phase',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             

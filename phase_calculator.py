@@ -16,7 +16,6 @@ def get_legal_phase( value, available_phases_arr ):
     # Trim off 2-pi period from the value, and find where the nearest value is.
     diff_arr = np.absolute( available_phases_arr - (value % (2*np.pi)) )
     index = diff_arr.argmin()
-    print(available_phases_arr[index])
     
     # Return result.
     return available_phases_arr[index]

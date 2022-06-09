@@ -15,6 +15,7 @@ import time
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
+from phase_calculator import bandsign
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -217,7 +218,7 @@ def amplitude_sweep_oscillation01_ro0(
             group        = 0,
             frequencies  = np.abs(readout_freq_if),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if),
         )
         
         
@@ -240,7 +241,7 @@ def amplitude_sweep_oscillation01_ro0(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01),
         )
         
         
@@ -721,14 +722,14 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         
@@ -760,7 +761,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -768,7 +769,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         
         
@@ -1273,14 +1274,14 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         
@@ -2282,7 +2283,7 @@ def amplitude_sweep_oscillation12_ro1(
             group        = 0,
             frequencies  = np.abs(readout_freq_if),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if),
         )
         
         
@@ -2315,7 +2316,7 @@ def amplitude_sweep_oscillation12_ro1(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01),
         )
         control_freq_if_12 = control_freq_nco - control_freq_12
         pls.setup_freq_lut(
@@ -2323,7 +2324,7 @@ def amplitude_sweep_oscillation12_ro1(
             group        = 1,
             frequencies  = np.abs(control_freq_if_12),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_12)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_12),
         )
         
         
