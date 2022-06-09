@@ -55,6 +55,7 @@ def find_f_ro0_sweep_coupler(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -417,6 +418,8 @@ def find_f_ro0_sweep_coupler(
             append_to_log_name_before_timestamp = 'ro0' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         ))
     
     return string_arr_to_return
@@ -448,6 +451,7 @@ def find_f_ro0_sweep_power(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -716,6 +720,8 @@ def find_f_ro0_sweep_power(
             append_to_log_name_before_timestamp = 'ro0_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         ))
     
     return string_arr_to_return
@@ -742,6 +748,7 @@ def find_f_ro1_sweep_coupler(
     control_port,
     control_amp_01,
     control_freq_01,
+    control_freq_nco,
     control_duration_01,
     
     coupler_dc_port,
@@ -758,6 +765,7 @@ def find_f_ro1_sweep_coupler(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -844,7 +852,7 @@ def find_f_ro1_sweep_coupler(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
@@ -852,7 +860,7 @@ def find_f_ro1_sweep_coupler(
         )
         # Control port mixer
         pls.hardware.configure_mixer(
-            freq      = control_freq_01,
+            freq      = control_freq_nco,
             out_ports = control_port,
             tune      = True,
             sync      = (coupler_dc_port == []),
@@ -936,12 +944,13 @@ def find_f_ro1_sweep_coupler(
         )
         
         # Setup control_pulse_pi_01 carrier tone, considering that there are digital mixers.
+        control_freq_if_01 = control_freq_nco - control_freq_01
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = np.sign(control_freq_if_01)*np.pi/2,
         )
         
         
@@ -1208,6 +1217,8 @@ def find_f_ro1_sweep_coupler(
             append_to_log_name_before_timestamp = 'ro1' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         ))
     
     return string_arr_to_return
@@ -1244,6 +1255,7 @@ def find_f_ro1_sweep_power(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1561,6 +1573,8 @@ def find_f_ro1_sweep_power(
             append_to_log_name_before_timestamp = 'ro1_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         ))
     
     return string_arr_to_return
@@ -1607,6 +1621,7 @@ def find_f_ro2_sweep_coupler(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1802,22 +1817,23 @@ def find_f_ro2_sweep_coupler(
             template_q  = control_envelope_12,
             envelope    = True,
         )
+        
         # Setup control pulse carrier tones, considering that there is a digital mixer
-        control_freq_if_01 = np.abs(control_freq_nco - control_freq_01)
+        control_freq_if_01 = control_freq_nco - control_freq_01
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = control_freq_if_01,
+            frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = np.sign(control_freq_if_01)*np.pi/2,
         )
-        control_freq_if_12 = np.abs(control_freq_nco - control_freq_12)
+        control_freq_if_12 = control_freq_nco - control_freq_12
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 1,
-            frequencies  = control_freq_if_12,
+            frequencies  = np.abs(control_freq_if_12),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = np.sign(control_freq_if_12)*np.pi/2,
         )
         
         
@@ -1867,7 +1883,7 @@ def find_f_ro2_sweep_coupler(
             
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
-
+        
             # Re-apply the coupler bias tone.
             if coupler_dc_port != []:
                 pls.output_pulse(T, coupler_bias_tone)
@@ -2093,6 +2109,8 @@ def find_f_ro2_sweep_coupler(
             append_to_log_name_before_timestamp = 'ro2' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         ))
     
     return string_arr_to_return
@@ -2133,6 +2151,7 @@ def find_f_ro2_sweep_power(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -2486,6 +2505,8 @@ def find_f_ro2_sweep_power(
             append_to_log_name_before_timestamp = 'ro2_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         ))
     
     return string_arr_to_return

@@ -22,16 +22,50 @@ def fit_amplitude(
         This "amplitude period" / 2 = the π-pulse amplitude.
     '''
     
+    ## TODO: Somehow, add support so that the user can provide themselves
+    ##       raw data for multiplexed rabi sweeps too.
+    
+    ## TODO: Solve the multiplexed sweep issue. All multiplexed sweeps
+    ##       where the x-axis is not identical for all qubits+resonators,
+    ##       will (likely?) have to be exported seperately.
+    ##       Meaning that this fitter will output some gibberish.
+    ##       Perhaps a "select resonator" function is necessary?
+    
+    # The Rabi oscillation could have been done with a multiplexed readout.
+    # Thus, we declare a list for storing what amplitude sweeps
+    # were done for the different qubits.
+    control_amp_values = []
+    
     # Get data.
     if i_provided_a_filepath:
         # The user provided a filepath to data.
-        assert isinstance(data_or_filepath_to_data, str), "Error: the Rabi amplitude fitter was provided a non-string datatype. Expected string (filepath to data)."
+        if (not isinstance(data_or_filepath_to_data, str)):
+            data_or_filepath_to_data = data_or_filepath_to_data[0]
+            assert isinstance(data_or_filepath_to_data, str), "Error: the Rabi amplitude fitter was provided a non-string datatype, and/or a list whose first element was a non-string datatype. Expected string (filepath to data)."
         with h5py.File(os.path.abspath(data_or_filepath_to_data), 'r') as h5f:
-            extracted_data     = h5f["processed_data"][()]
+            extracted_data = h5f["processed_data"][()]
+            
             if i_renamed_the_control_amp_arr_to == '':
-                control_amp_values = h5f["control_amp_arr"][()]
+                control_amp_values = h5f[ "control_amp_arr" ][()]
             else:
                 control_amp_values = h5f[i_renamed_the_control_amp_arr_to][()]
+            
+            # Note! Multiplexed functionality disabled for now, since the
+            # split files do not contain both control_amp_arr_A and
+            # control_amp_arr_B.
+            ##found_control_data = False
+            ##for try_this in ['control_amp_arr', 'control_amp_arr_A', 'control_amp_arr_B']:
+            ##    try:
+            ##        if i_renamed_the_control_amp_arr_to == '':
+            ##            control_amp_values.append( h5f[ try_this ][()] )
+            ##        else:
+            ##            control_amp_values.append( h5f[i_renamed_the_control_amp_arr_to][()] )
+            ##        found_control_data = True
+            ##    except KeyError:
+            ##        # Then do nothing.
+            ##        pass
+            ##if (not found_control_data):
+            ##    raise KeyError("Error: could not find any control port amplitude data in the file. Try passing the name of the control amp. arr. as an appropriate argument to the fit_rabi fitting function.")
     else:
         # Then the user provided the data raw.
         assert (not isinstance(data_or_filepath_to_data, str)), "Error: the Rabi amplitude fitter was provided a string type. Expected raw data. The provided variable was: "+str(data_or_filepath_to_data)
@@ -78,6 +112,9 @@ def fit_amplitude(
     fitted_values = [[]] * len(mag_vals_matrix)
     
     for current_res_ii in range(len( mag_vals_matrix )):
+        # Note! See above comment on multiplexed sweeps being disabled for now.
+        ## # Select current sweep values for this particular resonator.
+        ## curr_control_amp_values = control_amp_values[current_res_ii]
         for current_z_axis_value in range(len( mag_vals_matrix[current_res_ii] )):
             
             # Get current trace.
@@ -88,6 +125,10 @@ def fit_amplitude(
                 x = control_amp_values,
                 y = current_trace_to_fit
             )
+            ##optimal_vals_x, fit_err_x = fit_periodicity(
+            ##    x = curr_control_amp_values,
+            ##    y = current_trace_to_fit
+            ##)
             
             # Grab fitted values.
             one_rabi_cycle_period = optimal_vals_x[3]

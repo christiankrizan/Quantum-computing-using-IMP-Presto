@@ -1125,21 +1125,21 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             fall_time   = 0e-9
         )
         # Setup readout carriers, considering the multiplexed readout NCO.
-        readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_A)
-        readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_B)
+        readout_freq_if_A = readout_freq_nco - readout_freq_A
+        readout_freq_if_B = readout_freq_nco - readout_freq_B
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_A,
-            phases       = np.full_like(readout_freq_if_A, 0.0),
-            phases_q     = np.full_like(readout_freq_if_A, -np.pi/2), # USB!  ##+np.pi/2, # LSB
+            frequencies  = np.abs(readout_freq_if_A),
+            phases       = 0.0,
+            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
-            frequencies  = readout_freq_if_B,
-            phases       = np.full_like(readout_freq_if_B, 0.0),
-            phases_q     = np.full_like(readout_freq_if_B, -np.pi/2), # USB!  ##+np.pi/2, # LSB
+            frequencies  = np.abs(readout_freq_if_B),
+            phases       = 0.0,
+            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
         )
         
         
@@ -1165,21 +1165,21 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             envelope    = True,
         )
         # Setup control pulse carrier tones, considering that there is a digital mixer
-        control_freq_if_01 = np.abs(control_freq_nco - control_freq_01)
+        control_freq_if_01 = control_freq_nco - control_freq_01
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = control_freq_if_01,
+            frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = np.sign(control_freq_if_01)*np.pi/2,
         )
-        control_freq_if_12 = np.abs(control_freq_nco - control_freq_12)
+        control_freq_if_12 = control_freq_nco - control_freq_12
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 1,
-            frequencies  = control_freq_if_12,
+            frequencies  = np.abs(control_freq_if_12),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = np.sign(control_freq_if_12)*np.pi/2,
         )
         
         
@@ -1426,7 +1426,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [readout_freq_if_B], # TODO: This script should be made multiplexed, check whether the state discrimination (and data_exporter.py) can handle that.
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_B)], # TODO: This script should be made multiplexed, check whether the state discrimination (and data_exporter.py) can handle that.
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
