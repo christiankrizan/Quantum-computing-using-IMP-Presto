@@ -16,7 +16,11 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
-from phase_calculator import get_legal_phase, bandsign
+from phase_calculator import \
+    reset_phase_counter, \
+    get_legal_phase, \
+    bandsign, \
+    add_virtual_z
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -48,9 +52,11 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     control_port_A,
     control_amp_01_A,
     control_freq_01_A,
+    control_freq_nco_A,
     control_port_B,
     control_amp_01_B,
     control_freq_01_B,
+    control_freq_nco_B,
     control_duration_01,
     
     coupler_dc_port,
@@ -73,6 +79,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -164,16 +171,16 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         )
         # Control port mixers
         pls.hardware.configure_mixer(
-            freq      = control_freq_01_A,
+            freq      = control_freq_nco_A,
             out_ports = control_port_A,
             tune      = True,
             sync      = False,
         )
         pls.hardware.configure_mixer(
-            freq      = control_freq_01_B,
+            freq      = control_freq_nco_B,
             out_ports = control_port_B,
             tune      = True,
-            sync      = (coupler_dc_port == []),##False,
+            sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
@@ -251,21 +258,21 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             fall_time   = 0e-9
         )
         # Setup readout carriers, considering the multiplexed readout NCO.
-        readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_A)
-        readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_B)
+        readout_freq_if_A = readout_freq_nco - readout_freq_A
+        readout_freq_if_B = readout_freq_nco - readout_freq_B
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_A,
-            phases       = np.full_like(readout_freq_if_A, 0.0),
-            phases_q     = np.full_like(readout_freq_if_A, -np.pi/2), # USB!  ##+np.pi/2, # LSB
+            frequencies  = np.abs(readout_freq_if_A),
+            phases       = 0.0,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
-            frequencies  = readout_freq_if_B,
-            phases       = np.full_like(readout_freq_if_B, 0.0),
-            phases_q     = np.full_like(readout_freq_if_B, -np.pi/2), # USB!  ##+np.pi/2, # LSB
+            frequencies  = np.abs(readout_freq_if_B),
+            phases       = 0.0,
+            phases_q     = bandsign(readout_freq_if_B)
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -288,20 +295,22 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             envelope    = True,
         )
         
-        # Setup control_pulse_pi_01 carrier tones, considering that there are digital mixers.
+        # Setup control pulse carrier tones, considering that there is a digital mixer
+        control_freq_if_01_A = control_freq_nco_A - control_freq_01_A
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
+        control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         
         
@@ -322,23 +331,22 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             fall_time   = coupler_ac_rising_edge_time_cz20,
         )
         
-        # Setup the cz20 pulse carrier, this tone will be swept in frequency.
-        # Since we set the mixer to some NCO value, we probably want to use
-        # the lower sideband for sweeping the span (not the upper).
+        # Setup the CZ20 pulse carrier, this tone will be swept in frequency.
+        coupler_ac_freq_cz20_centre_if = coupler_ac_freq_cz20_nco - coupler_ac_freq_cz20_centre  
         f_start = coupler_ac_freq_cz20_centre_if - coupler_ac_freq_cz20_span / 2
         f_stop = coupler_ac_freq_cz20_centre_if + coupler_ac_freq_cz20_span / 2
         coupler_ac_freq_cz20_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
+        # Use the appropriate side band.
         coupler_ac_pulse_cz20_freq_arr = coupler_ac_freq_cz20_nco - coupler_ac_freq_cz20_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
-            frequencies     = coupler_ac_freq_cz20_if_arr,
+            frequencies     = np.abs(coupler_ac_freq_cz20_if_arr),
             phases          = np.full_like(coupler_ac_freq_cz20_if_arr, 0.0),
-            phases_q        = np.full_like(coupler_ac_freq_cz20_if_arr, +np.pi / 2),  # +pi/2 for LSB!
+            phases_q        = np.full_like(coupler_ac_freq_cz20_if_arr, bandsign(coupler_ac_freq_cz20_centre_if)),
         )
         
         ### Setup pulse "coupler_bias_tone" ###
@@ -389,9 +397,15 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
                 repetition_delay \
             )
         
+        # Define repetition counter for T.
+        repetition_counter = 1
+        
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
-
+            
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
+            
             # Re-apply the coupler bias tone.
             if coupler_dc_port != []:
                 pls.output_pulse(T, coupler_bias_tone)
@@ -415,16 +429,30 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             # Move to next scanned frequency
             pls.next_frequency(T, coupler_ac_port, group = 0)
             
-            # Await a new repetition, after which a new coupler DC bias tone
-            # will be added - and a new frequency set for the readout tone.
-            T += repetition_delay
-        
+            # Get our last time reference
+            T_last = T
+            
+            # Is the iteration longer than the repetition delay?
+            if (T_last - T_begin) >= repetition_delay:
+                while (T_last - T_begin) >= repetition_delay:
+                    # If this happens, then the iteration does not fit within
+                    # one decreed repetion period.
+                    T = repetition_delay * repetition_counter
+                    repetition_counter += 1
+                    
+                    # Move reference
+                    T_begin = T
+            else:
+                # Then all is good.
+                T = repetition_delay * repetition_counter
+                repetition_counter += 1
         
         # Increment the CZ20 pulse amplitude.
         pls.next_scale(T, coupler_ac_port, group = 0)
         
         # Move to next iteration.
-        T += repetition_delay
+        T = repetition_delay * repetition_counter
+        repetition_counter += 1
         
         
         ################################
@@ -586,9 +614,12 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             append_to_log_name_before_timestamp = '20_sweep_amplitude_and_detuning',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         ))
     
     return string_arr_to_return
+
     
 def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     ip_address,
@@ -631,7 +662,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     coupler_ac_rising_edge_time_cz20,
     coupler_ac_plateau_duration_maximise_cz20,
     coupler_ac_freq_cz20_nco,
-    coupler_ac_freq_cz20_centre_if,
+    coupler_ac_freq_cz20_centre,
     coupler_ac_freq_cz20_span,
     
     coupler_ac_amp_min,
@@ -844,21 +875,21 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
             fall_time   = 0e-9
         )
         # Setup readout carriers, considering the multiplexed readout NCO.
-        readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_A)
-        readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_B)
+        readout_freq_if_A = readout_freq_nco - readout_freq_A
+        readout_freq_if_B = readout_freq_nco - readout_freq_B
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_A,
-            phases       = np.full_like(readout_freq_if_A, 0.0),
-            phases_q     = np.full_like(readout_freq_if_A, -np.pi/2), # USB !  ##+np.pi/2, # LSB
+            frequencies  = np.abs(readout_freq_if_A),
+            phases       = 0.0,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
-            frequencies  = readout_freq_if_B,
-            phases       = np.full_like(readout_freq_if_B, 0.0),
-            phases_q     = np.full_like(readout_freq_if_B, -np.pi/2), # USB!  ##+np.pi/2, # LSB
+            frequencies  = np.abs(readout_freq_if_B),
+            phases       = 0.0,
+            phases_q     = bandsign(readout_freq_if_B)
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -900,38 +931,38 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         )
         
         # Setup control pulse carrier tones, considering that there is a digital mixer
-        control_freq_if_01_A = np.abs(control_freq_nco_A - control_freq_01_A)
+        control_freq_if_01_A = control_freq_nco_A - control_freq_01_A
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 0,
-            frequencies  = control_freq_if_01_A,
+            frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = bandsign(control_freq_if_01_A),
         )
-        control_freq_if_12_A = np.abs(control_freq_nco_A - control_freq_12_A)
+        control_freq_if_12_A = control_freq_nco_A - control_freq_12_A
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 1,
-            frequencies  = control_freq_if_12_A,
+            frequencies  = np.abs(control_freq_if_12_A),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = bandsign(control_freq_if_12_A),
         )
         # ... Now for the other control port
-        control_freq_if_01_B = np.abs(control_freq_nco_B - control_freq_01_B)
+        control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 0,
-            frequencies  = control_freq_if_01_B,
+            frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = bandsign(control_freq_if_01_B),
         )
-        control_freq_if_12_B = np.abs(control_freq_nco_B - control_freq_12_B)
+        control_freq_if_12_B = control_freq_nco_B - control_freq_12_B
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 1,
-            frequencies  = control_freq_if_12_B,
+            frequencies  = np.abs(control_freq_if_12_B),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = bandsign(control_freq_if_12_B),
         )
         
         
@@ -952,23 +983,22 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
             fall_time   = coupler_ac_rising_edge_time_cz20,
         )
         
-        # Setup the cz20 pulse carrier, this tone will be swept in frequency.
-        # Since we set the mixer to some NCO value, we probably want to use
-        # the lower sideband for sweeping the span (not the upper).
+        # Setup the CZ20 pulse carrier, this tone will be swept in frequency.
+        coupler_ac_freq_cz20_centre_if = coupler_ac_freq_cz20_nco - coupler_ac_freq_cz20_centre  
         f_start = coupler_ac_freq_cz20_centre_if - coupler_ac_freq_cz20_span / 2
         f_stop = coupler_ac_freq_cz20_centre_if + coupler_ac_freq_cz20_span / 2
         coupler_ac_freq_cz20_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
+        # Use the appropriate side band.
         coupler_ac_pulse_cz20_freq_arr = coupler_ac_freq_cz20_nco - coupler_ac_freq_cz20_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
-            frequencies     = coupler_ac_freq_cz20_if_arr,
+            frequencies     = np.abs(coupler_ac_freq_cz20_if_arr),
             phases          = np.full_like(coupler_ac_freq_cz20_if_arr, 0.0),
-            phases_q        = np.full_like(coupler_ac_freq_cz20_if_arr, +np.pi / 2),  # +pi/2 for LSB!
+            phases_q        = np.full_like(coupler_ac_freq_cz20_if_arr, bandsign(coupler_ac_freq_cz20_centre_if)),
         )
         
         ### Setup pulse "coupler_bias_tone" ###
@@ -1019,11 +1049,17 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
                 repetition_delay \
             )
         
+        # Define repetition counter for T.
+        repetition_counter = 1
+        
         # For every AC coupler amplitude to sweep over:
         for jj in range(num_amplitudes):
         
             # For every resonator stimulus pulse frequency to sweep over:
             for ii in range(num_freqs):
+                
+                # Get a time reference, used for gauging the iteration length.
+                T_begin = T
 
                 # Re-apply the coupler bias tone.
                 if coupler_dc_port != []:
@@ -1048,16 +1084,30 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
                 # Move to next scanned frequency
                 pls.next_frequency(T, coupler_ac_port, group = 0)
                 
-                # Await a new repetition, after which a new coupler DC bias tone
-                # will be added - and a new frequency set for the readout tone.
-                T += repetition_delay
-            
+                # Get our last time reference
+                T_last = T
+                
+                # Is the iteration longer than the repetition delay?
+                if (T_last - T_begin) >= repetition_delay:
+                    while (T_last - T_begin) >= repetition_delay:
+                        # If this happens, then the iteration does not fit within
+                        # one decreed repetion period.
+                        T = repetition_delay * repetition_counter
+                        repetition_counter += 1
+                        
+                        # Move reference
+                        T_begin = T
+                else:
+                    # Then all is good.
+                    T = repetition_delay * repetition_counter
+                    repetition_counter += 1
             
             # Increment the CZ20 pulse amplitude.
             pls.next_scale(T, coupler_ac_port, group = 0)
         
             # Move to next iteration.
-            T += repetition_delay
+            T = repetition_delay * repetition_counter
+            repetition_counter += 1
         
         
         ################################
@@ -1238,6 +1288,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         ))
     
     return string_arr_to_return
+
 
 def cz20_sweep_duration_and_detuning_state_probability(
     ip_address,
@@ -2936,10 +2987,8 @@ def cz20_tune_local_accumulated_phase(
             
             # Reset phases
             pls.reset_phase(T, [control_port_A, control_port_B, coupler_ac_port])
-            phase_A = 0.0 # rad
-            phase_B = 0.0 # rad
-            pls.select_frequency(T, np.where(phases_declared == phase_A)[0][0], control_port_A, group = 0)
-            pls.select_frequency(T, np.where(phases_declared == phase_B)[0][0], control_port_B, group = 0)
+            phase_A = reset_phase_counter(T, control_port_A, 0, phases_declared, pls)
+            phase_B = reset_phase_counter(T, control_port_B, 0, phases_declared, pls)
             
             # Prepare the input state, either |+0> or |0+>
             pls.output_pulse(T, [control_pulse_pi_01_half_A, control_pulse_pi_01_half_B])
@@ -2950,10 +2999,8 @@ def cz20_tune_local_accumulated_phase(
             T += coupler_ac_duration_cz20
             
             # Apply virtual-Z
-            phase_A = get_legal_phase((phase_A + control_phase_arr[ii]), phases_declared)
-            phase_B = get_legal_phase((phase_B + control_phase_arr[ii]), phases_declared)
-            pls.select_frequency(T, np.where(phases_declared == phase_A)[0][0], control_port_A, group = 0)
-            pls.select_frequency(T, np.where(phases_declared == phase_B)[0][0], control_port_B, group = 0)
+            add_virtual_z(T, phase_A, control_phase_arr[ii], control_port_A, 0, phases_declared, pls)
+            add_virtual_z(T, phase_B, control_phase_arr[ii], control_port_B, 0, phases_declared, pls)
             
             # Appli pi/2 gate on the qubit prepared in |+>
             pls.output_pulse(T, [control_pulse_pi_01_half_A, control_pulse_pi_01_half_B])

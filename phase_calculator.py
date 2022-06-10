@@ -28,3 +28,38 @@ def bandsign( if_value, default_to_lsb = False ):
         return (np.sign(if_value)*np.pi/2) if (if_value != 0.0) else (-np.pi/2)
     else:
         return (np.sign(if_value)*np.pi/2) if (if_value != 0.0) else (+np.pi/2)
+    
+def add_virtual_z(
+    at_time,
+    current_phase,
+    add_this_phase,
+    port,
+    group,
+    available_phases,
+    pulse_object,
+    ):
+    ''' Append a phase to a port, that has had its IF LUT set to 0 Hz.
+        Returns the current phase after operation.
+    '''
+    current_phase = get_legal_phase((current_phase + add_this_phase), available_phases)
+    pulse_object.select_frequency(at_time, np.where(available_phases == current_phase)[0][0], port, group = group)
+    
+    return current_phase
+
+
+def reset_phase_counter(
+    at_time,
+    port,
+    group,
+    available_phases,
+    pulse_object
+    ):
+    ''' Tries to reset the phase counter to 0.
+        Returns the nearest legal value in radians.
+    '''
+    current_phase = get_legal_phase(0.0, available_phases)
+    pulse_object.select_frequency(at_time, np.where(available_phases == current_phase)[0][0], port, group = group)
+    
+    return current_phase
+    
+    
