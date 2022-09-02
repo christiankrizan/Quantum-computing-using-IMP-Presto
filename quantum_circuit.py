@@ -65,23 +65,24 @@ def execute(
     coupler_dc_bias,
     added_delay_for_bias_tee,
     
-    ##coupler_ac_port,
-    ##coupler_ac_freq_nco,
+    coupler_ac_port,
+    coupler_ac_freq_nco,
     
-    ##coupler_ac_amp_cz20,
-    ##coupler_ac_freq_cz20,
-    ##coupler_ac_rising_edge_time_cz20,
-    ##coupler_ac_plateau_duration_maximise_cz20,
-    ##phase_adjustment_after_cz20_A,
-    ##phase_adjustment_after_cz20_B,
+    coupler_ac_amp_cz20,
+    coupler_ac_freq_cz20,
+    coupler_ac_single_edge_time_cz20,
+    coupler_ac_plateau_duration_cz20,
+    phase_adjustment_after_cz20_A,
+    phase_adjustment_after_cz20_B,
+    phase_adjustment_coupler_ac_cz20,
     
-    ##coupler_ac_amp_iswap,
-    ##coupler_ac_freq_iswap,
-    ##coupler_ac_rising_edge_time_iswap,
-    ##coupler_ac_plateau_duration_maximise_iswap,
-    ##phase_adjustment_after_iswap_A,
-    ##phase_adjustment_after_iswap_B,
-    ##phase_adjustment_after_iswap_coupler,
+    coupler_ac_amp_iswap,
+    coupler_ac_freq_iswap,
+    coupler_ac_single_edge_time_iswap,
+    coupler_ac_plateau_duration_iswap,
+    phase_adjustment_after_iswap_A,
+    phase_adjustment_after_iswap_B,
+    phase_adjustment_coupler_ac_iswap,
     
     num_averages,
     
@@ -105,16 +106,6 @@ def execute(
         of the native gate set.
     '''
     
-    # TODO PLACEHOLDER
-    print("Will execute the following:") # TODO
-    for a in quantum_circuit:
-        for b in a:
-            print(b)
-    
-    assert 1 == 0, "HALTED. This routine is currently only a placeholder."
-    
-    """
-    
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
@@ -124,8 +115,8 @@ def execute(
     
     ## Initial array declaration
     
-    # Declare amplitude array for the AC coupler tone to be swept
-    coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)
+    # Declare what phases are available
+    phases_declared = np.linspace(0, 2*np.pi, 512)
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -137,7 +128,7 @@ def execute(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   True #False
     ) as pls:
         print("Connected. Setting up...")
         
@@ -167,8 +158,10 @@ def execute(
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
-        coupler_ac_rising_edge_time_cz20 = int(round(coupler_ac_rising_edge_time_cz20 / plo_clk_T)) * plo_clk_T
-        coupler_ac_plateau_duration_maximise_cz20 = int(round(coupler_ac_plateau_duration_maximise_cz20 / plo_clk_T)) * plo_clk_T
+        coupler_ac_single_edge_time_cz20 = int(round(coupler_ac_single_edge_time_cz20 / plo_clk_T)) * plo_clk_T
+        coupler_ac_plateau_duration_cz20 = int(round(coupler_ac_plateau_duration_cz20 / plo_clk_T)) * plo_clk_T
+        coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
+        coupler_ac_plateau_duration_iswap = int(round(coupler_ac_plateau_duration_iswap / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
@@ -198,7 +191,7 @@ def execute(
             freq      = control_freq_nco_B,
             out_ports = control_port_B,
             tune      = True,
-            sync      = (coupler_dc_port == []),
+            sync      = False,
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
@@ -243,7 +236,12 @@ def execute(
         pls.setup_scale_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
-            scales          = coupler_ac_amp_arr, # This value will be swept!
+            scales          = coupler_ac_amp_iswap,
+        )
+        pls.setup_scale_lut(
+            output_ports    = coupler_ac_port,
+            group           = 1,
+            scales          = coupler_ac_amp_cz20,
         )
         if coupler_dc_port != []:
             pls.setup_scale_lut(
@@ -298,6 +296,7 @@ def execute(
         # Setup control_pulse_pi_01_A and _B pulse envelopes.
         control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template.
         control_envelope_01 = sin2(control_ns_01)
+        
         control_pulse_pi_01_A = pls.setup_template(
             output_port = control_port_A,
             group       = 0,
@@ -313,58 +312,89 @@ def execute(
             envelope    = True,
         )
         
+        control_pulse_pi_01_half_A = pls.setup_template(
+            output_port = control_port_A,
+            group       = 0,
+            template    = control_envelope_01/2, # Halved!
+            template_q  = control_envelope_01/2, # Halved!
+            envelope    = True,
+        )
+        control_pulse_pi_01_half_B = pls.setup_template(
+            output_port = control_port_B,
+            group       = 0,
+            template    = control_envelope_01/2, # Halved!
+            template_q  = control_envelope_01/2, # Halved!
+            envelope    = True,
+        )
+        
         # Setup control pulse carrier tones, considering that there is a digital mixer
         control_freq_if_01_A = control_freq_nco_A - control_freq_01_A
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 0,
-            frequencies  = np.abs(control_freq_if_01_A),
-            phases       = 0.0,
-            phases_q     = bandsign(control_freq_if_01_A),
+            frequencies  = np.full_like(phases_declared, np.abs(control_freq_if_01_A)),
+            phases       = phases_declared,
+            phases_q     = phases_declared + bandsign(control_freq_if_01_A),
         )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 0,
-            frequencies  = np.abs(control_freq_if_01_B),
-            phases       = 0.0,
-            phases_q     = bandsign(control_freq_if_01_B),
+            frequencies  = np.full_like(phases_declared, np.abs(control_freq_if_01_B)),
+            phases       = phases_declared,
+            phases_q     = phases_declared + bandsign(control_freq_if_01_B),
         )
         
         
-        ### Setup the CZ20 gate pulse
+        ## Set up the iSWAP gate pulse
         
-        # The initially set duration will not be swept by the sequencer
-        # program.
-        coupler_ac_duration_cz20 = \
-            2 * coupler_ac_rising_edge_time_cz20 + \
-            coupler_ac_plateau_duration_maximise_cz20
-        coupler_ac_pulse_cz20 = pls.setup_long_drive(
+        # Set up iSWAP envelope
+        coupler_ac_duration_iswap = \
+            coupler_ac_plateau_duration_iswap + \
+            2 * coupler_ac_single_edge_time_iswap
+        coupler_ac_pulse_iswap = pls.setup_long_drive(
             output_port = coupler_ac_port,
             group       = 0,
-            duration    = coupler_ac_duration_cz20,
+            duration    = coupler_ac_duration_iswap,
             amplitude   = 1.0,
             amplitude_q = 1.0,
-            rise_time   = coupler_ac_rising_edge_time_cz20,
-            fall_time   = coupler_ac_rising_edge_time_cz20,
+            rise_time   = coupler_ac_single_edge_time_iswap,
+            fall_time   = coupler_ac_single_edge_time_iswap
         )
-        
-        # Setup the CZ20 pulse carrier, this tone will be swept in frequency.
-        coupler_ac_freq_cz20_centre_if = coupler_ac_freq_nco - coupler_ac_freq_cz20_centre  
-        f_start = coupler_ac_freq_cz20_centre_if - coupler_ac_freq_cz20_span / 2
-        f_stop = coupler_ac_freq_cz20_centre_if + coupler_ac_freq_cz20_span / 2
-        coupler_ac_freq_cz20_if_arr = np.linspace(f_start, f_stop, num_freqs)
-        
-        # Use the appropriate side band.
-        coupler_ac_pulse_cz20_freq_arr = coupler_ac_freq_nco - coupler_ac_freq_cz20_if_arr
-        
-        # Setup LUT
+        # Setup the iSWAP pulse carrier.
+        coupler_ac_freq_if_iswap = coupler_ac_freq_nco - coupler_ac_freq_iswap
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
-            frequencies     = np.abs(coupler_ac_freq_cz20_if_arr),
-            phases          = np.full_like(coupler_ac_freq_cz20_if_arr, 0.0),
-            phases_q        = np.full_like(coupler_ac_freq_cz20_if_arr, bandsign(coupler_ac_freq_cz20_centre_if)),
+            frequencies     = np.abs(coupler_ac_freq_if_iswap),
+            phases          = phase_adjustment_coupler_ac_iswap, # TODO NOT FINISHED, this shouldn't work.
+            phases_q        = phase_adjustment_coupler_ac_iswap + bandsign(coupler_ac_freq_if_iswap), # TODO NOT FINISHED, this shouldn't work.
+        )
+        
+        
+        ## Set up the CZ20 gate pulse
+        
+        # Set up CZ20 envelope
+        coupler_ac_duration_cz20 = \
+            coupler_ac_plateau_duration_cz20 + \
+            2 * coupler_ac_single_edge_time_cz20
+        coupler_ac_pulse_cz20 = pls.setup_long_drive(
+            output_port = coupler_ac_port,
+            group       = 1,
+            duration    = coupler_ac_duration_cz20,
+            amplitude   = 1.0,
+            amplitude_q = 1.0,
+            rise_time   = coupler_ac_single_edge_time_cz20,
+            fall_time   = coupler_ac_single_edge_time_cz20,
+        )
+        # Setup the CZ20 pulse carrier.
+        coupler_ac_freq_if_cz20 = coupler_ac_freq_nco - coupler_ac_freq_cz20
+        pls.setup_freq_lut(
+            output_ports    = coupler_ac_port,
+            group           = 1,
+            frequencies     = np.abs(coupler_ac_freq_if_cz20),
+            phases          = phase_adjustment_coupler_ac_cz20, # TODO NOT FINISHED, this shouldn't work.
+            phases_q        = phase_adjustment_coupler_ac_cz20 + bandsign(coupler_ac_freq_if_cz20), # TODO NOT FINISHED, this shouldn't work.
         )
         
         ### Setup pulse "coupler_bias_tone" ###
@@ -406,72 +436,102 @@ def execute(
             pls.output_pulse(T, coupler_bias_tone)
             T += added_delay_for_bias_tee
         
-            # Redefine the coupler DC pulse duration for repeated playback
-            # once one tee risetime has passed.
+            # Redefine the coupler DC pulse duration.
             coupler_bias_tone.set_total_duration(
-                control_duration_01 + \
-                coupler_ac_duration_cz20 + \
-                readout_duration + \
-                repetition_delay \
+                quantum_circuit[-1][0][3] # Get the longest channel's length.
             )
         
         # Define repetition counter for T.
         repetition_counter = 1
         
-        # For every resonator stimulus pulse frequency to sweep over:
-        for ii in range(num_freqs):
-            
-            # Get a time reference, used for gauging the iteration length.
-            T_begin = T
-            
-            # Re-apply the coupler bias tone.
-            if coupler_dc_port != []:
-                pls.output_pulse(T, coupler_bias_tone)
-            
-            # Put the system into state |11>
-            pls.reset_phase(T, [control_port_A, control_port_B])
-            pls.output_pulse(T, [control_pulse_pi_01_A, control_pulse_pi_01_B])
-            T += control_duration_01
-            
-            # Apply the CZ20 gate, with parameters being swept.
-            pls.reset_phase(T, coupler_ac_port)
-            pls.output_pulse(T, coupler_ac_pulse_cz20)
-            T += coupler_ac_duration_cz20
-            
-            # Commence multiplexed readout
-            pls.reset_phase(T, readout_stimulus_port)
-            pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
-            pls.store(T + readout_sampling_delay) # Sampling window
-            T += readout_duration
-            
-            # Move to next scanned frequency
-            pls.next_frequency(T, coupler_ac_port, group = 0)
-            
-            # Get our last time reference
-            T_last = T
-            
-            # Is the iteration longer than the repetition delay?
-            if (T_last - T_begin) >= repetition_delay:
-                while (T_last - T_begin) >= repetition_delay:
-                    # If this happens, then the iteration does not fit within
-                    # one decreed repetion period.
-                    T = repetition_delay * repetition_counter
-                    repetition_counter += 1
+        ## TODO Some kind of loop counter should go here
+        ##      in order to assure that the phase remains coherent.
+        
+        # Get a time reference, used for gauging the iteration length.
+        T_begin = T
+        
+        # (Re-)apply the coupler bias tone.
+        if coupler_dc_port != []:
+            pls.output_pulse(T, coupler_bias_tone)
+        
+        # Reset phases
+        pls.reset_phase(T, [control_port_A, control_port_B, coupler_ac_port])
+        phase_A = reset_phase_counter(T, control_port_A, 0, phases_declared, pls)
+        phase_B = reset_phase_counter(T, control_port_B, 0, phases_declared, pls)
+        
+        # Schedule gates from the quantum circuit.
+        for all_barrier_moments in quantum_circuit:
+            for operation_code in all_barrier_moments:
+                
+                # Get current operation's scheduled execution time.
+                T = operation_code[3]
+                
+                # Do things depending on the operation.
+                # The most common gates expected are (in order):
+                #    Rotate-Z, sqrt(X), Pauli-X, iSWAP, CZ, Measure
+                if operation_code[0] == 'rz':
+                    # In the 'rz' instruction, we expect a parameter showing
+                    # how much phase to rotate with. This parameter is seen
+                    # in operation_code[1][0]
+                    if operation_code[2][0] == 0: # Qubit A or B for this interface platform?
+                        add_virtual_z(T, phase_A, operation_code[1][0], control_port_A, 0, phases_declared, pls)
+                    else:
+                        add_virtual_z(T, phase_B, operation_code[1][0], control_port_B, 0, phases_declared, pls)
+                
+                elif operation_code[0] == 'sx':
+                    if operation_code[2][0] == 0: # Qubit A or B for this interface platform?
+                        pls.output_pulse(T, control_pulse_pi_01_half_A)
+                    else:
+                        pls.output_pulse(T, control_pulse_pi_01_half_B)
+                
+                elif operation_code[0] == 'x':
+                    if operation_code[2][0] == 0: # Qubit A or B for this interface platform?
+                        pls.output_pulse(T, control_pulse_pi_01_A)
+                    else:
+                        pls.output_pulse(T, control_pulse_pi_01_B)
+                
+                elif operation_code[0] == 'iswap':
+                    pls.output_pulse(T, coupler_ac_pulse_iswap)
+                    add_virtual_z(T, phase_A, phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+                    add_virtual_z(T, phase_B, phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+                    # TODO How does one phase-adjust the coupler tone? Not done yet.
+                
+                elif operation_code[0] == 'cz':
+                    pls.output_pulse(T, coupler_ac_pulse_cz20)
+                    add_virtual_z(T, phase_A, phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                    add_virtual_z(T, phase_B, phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                
+                elif operation_code[0] == 'measure':
+                    # Commence multiplexed readout
+                    pls.reset_phase(T, readout_stimulus_port)
+                    pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
+                    pls.store(T + readout_sampling_delay) # Sampling window
+                    T += readout_duration
                     
-                    # Move reference
-                    T_begin = T
-            else:
-                # Then all is good.
+                elif operation_code[0] == 'total_duration':
+                    # print('Finished scheduling gate sequence, will commence execution.')
+                    pass
+                
+                else:
+                    raise NotImplementedError("Error! An unknown gate operation was encountered")
+        
+        # Get our last time reference
+        T_last = T
+        
+        # Is the iteration longer than the repetition delay?
+        if (T_last - T_begin) >= repetition_delay:
+            while (T_last - T_begin) >= repetition_delay:
+                # If this happens, then the iteration does not fit within
+                # one decreed repetion period.
                 T = repetition_delay * repetition_counter
                 repetition_counter += 1
-        
-        # Increment the CZ20 pulse amplitude.
-        pls.next_scale(T, coupler_ac_port, group = 0)
-        
-        # Move to next iteration.
-        T = repetition_delay * repetition_counter
-        repetition_counter += 1
-        
+                
+                # Move reference
+                T_begin = T
+        else:
+            # Then all is good.
+            T = repetition_delay * repetition_counter
+            repetition_counter += 1
         
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
@@ -480,13 +540,15 @@ def execute(
         # Average the measurement over 'num_averages' averages
         pls.run(
             period          =   T,
-            repeat_count    =   num_amplitudes,
+            repeat_count    =   1,
             num_averages    =   num_averages,
             print_time      =   True,
         )
         
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
+    
+    assert 1 == 0, "HALTED, NOT FINISHED" #TODO
     
     if not pls.dry_run:
         time_vector, fetched_data_arr = pls.get_store_data()
@@ -499,7 +561,6 @@ def execute(
         
         # Data to be stored.
         hdf5_steps = [
-            'coupler_ac_pulse_cz20_freq_arr', "Hz",
             'coupler_ac_amp_arr', "FS",
         ]
         hdf5_singles = [
@@ -624,12 +685,12 @@ def execute(
             
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
-            inner_loop_size = num_freqs,
-            outer_loop_size = num_amplitudes,
+            inner_loop_size = 1, # TODO Yeah how should this be done... Remains to be seen soon.
+            outer_loop_size = 1,
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = '20_sweep_amplitude_and_detuning',
+            append_to_log_name_before_timestamp = 'quantum_circuit',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
@@ -637,4 +698,4 @@ def execute(
         ))
     
     return string_arr_to_return
-    """
+    

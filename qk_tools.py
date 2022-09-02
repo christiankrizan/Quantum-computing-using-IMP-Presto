@@ -297,8 +297,11 @@ def indecorum_parse(
     # the quantum circuit, it will be caught and removed soon.
     barrier_moments.append(curr_moment)
     
+    # Append final (total) duration to the end.
+    barrier_moments.append( [['total_duration', time_counters, qubit_indices, np.max(time_counters)]] )
+    
     # Remove empty barrier moments.
-    barrier_moments = filter(None, barrier_moments)
+    barrier_moments = list(filter(None, barrier_moments))
     
     # Returned parsed sequence.
     return barrier_moments
