@@ -77,6 +77,12 @@ def generate_rb_sequence(
     # User input filtering.
     assert len(qubit_indices) > 0, "Error! Bad argument provided to the RB sequence generator for the qubit indices list. The provided argument was: "+str(qubit_indices)
     assert len(native_gate_set) > 0, "Error! Bad argument provided to the RB sequence generator for the native gate set. The provided argument was: "+str(native_gate_set)
+    if optimisation_level > 3:
+        print("Warning! The optimisation level for the Qiskit randomised banchmarking routines was changed from "+str(optimisation_level)+" to 3, which is the highest possible optimisation flag.")
+        optimisation_level = 3
+    elif optimisation_level < 0:
+        print("Warning! The optimisation level for the Qiskit randomised banchmarking routines was changed from "+str(optimisation_level)+" to 0, which is the lowest possible optimisation flag.")
+        optimisation_level = 0
     
     # Parse rb_sequence_lengths in case of bad user input.
     rb_sequence_lengths = \
@@ -93,14 +99,14 @@ def generate_rb_sequence(
     rb_experiment = StandardRB(
         qubits = qubit_indices,
         lengths = rb_sequence_lengths,
-        num_samples = 1,
+        num_samples = num_samples,
         seed = randomisation_seed,
         full_sampling = sample_cliffords_independently_for_all_lengths
     )
     
     # Transpile the circuit to our native gate set.
     transpiled_schema = transpile(
-        circuits = rb_experiment.circuits()[0],
+        circuits = rb_experiment.circuits(),#[0],
         basis_gates = native_gate_set,
         optimization_level = optimisation_level
     )

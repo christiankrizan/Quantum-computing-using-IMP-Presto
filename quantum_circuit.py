@@ -505,6 +505,14 @@ def execute(
                     add_virtual_z(T, phase_A, phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
                     add_virtual_z(T, phase_B, phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
                 
+                elif operation_code[0] == 'z':
+                    # Same as a rotate-Z operation, but with π radians.
+                    if operation_code[2][0] == 0: # Qubit A or B for this interface platform?
+                        add_virtual_z(T, phase_A, np.pi, control_port_A, 0, phases_declared, pls)
+                    else:
+                        add_virtual_z(T, phase_B, np.pi, control_port_B, 0, phases_declared, pls)
+                
+                
                 elif operation_code[0] == 'measure':
                     # Commence multiplexed readout
                     pls.reset_phase(T, readout_stimulus_port)
@@ -527,7 +535,7 @@ def execute(
                     pass
                 
                 else:
-                    raise NotImplementedError("Error! An unknown gate operation was encountered")
+                    raise NotImplementedError("Error! An unknown gate operation was encountered! The unknown gate was: "+str(operation_code[0]))
         
         # Get our last time reference
         T_last = T
