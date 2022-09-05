@@ -31,6 +31,7 @@ from data_exporter import \
 
 ##from time_remaining_printer import show_user_time_remaining
 
+#def execute_state_probability(
 def execute(
     quantum_circuit,
     
@@ -86,7 +87,10 @@ def execute(
     
     num_averages,
     
-    save_complex_data = True,
+    num_single_shots,
+    resonator_ids,
+    states_to_discriminate_between = ['00', '01', '02', '10', '11', '12', '20', '21', '22'],
+    
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     axes =  {
@@ -504,7 +508,17 @@ def execute(
                 elif operation_code[0] == 'measure':
                     # Commence multiplexed readout
                     pls.reset_phase(T, readout_stimulus_port)
-                    pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
+                    
+                    # On which resonators?
+                    if operation_code[2] == [0, 1]:
+                        pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
+                    elif operation_code[2] == [0]:
+                        pls.output_pulse(T, [readout_pulse_A])
+                    elif operation_code[2] == [1]:
+                        pls.output_pulse(T, [readout_pulse_B])
+                    else:
+                        raise ValueError("Error! Could not execute the requested readout sequence in the quantum circuit. A readout was requested on resonator indices "+str(operation_code[2])+", but only resonators [0, 1] are known to this particular interface.")
+                        
                     pls.store(T + readout_sampling_delay) # Sampling window
                     T += readout_duration
                     
@@ -540,7 +554,7 @@ def execute(
         # Average the measurement over 'num_averages' averages
         pls.run(
             period          =   T,
-            repeat_count    =   1,
+            repeat_count    =   num_single_shots,
             num_averages    =   num_averages,
             print_time      =   True,
         )
@@ -548,12 +562,17 @@ def execute(
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
     
-    assert 1 == 0, "HALTED, NOT FINISHED" #TODO
-    
     if not pls.dry_run:
         time_vector, fetched_data_arr = pls.get_store_data()
         
         print("Saving data")
+        
+        ## Create fictional array for data storage.
+        discretised_result_arr = np.linspace( \
+            num_single_shots, \
+            num_single_shots, \
+            1                 \
+        )
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -561,7 +580,7 @@ def execute(
         
         # Data to be stored.
         hdf5_steps = [
-            'coupler_ac_amp_arr', "FS",
+            'discretised_result_arr', "",
         ]
         hdf5_singles = [
             'readout_stimulus_port', "",
@@ -571,18 +590,22 @@ def execute(
             'readout_amp_A', "FS",
             'readout_freq_B', "Hz",
             'readout_amp_B', "FS",
-            'readout_freq_nco',"Hz",
+            'readout_freq_nco', "Hz",
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
             'repetition_delay', "s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
             
             'control_port_A', "",
             'control_amp_01_A', "FS",
             'control_freq_01_A', "Hz",
+            'control_freq_nco_A', "Hz",
             'control_port_B', "",
             'control_amp_01_B', "FS",
             'control_freq_01_B', "Hz",
+            'control_freq_nco_B', "Hz",
             'control_duration_01', "s",
             
             #'coupler_dc_port', "",
@@ -590,17 +613,26 @@ def execute(
             'added_delay_for_bias_tee', "s",
             
             'coupler_ac_port', "",
-            'coupler_ac_duration_cz20', "s",
             'coupler_ac_freq_nco', "Hz",
-            'coupler_ac_freq_cz20_centre_if', "Hz",
-            'coupler_ac_freq_cz20_span', "Hz",
             
-            'coupler_ac_amp_min', "FS",
-            'coupler_ac_amp_max', "FS",
+            'coupler_ac_amp_cz20', "FS",
+            'coupler_ac_freq_cz20', "Hz",
+            'coupler_ac_single_edge_time_cz20', "s",
+            'coupler_ac_plateau_duration_cz20', "s",
+            'phase_adjustment_after_cz20_A', "rad",
+            'phase_adjustment_after_cz20_B', "rad",
+            'phase_adjustment_coupler_ac_cz20', "rad",
             
-            'num_freqs', "",
+            'coupler_ac_amp_iswap', "FS",
+            'coupler_ac_freq_iswap', "Hz",
+            'coupler_ac_single_edge_time_iswap', "s",
+            'coupler_ac_plateau_duration_iswap', "s",
+            'phase_adjustment_after_iswap_A', "rad",
+            'phase_adjustment_after_iswap_B', "rad",
+            'phase_adjustment_coupler_ac_iswap', "rad",
+            
             'num_averages', "",
-            'num_amplitudes', "",
+            'num_single_shots', "",
         ]
         hdf5_logs = []
         try:
@@ -687,6 +719,10 @@ def execute(
             integration_window_stop = integration_window_stop,
             inner_loop_size = 1, # TODO Yeah how should this be done... Remains to be seen soon.
             outer_loop_size = 1,
+            
+            single_shot_repeats_to_discretise = num_single_shots,
+            ordered_resonator_ids_in_readout_data = resonator_ids,
+            get_probabilities_on_these_states = states_to_discriminate_between,
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
