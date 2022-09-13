@@ -123,7 +123,10 @@ def make_and_get_save_folder(
     data_folder_path = os.path.join(call_root, 'Data output folder')
     path1 = os.path.join(data_folder_path, year_num)
     path2 = os.path.join(data_folder_path, year_num, month_num)
-    full_folder_path_where_data_will_be_saved = os.path.join(data_folder_path, year_num, month_num, 'Data_' + day_num)
+    full_folder_path_where_data_will_be_saved = os.path.join(data_folder_path, year_num, month_num, 'Data_' + month_num + day_num)
+    # TODO: This was the old format, I changed it on the 13th of September
+    # full_folder_path_where_data_will_be_saved = os.path.join(data_folder_path, year_num, month_num, 'Data_' + + day_num)
+    # /TODO
     
     # Trickle through all subfolders in the created full folder path where
     # data will be saved, and make the missing directories where needed.
@@ -636,7 +639,7 @@ def export_processed_data_to_file(
         else:
             savefile_string = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.hdf5'
         
-        if not suppress_log_browser_export:# TODO see todo below, tl;dr: fix so that the user must not have Labber to post-process the H5PY.
+        if not suppress_log_browser_export:
             print("... assembling Log Browser-compatible .HDF5 log file: " + savefile_string)
             f = Labber.createLogFile_ForData(
                 savefile_string,
@@ -655,7 +658,6 @@ def export_processed_data_to_file(
             # TODO:  This part should cover an arbitrary number of fetched_data_arr
             #        arrays. And, this entire subroutine should be made fully
             #        generic.
-            # TODO2: Is not in fact the TODO above fixed now?
             if (select_resonator_for_single_log_export == ''):
                 
                 # Ensure that log_dict_list and processed_data matches.
@@ -803,6 +805,9 @@ def stitch(
         
         Finally, delete all old files if requested.
     '''
+    
+    assert 1 == 0, "Halted! There is a 'Probability for state |00>' has the wrong size (500 vs 25) error that must be solved. The 500 vs. 25 scaling depends on the number of files input to the stitcher. Likely, the log_dict_list is not updated properly before sending the stitched file data into the data export routine."
+    
     try:
         assert len(list_of_h5_files_to_stitch) != 0, \
             "Error: the stitched routine was called for exported data files. " + \
