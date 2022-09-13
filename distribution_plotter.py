@@ -7,12 +7,24 @@
 
 import json
 import h5py
+import os
 import numpy as np
 import matplotlib.pyplot as plt
  
-def barplot( filepaths_to_plot, title = '', halt_on_distribution_data_missing = False ):
+def barplot(
+    filepaths_to_plot,
+    title = '',
+    halt_on_distribution_data_missing = False,
+    attempt_to_fix_string_input_argument = True
+    ):
     ''' Plot some state distribution set(s) in a bar graph.
     '''
+    
+    # User syntax repair
+    if attempt_to_fix_string_input_argument:
+        if isinstance(filepaths_to_plot, str):
+            filepaths_to_plot = os.path.abspath(filepaths_to_plot)
+            filepaths_to_plot = [filepaths_to_plot]
     
     # For all entries!
     for item in filepaths_to_plot:
