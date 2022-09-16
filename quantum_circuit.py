@@ -489,11 +489,19 @@ def execute(
                             phase_A = add_virtual_z(T, phase_A, np.pi/2, control_port_A, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_half_A)
                         elif isclose(operation_code[1][0], -np.pi/2):
-                            phase_A = add_virtual_z(T, phase_A, 3*np.pi/4, control_port_A, 0, phases_declared, pls)
+                            phase_A = add_virtual_z(T, phase_A, 3*np.pi/2, control_port_A, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_half_A)
                         elif isclose(operation_code[1][0], np.pi):
                             phase_A = add_virtual_z(T, phase_A, np.pi/2, control_port_A, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_A)
+                        elif isclose(operation_code[1][0], -np.pi):
+                            phase_A = add_virtual_z(T, phase_A, 3*np.pi/2, control_port_A, 0, phases_declared, pls)
+                            pls.output_pulse(T, control_pulse_pi_01_A)
+                        elif isclose(operation_code[1][0], 0.0):
+                            # Knowledgeable people let me know that I
+                            # should not be doing anything if a rotation of 0
+                            # is required.
+                            pass
                         else:
                             raise NotImplementedError("Error! This QPU interface does not support Rx operations to arbitrary θ angles. The requested angle was: "+str(operation_code[1][0]))
                     else:
@@ -501,11 +509,19 @@ def execute(
                             phase_B = add_virtual_z(T, phase_B, np.pi/2, control_port_B, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_half_B)
                         elif isclose(operation_code[1][0], -np.pi/2):
-                            phase_B = add_virtual_z(T, phase_B, 3*np.pi/4, control_port_B, 0, phases_declared, pls)
+                            phase_B = add_virtual_z(T, phase_B, 3*np.pi/2, control_port_B, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_half_B)
                         elif isclose(operation_code[1][0], np.pi):
                             phase_B = add_virtual_z(T, phase_B, np.pi/2, control_port_B, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_B)
+                        elif isclose(operation_code[1][0], -np.pi):
+                            phase_B = add_virtual_z(T, phase_B, 3*np.pi/2, control_port_B, 0, phases_declared, pls)
+                            pls.output_pulse(T, control_pulse_pi_01_B)
+                        elif isclose(operation_code[1][0], 0.0):
+                            # Knowledgeable people let me know that I
+                            # should not be doing anything if a rotation of 0
+                            # is required.
+                            pass
                         else:
                             raise NotImplementedError("Error! This QPU interface does not support Rx operations to arbitrary θ angles. The requested angle was: "+str(operation_code[1][0]))
                 
@@ -527,6 +543,11 @@ def execute(
                         elif isclose(operation_code[1][0], np.pi):
                             phase_A = add_virtual_z(T, phase_A, np.pi, control_port_A, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_A)
+                        elif isclose(operation_code[1][0], 0.0):
+                            # Knowledgeable people let me know that I
+                            # should not be doing anything if a rotation of 0
+                            # is required.
+                            pass
                         else:
                             raise NotImplementedError("Error! This QPU interface does not support Ry operations to arbitrary θ angles. The requested angle was: "+str(operation_code[1][0]))
                     else:
@@ -538,6 +559,11 @@ def execute(
                         elif isclose(operation_code[1][0], np.pi):
                             phase_B = add_virtual_z(T, phase_B, np.pi, control_port_B, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_B)
+                        elif isclose(operation_code[1][0], 0.0):
+                            # Knowledgeable people let me know that I
+                            # should not be doing anything if a rotation of 0
+                            # is required.
+                            pass
                         else:
                             raise NotImplementedError("Error! This QPU interface does not support Ry operations to arbitrary θ angles. The requested angle was: "+str(operation_code[1][0]))
                         
@@ -1270,7 +1296,7 @@ def execute_DEMO(
                             print('Scheduled Rx(-pi/2) on qubit A at time '+str(T)+'.')
                             time.sleep(0.05)
                             # /TODO
-                            phase_A = add_virtual_z(T, phase_A, 3*np.pi/4, control_port_A, 0, phases_declared, pls)
+                            phase_A = add_virtual_z(T, phase_A, 3*np.pi/2, control_port_A, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_half_A)
                         elif isclose(operation_code[1][0], np.pi):
                             # TODO DEMONSTRATION REMOVE
@@ -1278,6 +1304,13 @@ def execute_DEMO(
                             time.sleep(0.05)
                             # /TODO
                             phase_A = add_virtual_z(T, phase_A, np.pi/2, control_port_A, 0, phases_declared, pls)
+                            pls.output_pulse(T, control_pulse_pi_01_A)
+                        elif isclose(operation_code[1][0], -np.pi):
+                            # TODO DEMONSTRATION REMOVE
+                            print('Scheduled Rx(-pi) on qubit A at time '+str(T)+'.')
+                            time.sleep(0.05)
+                            # /TODO
+                            phase_A = add_virtual_z(T, phase_A, 3*np.pi/2, control_port_A, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_A)
                         else:
                             raise NotImplementedError("Error! This QPU interface does not support Rx operations to arbitrary θ angles. The requested angle was: "+str(operation_code[1][0]))
@@ -1294,7 +1327,7 @@ def execute_DEMO(
                             print('Scheduled Rx(-pi/2) on qubit B at time '+str(T)+'.')
                             time.sleep(0.05)
                             # /TODO
-                            phase_B = add_virtual_z(T, phase_B, 3*np.pi/4, control_port_B, 0, phases_declared, pls)
+                            phase_B = add_virtual_z(T, phase_B, 3*np.pi/2, control_port_B, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_half_B)
                         elif isclose(operation_code[1][0], np.pi):
                             # TODO DEMONSTRATION REMOVE
@@ -1302,6 +1335,13 @@ def execute_DEMO(
                             time.sleep(0.05)
                             # /TODO
                             phase_B = add_virtual_z(T, phase_B, np.pi/2, control_port_B, 0, phases_declared, pls)
+                            pls.output_pulse(T, control_pulse_pi_01_B)
+                        elif isclose(operation_code[1][0], -np.pi):
+                            # TODO DEMONSTRATION REMOVE
+                            print('Scheduled Rx(-pi) on qubit B at time '+str(T)+'.')
+                            time.sleep(0.05)
+                            # /TODO
+                            phase_B = add_virtual_z(T, phase_B, 3*np.pi/2, control_port_B, 0, phases_declared, pls)
                             pls.output_pulse(T, control_pulse_pi_01_B)
                         else:
                             raise NotImplementedError("Error! This QPU interface does not support Rx operations to arbitrary θ angles. The requested angle was: "+str(operation_code[1][0]))

@@ -65,10 +65,10 @@ from qiskit_experiments.library import StandardRB
 #from qiskit.providers.fake_provider import FakeParis
 
 def generate_rb_sequence(
-    num_samples,
+    num_random_quantum_circuits_to_generate_for_one_sequence_length,
+    list_of_num_clifford_gates_per_x_axis_tick = [],
     native_gate_set = [],
     qubit_indices = [], # Syntax is [0] for qubit 0 for instance.
-    rb_sequence_lengths = [],
     randomisation_seed = None,
     optimisation_level = 0,
     sample_cliffords_independently_for_all_lengths = False
@@ -84,10 +84,10 @@ def generate_rb_sequence(
         print("Warning! The optimisation level for the Qiskit randomised banchmarking routines was changed from "+str(optimisation_level)+" to 0, which is the lowest possible optimisation flag.")
         optimisation_level = 0
     
-    # Parse rb_sequence_lengths in case of bad user input.
-    rb_sequence_lengths = \
-        np.unique( np.sort(rb_sequence_lengths) )
-    assert (len(rb_sequence_lengths) > 0), "Error! The Randomised Benchmarking routine was tasked to generate an RB sequence that was 0 long. The full list of tasked RB sequences was:\n"+str(rb_sequence_lengths)
+    # Parse list_of_num_clifford_gates_per_x_axis_tick in case of bad user input.
+    list_of_num_clifford_gates_per_x_axis_tick = \
+        np.unique( np.sort(list_of_num_clifford_gates_per_x_axis_tick) )
+    assert (len(list_of_num_clifford_gates_per_x_axis_tick) > 0), "Error! The Randomised Benchmarking routine was tasked to generate an RB sequence that was 0 long. The full list of tasked RB sequences was:\n"+str(list_of_num_clifford_gates_per_x_axis_tick)
     
     # How many qubits are there?
     try:
@@ -98,8 +98,8 @@ def generate_rb_sequence(
     # Generate RB experiment.
     rb_experiment = StandardRB(
         qubits = qubit_indices,
-        lengths = rb_sequence_lengths,
-        num_samples = num_samples,
+        lengths = list_of_num_clifford_gates_per_x_axis_tick,
+        num_samples = num_random_quantum_circuits_to_generate_for_one_sequence_length,
         seed = randomisation_seed,
         full_sampling = sample_cliffords_independently_for_all_lengths
     )
@@ -111,7 +111,7 @@ def generate_rb_sequence(
         optimization_level = optimisation_level
     )
     
-    ''' Examples of some legal "basis gates"
+    ''' Examples of some legal "basis gates" for Qiskit
     'cx',
     'iswap',
     'id',
