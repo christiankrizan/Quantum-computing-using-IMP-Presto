@@ -950,7 +950,7 @@ def find_f_ro1_sweep_coupler(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01),
         )
         
         
@@ -1825,7 +1825,7 @@ def find_f_ro2_sweep_coupler(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01),
         )
         control_freq_if_12 = control_freq_nco - control_freq_12
         pls.setup_freq_lut(
@@ -1833,7 +1833,7 @@ def find_f_ro2_sweep_coupler(
             group        = 1,
             frequencies  = np.abs(control_freq_if_12),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_12)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_12),
         )
         
         
