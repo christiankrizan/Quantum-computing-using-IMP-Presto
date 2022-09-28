@@ -10,15 +10,19 @@ import json
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
 def assemble_rb_data(
     list_of_rb_data_files_to_integrate,
     num_random_quantum_circuits_to_generate_for_one_sequence_length,
     list_of_num_clifford_gates_per_x_axis_tick,
+    average_fidelity_guess_for_fit,
+    plot_show_duration = 0.0,
     plot_title = '',
     delete_files_once_finished = False,
     force_override_safety_check_for_deleting_files = False
     ):
+    assert 1 == 0, "THIS FILE IS IN BETA, REMOVE THIS ASSERTION TO USE IT DESPITE ITS UNFINISHED STATE.")
     ''' Following a randomised-benchmarking experiment,
         produce a curve showing the RB sequence fidelity.
         The list_of_rb_data_files_to_integrate is expected on the
@@ -170,6 +174,47 @@ def assemble_rb_data(
         for col in range(len(rb_plot_matrix[row])):
             plt.plot(list_of_num_clifford_gates_per_x_axis_tick[col], rb_plot_matrix[row][col], 'o', color="#acacac")
     
+    # Drawing the average dots
+    mean_rb_values = np.mean(rb_plot_matrix, axis=0)
+    for col in range(len(rb_plot_matrix[row])):
+        plt.plot(list_of_num_clifford_gates_per_x_axis_tick[col], mean_rb_values[col], 'o', color="#e69313")
+    
+    # Fitting a decaying exponential to the data
+    difference_between_first_and_last_averaged_rb_datapoints = mean_rb_values[0] - mean_rb_values[-1]
+    offset = mean_rb_values[-1]
+    popt, pcov = curve_fit( \
+        decaying_exponential_function, \
+        list_of_num_clifford_gates_per_x_axis_tick, \
+        mean_rb_values, \
+        p0 = ( \
+            difference_between_first_and_last_averaged_rb_datapoints, \
+            offset, \
+            average_fidelity_guess_for_fit \
+        ) \
+    )
+    
+    # Compute the one-sigma standard deviation error.
+    # See matplotlib documentation, search for "np.sqrt(np.diag(pcov))"
+    p_sigma = np.sqrt(np.diag(pcov))
+    
+    # Get the average gate error per Clifford
+    if qubits_in_rb == 1:
+        r_ref = extract_single_qubit_gate_error( \
+            reference_average_fidelity_p_ref = popt[-1], \
+            error_bar_of_p_ref = p_sigma[-1] \
+        )
+        print("The average single-qubit gate error is: r_ref = "+str(r_ref[0])+" ±"+str(r_ref[1]))
+        print("SPAM characterisation parameters, see DOI 10.1103/PhysRevLett.116.150505, were:\nA = "+str(popt[0])+" ±"+str(p_sigma[0])+",\nB = "+str(popt[1])+" ±"+str(p_sigma[1]))
+        
+    elif qubits_in_rb == 2:
+        r_ref = extract_multi_qubit_gate_error( \
+            reference_average_fidelity_p_ref = popt[-1], \
+            error_bar_of_p_ref = p_sigma[-1] \
+        )
+        raise NotImplementedError("Error! Not finished yet!")
+    else:
+        raise NotImplementedError("Error! A value other than one or two qubits found (specifically, got "+str(qubits_in_rb)+" qubits from the supplied data), unsure what to do analysis-wise.")
+    
     # Axis modifications
     plt.xticks(rotation = 45)
     plt.ylim(0.0, 1.0)
@@ -181,7 +226,8 @@ def assemble_rb_data(
         plt.title( plot_title )
     else:
         if qubits_in_rb == 1:
-            plt.title( "Single-qubit randomised benchmarking" ) # TODO
+            # Make a title
+            plt.title( "Single-qubit randomised benchmarking" )
         else:
             word = str(qubits_in_rb)
             # No check for >1 needed.
@@ -212,13 +258,18 @@ def assemble_rb_data(
             else:
                 word = "two"
             
-            plt.title( "Randomised benchmarking on "+word+" qubits" ) # TODO
+            # Make a title
+            plt.title( "Randomised benchmarking on "+word+" qubits" )
     
     # Plot!
-    plt.show()
-    
-    # TODO DEBUG REMOVE
-    raise NotImplementedError("Routine not finished, and RB plot not fitted.")
+    if plot_show_duration > 0.0:
+        # Plot the fitted curve.
+        plt.plot(list_of_num_clifford_gates_per_x_axis_tick, decaying_exponential_function(list_of_num_clifford_gates_per_x_axis_tick, *popt))
+        
+        # Show the plot
+        plt.show(block=False)
+        plt.pause(plot_show_duration)
+        plt.close()
     
     # Clean up?
     if delete_files_once_finished:
@@ -232,3 +283,54 @@ def assemble_rb_data(
         for file_to_delete in list_of_rb_data_files_to_integrate:
             if os.path.isfile(file_to_delete):
                 os.remove(file_to_delete)
+    
+    # Finish.
+    average_fidelity_per_Clifford_gate = [popt[-1], p_sigma[-1]]
+    average_single_qubit_gate_error = [r_ref[0], r_ref[1]]
+    SPAM_characteristic_A = [popt[0], p_sigma[0]]
+    SPAM_characteristic_B = [popt[1], p_sigma[1]]
+    return [average_fidelity_per_Clifford_gate, average_single_qubit_gate_error, SPAM_characteristic_A, SPAM_characteristic_B]
+
+def decaying_exponential_function(m, A, B, p):
+    ''' Function used by the fitting routine.
+        A,B quantify state preparation and measurement errors,
+            where A is the difference in probability from the very first
+            (shortest) RB experiment, versus the very last (longest)
+            RB experiment. Ie. "the height difference of the exponential curve"
+        p is the average fidelity per Clifford gate.
+        
+        See https://dx.doi.org/10.1103/PhysRevLett.116.150505 for formula.
+        
+    '''
+    return A*p**m + B
+    
+def extract_single_qubit_gate_error(
+    reference_average_fidelity_p_ref,
+    error_bar_of_p_ref,
+    ):
+    ''' This routine follows the methodology outlined in this paper:
+        https://dx.doi.org/10.1103/PhysRevLett.116.150505
+    '''
+    
+    # 1.875 is widely known in litterature, otherwise go ahead and count the
+    # gates listed in Appendix B here, and divide by the 24 different options:
+    # https://qudev.phys.ethz.ch/static/content/science/Documents/master/Samuel_Haberthur_Masterthesis.pdf
+    physical_pulses_on_average_per_Clifford_gate = 1.875
+    
+    # Average single-qubit gate error r_ref ± r_ref_plusminus_error:
+    r_ref = (1 - reference_average_fidelity_p_ref) / (2 * physical_pulses_on_average_per_Clifford_gate)
+    if error_bar_of_p_ref != np.inf:
+        r_ref_error_high = (1 - reference_average_fidelity_p_ref + error_bar_of_p_ref) / (2 * physical_pulses_on_average_per_Clifford_gate)
+        r_ref_error_low  = (1 - reference_average_fidelity_p_ref - error_bar_of_p_ref) / (2 * physical_pulses_on_average_per_Clifford_gate)
+        r_ref_plusminus_error = np.abs( np.max([r_ref_error_low, r_ref_error_high]) - np.min([r_ref_error_low, r_ref_error_high]) )/2
+    else:
+        r_ref_plusminus_error = np.inf
+    
+    return r_ref, r_ref_plusminus_error
+
+def extract_multi_qubit_gate_error(
+    ):
+    assert 1 == 0, str("Error! SEE https://clelandlab.uchicago.edu/pdf/barends%20benchmark%20nature%202014%20supp.pdf")
+    assert 1 == 0,  str("nature13171-1.pdf") # TODO SEE HERE! MULTI QUBIT!
+    assert 1 == 0,  str("SEE THIS" + str('https://arxiv.org/pdf/1109.6887.pdf')+' EQUATION 3.4')
+    
