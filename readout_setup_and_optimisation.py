@@ -17,6 +17,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
+from phase_calculator import bandsign
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -1132,14 +1133,14 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         
@@ -1171,7 +1172,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01),
         )
         control_freq_if_12 = control_freq_nco - control_freq_12
         pls.setup_freq_lut(
@@ -1179,7 +1180,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             group        = 1,
             frequencies  = np.abs(control_freq_if_12),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_12)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_12),
         )
         
         

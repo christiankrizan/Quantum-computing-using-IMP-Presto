@@ -16,6 +16,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
+from phase_calculator import bandsign
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -285,14 +286,14 @@ def iswap_sweep_duration_and_detuning(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
 
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -322,7 +323,7 @@ def iswap_sweep_duration_and_detuning(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -330,7 +331,7 @@ def iswap_sweep_duration_and_detuning(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         
         
@@ -364,7 +365,7 @@ def iswap_sweep_duration_and_detuning(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_iswap_if_arr),
             phases          = np.full_like(coupler_ac_freq_iswap_if_arr, 0.0),
-            phases_q        = np.full_like(coupler_ac_freq_iswap_if_arr, np.sign(coupler_ac_freq_iswap_centre_if)*np.pi/2),
+            phases_q        = np.full_like(coupler_ac_freq_iswap_if_arr, bandsign(coupler_ac_freq_iswap_centre_if)),
         )
         
         
@@ -907,14 +908,14 @@ def iswap_sweep_duration_and_detuning_state_probability(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
 
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -944,7 +945,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -952,7 +953,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         
         
@@ -986,7 +987,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_iswap_if_arr),
             phases          = np.full_like(coupler_ac_freq_iswap_if_arr, 0.0),
-            phases_q        = np.full_like(coupler_ac_freq_iswap_if_arr, np.sign(coupler_ac_freq_iswap_centre_if)*np.pi/2),
+            phases_q        = np.full_like(coupler_ac_freq_iswap_if_arr, bandsign(coupler_ac_freq_iswap_centre_if)),
         )
         
         
@@ -1518,14 +1519,14 @@ def iswap_sweep_duration_and_amplitude(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -1587,7 +1588,7 @@ def iswap_sweep_duration_and_amplitude(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_iswap),
             phases          = 0.0,
-            phases_q        = np.sign(coupler_ac_freq_if_iswap)*np.pi/2,
+            phases_q        = bandsign(coupler_ac_freq_if_iswap),
         )
         
         ### Setup pulse "coupler_bias_tone" ###
@@ -1940,12 +1941,10 @@ def iswap_sweep_amplitude_and_detuning(
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
     
-    
     ## Initial array declaration
     
     # Declare amplitude array for the AC coupler tone to be swept
     coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)
-    
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -2110,14 +2109,14 @@ def iswap_sweep_amplitude_and_detuning(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -2147,7 +2146,7 @@ def iswap_sweep_amplitude_and_detuning(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -2155,7 +2154,7 @@ def iswap_sweep_amplitude_and_detuning(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         
         
@@ -2191,7 +2190,7 @@ def iswap_sweep_amplitude_and_detuning(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_iswap_if_arr),
             phases          = np.full_like(coupler_ac_freq_iswap_if_arr, 0.0),
-            phases_q        = np.full_like(coupler_ac_freq_iswap_if_arr, np.sign(coupler_ac_freq_iswap_centre_if)*np.pi/2),
+            phases_q        = np.full_like(coupler_ac_freq_iswap_if_arr, bandsign(coupler_ac_freq_iswap_centre_if)),
         )
         
         
@@ -2716,14 +2715,14 @@ def iswap_cross_ramsey(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -2767,14 +2766,14 @@ def iswap_cross_ramsey(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 1,
             frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_A)),
             phases       = control_phase_arr,
-            phases_q     = control_phase_arr + np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = control_phase_arr + bandsign(control_freq_if_01_A),
         )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -2782,14 +2781,14 @@ def iswap_cross_ramsey(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 1,
             frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_B)),
             phases       = control_phase_arr,
-            phases_q     = control_phase_arr + np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = control_phase_arr + bandsign(control_freq_if_01_B),
         )
         
         
@@ -2828,14 +2827,14 @@ def iswap_cross_ramsey(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_iswap_if),
             phases          = 0.0,
-            phases_q        = np.sign(coupler_ac_freq_iswap_if)*np.pi/2,
+            phases_q        = bandsign(coupler_ac_freq_iswap_if),
         )
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 1,
             frequencies     = np.abs(coupler_ac_freq_iswap_if),
             phases          = np.pi, # 180 degree inversion
-            phases_q        = np.pi + np.sign(coupler_ac_freq_iswap_if)*np.pi/2, # 180 degree inversion
+            phases_q        = np.pi + bandsign(coupler_ac_freq_iswap_if), # 180 degree inversion
         )
         
         ### Setup pulse "coupler_bias_tone" ###
@@ -3100,7 +3099,7 @@ def iswap_cross_ramsey(
     return string_arr_to_return
     
     
-def tune_local_qubit_phases_of_iswap(
+def iswap_tune_local_accumulated_phase(
     ip_address,
     ext_clk_present,
     
@@ -3371,14 +3370,14 @@ def tune_local_qubit_phases_of_iswap(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -3748,7 +3747,7 @@ def tune_local_qubit_phases_of_iswap(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = 'tune_local_qubit_phase',
+            append_to_log_name_before_timestamp = 'tune_local_accumulated_phase',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
         ))

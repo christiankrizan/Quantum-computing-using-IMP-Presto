@@ -59,7 +59,7 @@ def iswap_then_cz20_prep_10_state_probability(
     added_delay_for_bias_tee,
     
     coupler_ac_port,
-    coupler_ac_freq_nco, # This NCO is supposed to not matter, but something is wrong. (With the instrument? Possible, not excluded.)
+    coupler_ac_freq_nco,
     
     coupler_ac_amp_iswap,
     coupler_ac_freq_iswap,
@@ -285,14 +285,14 @@ def iswap_then_cz20_prep_10_state_probability(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
@@ -340,7 +340,7 @@ def iswap_then_cz20_prep_10_state_probability(
             group        = 0,
             frequencies  = np.full_like(declared_phases, np.abs(control_freq_if_01_A)),
             phases       = declared_phases,
-            phases_q     = declared_phases + np.full_like(declared_phases, np.sign(control_freq_if_01_A)*np.pi/2),
+            phases_q     = declared_phases + np.full_like(declared_phases, bandsign(control_freq_if_01_A)),
         )
         # ... Now for the other control port
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
@@ -349,7 +349,7 @@ def iswap_then_cz20_prep_10_state_probability(
             group        = 0,
             frequencies  = np.full_like(declared_phases, np.abs(control_freq_if_01_B)),
             phases       = declared_phases,
-            phases_q     = declared_phases + np.full_like(declared_phases, np.sign(control_freq_if_01_B)*np.pi/2),
+            phases_q     = declared_phases + np.full_like(declared_phases, bandsign(control_freq_if_01_B)),
         )
         
         
@@ -376,7 +376,7 @@ def iswap_then_cz20_prep_10_state_probability(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_iswap),
             phases          = 0.0,
-            phases_q        = np.sign(coupler_ac_freq_if_iswap)*np.pi/2,
+            phases_q        = bandsign(coupler_ac_freq_if_iswap),
         )
         
         
@@ -402,7 +402,7 @@ def iswap_then_cz20_prep_10_state_probability(
             group           = 1,
             frequencies     = np.abs(coupler_ac_freq_if_cz20),
             phases          = 0.0,
-            phases_q        = np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
+            phases_q        = bandsign(coupler_ac_freq_if_cz20),
         )
         
         
@@ -730,7 +730,7 @@ def iswap_then_cz_prep_10_cross_Ramsey(
     added_delay_for_bias_tee,
     
     coupler_ac_port,
-    coupler_ac_freq_nco, # This NCO is supposed to not matter, but something is wrong. (With the instrument? Possible, not excluded.)
+    coupler_ac_freq_nco,
     
     coupler_ac_amp_iswap,
     coupler_ac_freq_iswap,
@@ -965,14 +965,14 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         
@@ -1033,14 +1033,14 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 1,
             frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_A)),
             phases       = control_phase_arr,
-            phases_q     = control_phase_arr + np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = control_phase_arr + bandsign(control_freq_if_01_A),
         )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -1048,14 +1048,14 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         ##pls.setup_freq_lut(
         ##    output_ports = control_port_B,
         ##    group        = 1,
         ##    frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_B)),
         ##    phases       = control_phase_arr,
-        ##    phases_q     = control_phase_arr + np.sign(control_freq_if_01_B)*np.pi/2,
+        ##    phases_q     = control_phase_arr + bandsign(control_freq_if_01_B),
         ##)
         
         
@@ -1081,7 +1081,7 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_iswap),
             phases          = phase_adjustment_coupler_ac_iswap,
-            phases_q        = phase_adjustment_coupler_ac_iswap + np.sign(coupler_ac_freq_if_iswap)*np.pi/2,
+            phases_q        = phase_adjustment_coupler_ac_iswap + bandsign(coupler_ac_freq_if_iswap),
         )
         
         
@@ -1107,7 +1107,7 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             group           = 1,
             frequencies     = np.abs(coupler_ac_freq_if_cz20),
             phases          = phase_adjustment_coupler_ac_cz20,
-            phases_q        = phase_adjustment_coupler_ac_cz20 + np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
+            phases_q        = phase_adjustment_coupler_ac_cz20 + bandsign(coupler_ac_freq_if_cz20),
         )
         
         
@@ -1447,7 +1447,7 @@ def synthetic_swap_prep_10_cross_Ramsey(
     added_delay_for_bias_tee,
     
     coupler_ac_port,
-    coupler_ac_freq_nco, # This NCO is supposed to not matter, but something is wrong. (With the instrument? Possible, not excluded.)
+    coupler_ac_freq_nco,
     
     coupler_ac_amp_iswap,
     coupler_ac_freq_iswap,
@@ -1684,14 +1684,14 @@ def synthetic_swap_prep_10_cross_Ramsey(
             group        = 0,
             frequencies  = np.abs(readout_freq_if_A),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_A)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_A),
         )
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 1,
             frequencies  = np.abs(readout_freq_if_B),
             phases       = 0.0,
-            phases_q     = np.sign(readout_freq_if_B)*np.pi/2,
+            phases_q     = bandsign(readout_freq_if_B),
         )
         
         
@@ -1752,14 +1752,14 @@ def synthetic_swap_prep_10_cross_Ramsey(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 1,
             frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_A)),
             phases       = control_phase_arr,
-            phases_q     = control_phase_arr + np.sign(control_freq_if_01_A)*np.pi/2,
+            phases_q     = control_phase_arr + bandsign(control_freq_if_01_A),
         )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -1767,14 +1767,14 @@ def synthetic_swap_prep_10_cross_Ramsey(
             group        = 0,
             frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = np.sign(control_freq_if_01_B)*np.pi/2,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         ##pls.setup_freq_lut(
         ##    output_ports = control_port_B,
         ##    group        = 1,
         ##    frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_B)),
         ##    phases       = control_phase_arr,
-        ##    phases_q     = control_phase_arr + np.sign(control_freq_if_01_B)*np.pi/2,
+        ##    phases_q     = control_phase_arr + bandsign(control_freq_if_01_B),
         ##)
         
         
@@ -1800,7 +1800,7 @@ def synthetic_swap_prep_10_cross_Ramsey(
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_iswap),
             phases          = phase_adjustment_coupler_ac_iswap,
-            phases_q        = phase_adjustment_coupler_ac_iswap + np.sign(coupler_ac_freq_if_iswap)*np.pi/2,
+            phases_q        = phase_adjustment_coupler_ac_iswap + bandsign(coupler_ac_freq_if_iswap),
         )
         
         
@@ -1826,7 +1826,7 @@ def synthetic_swap_prep_10_cross_Ramsey(
             group           = 1,
             frequencies     = np.abs(coupler_ac_freq_if_cz20),
             phases          = phase_adjustment_coupler_ac_cz20,
-            phases_q        = phase_adjustment_coupler_ac_cz20 + np.sign(coupler_ac_freq_if_cz20)*np.pi/2,
+            phases_q        = phase_adjustment_coupler_ac_cz20 + bandsign(coupler_ac_freq_if_cz20),
         )
         
         
