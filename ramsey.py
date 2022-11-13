@@ -1905,8 +1905,7 @@ def ramsey01_echo_readout0(
             pass # Fine, no state discrimnation.
         if len(hdf5_logs) == 0:
             hdf5_logs = [
-                'fetched_data_arr_1', "FS",
-                'fetched_data_arr_2', "FS",
+                'fetched_data_arr', "FS",
             ]
         
         # Ensure the keyed elements above are valid.

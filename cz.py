@@ -334,7 +334,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         )
         
         # Setup the CZ20 pulse carrier, this tone will be swept in frequency.
-        coupler_ac_freq_cz20_centre_if = coupler_ac_freq_nco - coupler_ac_freq_cz20_centre  
+        coupler_ac_freq_cz20_centre_if = coupler_ac_freq_nco - coupler_ac_freq_cz20_centre
         f_start = coupler_ac_freq_cz20_centre_if - coupler_ac_freq_cz20_span / 2
         f_stop = coupler_ac_freq_cz20_centre_if + coupler_ac_freq_cz20_span / 2
         coupler_ac_freq_cz20_if_arr = np.linspace(f_start, f_stop, num_freqs)
