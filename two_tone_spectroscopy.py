@@ -79,6 +79,8 @@ def pulsed01_flux_sweep(
         as a function of a swept pairwise coupler bias.
     '''
     
+    assert 1 == 0, "Halted! Note! Finding the sideband has been automated for this function, but is as of writing untested."
+    
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
