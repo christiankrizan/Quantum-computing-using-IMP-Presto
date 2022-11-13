@@ -124,9 +124,6 @@ def make_and_get_save_folder(
     path1 = os.path.join(data_folder_path, year_num)
     path2 = os.path.join(data_folder_path, year_num, month_num)
     full_folder_path_where_data_will_be_saved = os.path.join(data_folder_path, year_num, month_num, 'Data_' + month_num + day_num)
-    # TODO: This was the old format, I changed it on the 13th of September
-    # full_folder_path_where_data_will_be_saved = os.path.join(data_folder_path, year_num, month_num, 'Data_' + + day_num)
-    # /TODO
     
     # Trickle through all subfolders in the created full folder path where
     # data will be saved, and make the missing directories where needed.
@@ -170,8 +167,8 @@ def save(
     suppress_log_browser_export = False,
     save_raw_time_data = False,
     
-    log_browser_tag = 'krizan',
-    log_browser_user = 'Christian Križan',
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     ):
     ''' Function for saving an IMP Presto measurement in an HDF5-format
         that is compatible with Labber's Log Browser.
@@ -583,8 +580,8 @@ def export_processed_data_to_file(
     timestamp = 0,
     time_vector = [],
     fetched_data_arr = [],
-    log_browser_tag = 'krizan',
-    log_browser_user = 'Christian Križan',
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp = '',
     use_log_browser_database = True,
@@ -649,6 +646,14 @@ def export_processed_data_to_file(
             )
             
             # Set project name, tag, and user in logfile.
+            # Check whether the user wishes to set a custom tag and/or user
+            # string in the exported file. If not, use 'Christian Križan' as
+            # the user, 'krizan' as the tag.
+            if log_browser_tag == 'default':
+                log_browser_tag  = 'krizan'
+            if log_browser_user == 'default':
+                log_browser_user = 'Christian Križan'
+            
             f.setProject(name_of_measurement_that_ran)
             f.setTags(log_browser_tag)
             f.setUser(log_browser_user)
@@ -792,8 +797,8 @@ def stitch(
     halt_if_x_and_z_axes_are_identical = True, # Halt to ensure there is no overwrite because of poor user arguments.
     use_this_scale = [1.0],
     use_this_offset = [0.0],
-    log_browser_tag = 'krizan',
-    log_browser_user = 'Christian Križan',
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     select_resonator_for_single_log_export = ''

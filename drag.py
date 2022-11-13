@@ -62,6 +62,8 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -509,6 +511,9 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             append_to_log_name_before_timestamp = 'find_lambda',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return

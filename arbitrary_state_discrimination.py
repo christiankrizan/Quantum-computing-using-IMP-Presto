@@ -63,6 +63,8 @@ def discriminate_state_11(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -499,6 +501,8 @@ def discriminate_state_11(
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     ## TODO!! This latter part is a brute-force approach to also
@@ -655,6 +659,8 @@ def discriminate_state_11(
                 select_resonator_for_single_log_export = str(u),
                 force_matrix_reshape_flip_row_and_column = True,
                 suppress_log_browser_export = suppress_log_browser_export,
+                log_browser_tag  = log_browser_tag,
+                log_browser_user = log_browser_user,
                 
                 save_raw_time_data = False
             ))
@@ -707,6 +713,8 @@ def discriminate_state_22(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1205,6 +1213,8 @@ def discriminate_state_22(
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     ## TODO!! This latter part is a brute-force approach to also
@@ -1368,6 +1378,8 @@ def discriminate_state_22(
                 select_resonator_for_single_log_export = str(u),
                 force_matrix_reshape_flip_row_and_column = True,
                 suppress_log_browser_export = suppress_log_browser_export,
+                log_browser_tag  = log_browser_tag,
+                log_browser_user = log_browser_user,
                 
                 save_raw_time_data = False
             ))

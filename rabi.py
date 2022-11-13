@@ -62,6 +62,8 @@ def amplitude_sweep_oscillation01_ro0(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -482,6 +484,8 @@ def amplitude_sweep_oscillation01_ro0(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -531,6 +535,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1047,6 +1053,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
                 select_resonator_for_single_log_export = str(u),
                 
                 suppress_log_browser_export = suppress_log_browser_export,
+                log_browser_tag  = log_browser_tag,
+                log_browser_user = log_browser_user,
             ))
     
     return string_arr_to_return
@@ -1093,6 +1101,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
     control_amp_01_B_max = +1.0,
     
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1569,6 +1579,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
                 select_resonator_for_single_log_export = str(u),
                 
                 suppress_log_browser_export = suppress_log_browser_export,
+                log_browser_tag  = log_browser_tag,
+                log_browser_user = log_browser_user,
             ))
     
     return string_arr_to_return
@@ -1613,6 +1625,8 @@ def amplitude_sweep_oscillation12_ro0(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -2071,6 +2085,8 @@ def amplitude_sweep_oscillation12_ro0(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -2117,6 +2133,8 @@ def amplitude_sweep_oscillation12_ro1(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -2582,6 +2600,8 @@ def amplitude_sweep_oscillation12_ro1(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
         
     return string_arr_to_return
@@ -2627,6 +2647,8 @@ def duration_sweep_oscillation12_ro1(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -3122,6 +3144,8 @@ def duration_sweep_oscillation12_ro1(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
         
     return string_arr_to_return

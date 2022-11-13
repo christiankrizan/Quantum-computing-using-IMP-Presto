@@ -61,6 +61,8 @@ def ramsey01_readout0(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -489,6 +491,9 @@ def ramsey01_readout0(
             append_to_log_name_before_timestamp = '01_with_bias',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -535,6 +540,8 @@ def ramsey01_multiplexed_ro(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1039,6 +1046,8 @@ def ramsey12_readout1(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1485,6 +1494,9 @@ def ramsey12_readout1(
             append_to_log_name_before_timestamp = '12' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -1526,6 +1538,8 @@ def ramsey01_echo_readout0(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1973,6 +1987,8 @@ def ramsey01_echo_readout0(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return

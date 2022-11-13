@@ -80,6 +80,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -616,6 +618,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -678,6 +682,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1285,6 +1291,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -1347,6 +1355,8 @@ def cz20_sweep_duration_and_detuning_state_probability(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1930,6 +1940,8 @@ def cz20_sweep_duration_and_detuning_state_probability(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -1988,6 +2000,8 @@ def cz20_Vz_ramsey_conditional_on_A(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -2557,7 +2571,9 @@ def cz20_Vz_ramsey_conditional_on_A(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -2620,6 +2636,8 @@ def cz20_Vz_ramsey_conditional_on_A_state_probability(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -3193,7 +3211,9 @@ def cz20_Vz_ramsey_conditional_on_A_state_probability(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -3249,6 +3269,8 @@ def cz20_tune_local_accumulated_phase(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -3809,7 +3831,9 @@ def cz20_tune_local_accumulated_phase(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -3870,6 +3894,8 @@ def cz20_tune_local_accumulated_phase_state_probability(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -4434,7 +4460,9 @@ def cz20_tune_local_accumulated_phase_state_probability(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -4489,6 +4517,8 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -5053,7 +5083,9 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -5111,6 +5143,8 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -5681,7 +5715,9 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return

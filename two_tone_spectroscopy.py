@@ -59,6 +59,8 @@ def pulsed01_flux_sweep(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -472,6 +474,9 @@ def pulsed01_flux_sweep(
             append_to_log_name_before_timestamp = '01'+with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
         
     return string_arr_to_return
@@ -518,6 +523,8 @@ def pulsed01_flux_sweep_multiplexed_ro(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1023,6 +1030,9 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 append_to_log_name_before_timestamp = '01_sweep_bias_multiplexed',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
+                
+                log_browser_tag  = log_browser_tag,
+                log_browser_user = log_browser_user,
             ))
 
     return string_arr_to_return
@@ -1062,6 +1072,8 @@ def pulsed01_power_sweep(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1471,6 +1483,8 @@ def pulsed12_flux_sweep(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1939,6 +1953,9 @@ def pulsed12_flux_sweep(
             append_to_log_name_before_timestamp = '12_sweep_bias',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
         
     return string_arr_to_return

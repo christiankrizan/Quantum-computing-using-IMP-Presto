@@ -94,6 +94,8 @@ def execute(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -819,6 +821,8 @@ def execute(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -885,6 +889,8 @@ def execute_DEMO(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1703,6 +1709,8 @@ def execute_DEMO(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return

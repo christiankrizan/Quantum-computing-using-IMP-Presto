@@ -72,6 +72,8 @@ def optimise_integration_window_g_e_f(
     
     use_log_browser_database = True,
     suppress_log_browser_export_of_suboptimal_data = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -469,6 +471,8 @@ def optimise_readout_frequency_g_e_f(
     use_log_browser_database = True,
     suppress_log_browser_export_of_suboptimal_data = True,
     suppress_log_browser_export_of_final_optimal_data = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -969,6 +973,8 @@ def get_complex_data_for_readout_optimisation_g_e_f(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1444,6 +1450,8 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             select_resonator_for_single_log_export = '',
             force_matrix_reshape_flip_row_and_column = True,
             suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
             
             save_raw_time_data = True
         ))
@@ -1478,6 +1486,8 @@ def get_time_traces_for_g_e_f(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'Time trace',
         "x_scaler": 1.0,
@@ -1809,6 +1819,9 @@ def get_time_traces_for_g_e_f(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
+            
             data_to_store_consists_of_time_traces_only = True,
         ))
     
@@ -1832,6 +1845,8 @@ def get_wire_to_readout_delay(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -2076,6 +2091,9 @@ def get_wire_to_readout_delay(
             append_to_log_name_before_timestamp = 'get_wire_delay',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
             
             data_to_store_consists_of_time_traces_only = True,
         ))

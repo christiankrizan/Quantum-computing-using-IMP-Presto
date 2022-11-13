@@ -77,6 +77,8 @@ def iswap_sweep_duration_and_detuning(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -636,7 +638,9 @@ def iswap_sweep_duration_and_detuning(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -697,6 +701,8 @@ def iswap_sweep_duration_and_detuning_state_probability(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1251,7 +1257,9 @@ def iswap_sweep_duration_and_detuning_state_probability(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -1303,6 +1311,8 @@ def iswap_sweep_duration_and_amplitude(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1861,6 +1871,9 @@ def iswap_sweep_duration_and_amplitude(
             append_to_log_name_before_timestamp = 'sweep_duration_and_amplitude',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -1917,6 +1930,8 @@ def iswap_sweep_amplitude_and_detuning(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -2449,7 +2464,9 @@ def iswap_sweep_amplitude_and_detuning(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -2507,6 +2524,8 @@ def iswap_cross_ramsey(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -3093,7 +3112,9 @@ def iswap_cross_ramsey(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export
+            suppress_log_browser_export = suppress_log_browser_export,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
@@ -3143,6 +3164,8 @@ def iswap_tune_local_accumulated_phase(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -3750,6 +3773,9 @@ def iswap_tune_local_accumulated_phase(
             append_to_log_name_before_timestamp = 'tune_local_accumulated_phase',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
