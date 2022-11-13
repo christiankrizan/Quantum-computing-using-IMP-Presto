@@ -16,6 +16,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
+from phase_calculator import bandsign
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -43,8 +44,8 @@ def pulsed01_flux_sweep(
     control_port,
     control_amp_01,
     control_duration_01,
-    control_freq_01_nco,
-    control_freq_01_centre_if,
+    control_freq_nco,
+    control_freq_01_centre,
     control_freq_01_span,
     
     coupler_dc_port,
@@ -143,7 +144,6 @@ def pulsed01_flux_sweep(
             integration_window_stop = integration_window_start + plo_clk_T
             print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
-        
         ''' Setup mixers '''
         
         # Readout port
@@ -156,7 +156,7 @@ def pulsed01_flux_sweep(
         )
         # Control port mixer
         pls.hardware.configure_mixer(
-            freq      = control_freq_01_nco,
+            freq      = control_freq_nco,
             out_ports = control_port,
             tune      = True,
             sync      = (coupler_dc_port == []),
@@ -229,20 +229,21 @@ def pulsed01_flux_sweep(
         )
         
         # Setup control pulse carrier, this tone will be swept in frequency.
+        control_freq_01_centre_if = coupler_freq_nco - control_freq_01_centre  
         f_start = control_freq_01_centre_if - control_freq_01_span / 2
-        f_stop = control_freq_01_centre_if + control_freq_01_span / 2
+        f_stop  = control_freq_01_centre_if + control_freq_01_span / 2
         control_freq_01_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
+        # Use the appropriate side band.
         control_pulse_01_freq_arr = control_freq_01_nco - control_freq_01_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports    = control_port,
             group           = 0,
-            frequencies     = control_freq_01_if_arr,
+            frequencies     = np.abs(control_freq_01_if_arr),
             phases          = np.full_like(control_freq_01_if_arr, 0.0),
-            phases_q        = np.full_like(control_freq_01_if_arr, +np.pi / 2),  # +pi/2 for LSB!
+            phases_q        = np.full_like(control_freq_01_if_arr, bandsign(control_freq_01_if_arr)),
         )
         
         
@@ -322,8 +323,7 @@ def pulsed01_flux_sweep(
         
         # Move to next iteration.
         T += repetition_delay
-
-
+        
         
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
@@ -381,8 +381,8 @@ def pulsed01_flux_sweep(
             'control_port', "",
             'control_amp_01', "FS",
             'control_duration_01', "s",
-            'control_freq_01_nco', "Hz",
-            'control_freq_01_centre_if', "Hz",
+            'control_freq_nco', "Hz",
+            'control_freq_01_centre', "Hz",
             'control_freq_01_span', "Hz",
             
             #'coupler_dc_port', "",
@@ -395,9 +395,19 @@ def pulsed01_flux_sweep(
             'coupler_bias_min', "FS",
             'coupler_bias_max', "FS",
         ]
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
         # Ensure the keyed elements above are valid.
         assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
@@ -440,8 +450,9 @@ def pulsed01_flux_sweep(
         # Create log lists
         log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            if len(hdf5_logs)/2 > 1:
-                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            if (len(hdf5_logs)/2 > 1):
+                if not ( ('Probability for state |') in hdf5_logs[kk] ):
+                    hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
             log_dict_list.append( get_dict_for_log_list(
                 log_entry_name = hdf5_logs[kk],
                 unit           = hdf5_logs[kk+1],
