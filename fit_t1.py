@@ -151,16 +151,15 @@ def exponential_decay(
 
 def fit_decay(delays, decaying_data):
     ''' Grab submitted data and perform a fit to find the exponential decay.
-        Where: 
     '''
     
     # Set time t to "delays" and get total duration.
     t = delays
     duration_of_experiment = t[-1] - t[0]
     
-    # Find a good first guess for t1.
-    # 0.63212055882 = 1 - e^(t/T1) where t = T1.
-    # Thus 0.6321... of the y_max - y_min is a decent initial guess.
+    # Find a good first guess for T1.
+    # 0.36787944117 = e^(t/T1) where t = T1.
+    # Thus 0.367879... of the y_max - y_min is a decent initial guess.
     y_excited = decaying_data[0]
     y_ground  = decaying_data[-1]
     pop_val_for_likely_T1 = 0.36787944117 * (y_excited - y_ground) + y_ground
@@ -171,10 +170,10 @@ def fit_decay(delays, decaying_data):
     # Perform fit with decaying_cosine_function as the model function,
     # and the initial guess of parameters as seen below.
     optimal_vals, covariance_mtx_of_opt_vals = curve_fit(
-        f = exponential_decay,
+        f     = exponential_decay,
         xdata = t,
         ydata = decaying_data,
-        p0 = (T1, y_excited, y_ground)
+        p0    = (T1, y_excited, y_ground)
     )
     
     # covariance_mtx_of_opt_vals is the covariance matrix of optimal_vals.
