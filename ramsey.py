@@ -15,7 +15,8 @@ import time
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
-from datetime import datetime
+from phase_calculator import bandsign
+from datetime import datetime ## TODO Not supposed to be here, I believe.
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -23,6 +24,7 @@ from data_exporter import \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save
+
 
 def ramsey01_readout0(
     ip_address,
@@ -1494,6 +1496,7 @@ def ramsey01_echo_readout0(
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq,
+    readout_freq_nco,
     readout_amp,
     readout_duration,
     
@@ -1516,13 +1519,13 @@ def ramsey01_echo_readout0(
     
     num_freqs,
     num_averages,
-    num_echo_pulses,
     
     num_delays,
     dt_per_ramsey_iteration,
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     axes =  {
         "x_name":   'default',
         "x_scaler": 1.0,
@@ -1537,7 +1540,7 @@ def ramsey01_echo_readout0(
         }
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
-        resonator.
+        resonator, using a single refocusing pulse ("echo").
     '''
     
     ## Input sanitisation
@@ -1546,17 +1549,11 @@ def ramsey01_echo_readout0(
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
-        
-    # TODO: Only one echo pulse is supported as of yet.
-    if num_echo_pulses > 1:
-        raise NotImplementedError("Halted! Currently, only one echo pulse is supported.")
-    # /TODO
     
     ## Initial array declaration
     
     # Declare time delay array for saving time data.
     delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)
-    
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -1602,9 +1599,9 @@ def ramsey01_echo_readout0(
         
         ''' Setup mixers '''
         
-        # Readout port
+        # Readout mixer
         pls.hardware.configure_mixer(
-            freq      = readout_freq,
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
@@ -1654,21 +1651,22 @@ def ramsey01_echo_readout0(
         
         # Setup readout pulse envelope
         readout_pulse = pls.setup_long_drive(
-            output_port = readout_stimulus_port,
-            group       = 0,
-            duration    = readout_duration,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
+            output_port =   readout_stimulus_port,
+            group       =   0,
+            duration    =   readout_duration,
+            amplitude   =   1.0,
+            amplitude_q =   1.0,
+            rise_time   =   0e-9,
+            fall_time   =   0e-9
         )
         # Setup readout carrier, considering that there is a digital mixer
+        readout_freq_if = readout_freq_nco - readout_freq
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(readout_freq_if),
             phases       = 0.0,
-            phases_q     = 0.0
+            phases_q     = bandsign(readout_freq_if),
         )
         
         
@@ -1774,20 +1772,23 @@ def ramsey01_echo_readout0(
                 # Re-apply the coupler bias tone.
                 pls.output_pulse(T, coupler_bias_tone)
             
-            # For doing the echo pulse(s), we need to know at what time
-            # we are supposed to play said pulse. This time will be
-            # T + control_duration_01 + ii*dt_per_ramsey_iteration + control_duration_01
-            # Let's schedule the echo pulse.
-            T_playecho = T + control_duration_01 + ii*dt_per_ramsey_iteration + control_duration_01
-            pls.output_pulse(T_playecho, control_pulse_pi_01)
-            
             # Apply the frequency-swept pi01 pulses.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01_half)
             T += control_duration_01
             
-            # Await some amount of time between pulses.
-            T += ii * dt_per_ramsey_iteration
+            # Await some amount of time between pulses. And, play
+            # the refocusing pulse in the middle of the measurement.
+            ## TODO! Is the set "delay" supposed to be constant
+            ##       regardless of the time duration of the echo pulse?
+            ##       I.e. is it supposed to be that way, that playing the echo
+            ##       pulse will add some (erroneous?) duration to the total
+            ##       measurement, equivalent to the duration of a pi pulse?
+            half_pause = int(round( ((ii * dt_per_ramsey_iteration)/2) / plo_clk_T)) * plo_clk_T
+            T += half_pause
+            pls.output_pulse(T, control_pulse_pi_01)
+            T += control_duration_01
+            T += half_pause
             
             # Apply the last pi_01_half pulse.
             pls.output_pulse(T, control_pulse_pi_01_half)
@@ -1834,6 +1835,18 @@ def ramsey01_echo_readout0(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
+        
         # Data to be stored.
         hdf5_steps = [
             'delay_arr', "s",
@@ -1867,89 +1880,71 @@ def ramsey01_echo_readout0(
             'num_delays', "",
             'dt_per_ramsey_iteration', "s",
         ]
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr_1', "FS",
+                'fetched_data_arr_2', "FS",
+            ]
         
-        # Assert that the received keys bear (an even number of) entries,
-        # implying whether a unit is missing.
-        number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and \
-            ((len(hdf5_singles) % 2) == 0) and \
-            ((len(hdf5_logs) % 2) == 0)
-        assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units provided. Someone likely forgot a comma."
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
         
         # Stylistically rework underscored characters in the axes dict.
-        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
-            axes[axis] = axes[axis].replace('/2','/₂')
-            axes[axis] = axes[axis].replace('/3','/₃')
-            axes[axis] = axes[axis].replace('_01','₀₁')
-            axes[axis] = axes[axis].replace('_02','₀₂')
-            axes[axis] = axes[axis].replace('_03','₀₃')
-            axes[axis] = axes[axis].replace('_12','₁₂')
-            axes[axis] = axes[axis].replace('_13','₁₃')
-            axes[axis] = axes[axis].replace('_20','₂₀')
-            axes[axis] = axes[axis].replace('_23','₂₃')
-            axes[axis] = axes[axis].replace('_0','₀')
-            axes[axis] = axes[axis].replace('_1','₁')
-            axes[axis] = axes[axis].replace('_2','₂')
-            axes[axis] = axes[axis].replace('_3','₃')
-            axes[axis] = axes[axis].replace('lambda','λ')
-            axes[axis] = axes[axis].replace('Lambda','Λ')
+        axes = stylise_axes(axes)
         
-        # Build step lists, re-scale and re-unit where necessary.
+        # Create step lists
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
-                temp_name   = hdf5_steps[ii]
-                temp_object = np.array( eval(hdf5_steps[ii]) )
-                temp_unit   = hdf5_steps[ii+1]
-                if ii == 0:
-                    if (axes['x_name']).lower() != 'default':
-                        # Replace the x-axis name
-                        temp_name = axes['x_name']
-                    if axes['x_scaler'] != 1.0:
-                        # Re-scale the x-axis
-                        temp_object *= axes['x_scaler']
-                    if (axes['x_unit']).lower() != 'default':
-                        # Change the unit on the x-axis
-                        temp_unit = axes['x_unit']
-                elif ii == 2:
-                    if (axes['z_name']).lower() != 'default':
-                        # Replace the z-axis name
-                        temp_name = axes['z_name']
-                    if axes['z_scaler'] != 1.0:
-                        # Re-scale the z-axis
-                        temp_object *= axes['z_scaler']
-                    if (axes['z_unit']).lower() != 'default':
-                        # Change the unit on the z-axis
-                        temp_unit = axes['z_unit']
-                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
-                temp_object = np.array( [eval(hdf5_singles[jj])] )
-                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
-        
-        log_dict_list = []
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
         for qq in range(len(axes['y_scaler'])):
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            log_entry_name = hdf5_logs[kk]
-            # Set unit on the y-axis
-            if (axes['y_unit']).lower() != 'default':
-                temp_log_unit = axes['y_unit']
-            else:
-                temp_log_unit = hdf5_logs[kk+1]
-            if (axes['y_name']).lower() != 'default':
-                # Replace the y-axis name
-                log_entry_name = axes['y_name']
-                if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
-            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
+            if (len(hdf5_logs)/2 > 1):
+                if not ( ('Probability for state |') in hdf5_logs[kk] ):
+                    hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
         
         # Save data!
         string_arr_to_return.append(save(
@@ -1961,7 +1956,7 @@ def ramsey01_echo_readout0(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [],
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1972,9 +1967,12 @@ def ramsey01_echo_readout0(
             outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
-            append_to_log_name_before_timestamp = '01_echo_with_bias',
+            source_code_of_executing_file = '', #get_sourcecode(__file__),
+            append_to_log_name_before_timestamp = '01_echo'+with_or_without_bias_string,,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
         ))
     
     return string_arr_to_return
