@@ -79,8 +79,6 @@ def pulsed01_flux_sweep(
         as a function of a swept pairwise coupler bias.
     '''
     
-    assert 1 == 0, "Halted! Note! Finding the sideband has been automated for this function, but is as of writing untested."
-    
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
@@ -231,13 +229,13 @@ def pulsed01_flux_sweep(
         )
         
         # Setup control pulse carrier, this tone will be swept in frequency.
-        control_freq_01_centre_if = coupler_freq_nco - control_freq_01_centre  
+        control_freq_01_centre_if = control_freq_nco - control_freq_01_centre  
         f_start = control_freq_01_centre_if - control_freq_01_span / 2
         f_stop  = control_freq_01_centre_if + control_freq_01_span / 2
         control_freq_01_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the appropriate side band.
-        control_pulse_01_freq_arr = control_freq_01_nco - control_freq_01_if_arr
+        control_pulse_01_freq_arr = control_freq_nco - control_freq_01_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -245,7 +243,7 @@ def pulsed01_flux_sweep(
             group           = 0,
             frequencies     = np.abs(control_freq_01_if_arr),
             phases          = np.full_like(control_freq_01_if_arr, 0.0),
-            phases_q        = np.full_like(control_freq_01_if_arr, bandsign(control_freq_01_if_arr)),
+            phases_q        = bandsign(control_freq_01_if_arr),
         )
         
         
