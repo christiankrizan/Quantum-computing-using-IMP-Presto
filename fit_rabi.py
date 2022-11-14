@@ -10,12 +10,14 @@ import h5py
 import numpy as np
 from numpy import hanning as von_hann
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 
 def fit_amplitude(
     data_or_filepath_to_data,
     control_amp_arr = [],
-    i_provided_a_filepath = False,
-    i_renamed_the_control_amp_arr_to = ''
+    i_provided_a_filepath = True,
+    i_renamed_the_control_amp_arr_to = '',
+    plot_for_this_many_seconds = 0.0
     ):
     ''' From supplied data or datapath,
         fit the Rabi oscillations to get a "period" in amplitude.
@@ -140,6 +142,33 @@ def fit_amplitude(
             
             # Store fit and its plusminus error bar.
             (fitted_values[current_res_ii]).append((pi_amplitude, fit_error/2))
+            
+            # Plot?
+            if plot_for_this_many_seconds != 0.0:
+                # Get trace data using the fitter's function and acquired values.
+                fit_curve = decaying_cosine_function(
+                    t          = control_amp_values,
+                    y_offset   = optimal_vals_x[0],
+                    amplitude  = optimal_vals_x[1],
+                    decay_rate = optimal_vals_x[2],
+                    period     = optimal_vals_x[3],
+                    phase      = optimal_vals_x[4]
+                )
+                plt.plot(control_amp_values, current_trace_to_fit, color="#034da3")
+                plt.plot(control_amp_values, fit_curve, color="#ef1620")
+                plt.title('Rabi oscillations (amplitude sweep)')
+                plt.ylabel('Demodulated readout amplitude [FS]')
+                plt.xlabel('π-pulse amplitude [FS]')
+                
+                # If inserting a positive time for which we want to plot for,
+                # then plot for that duration of time. If given a negative
+                # time, then instead block the plotted display.
+                if plot_for_this_many_seconds > 0.0:
+                    plt.show(block=False)
+                    plt.pause(plot_for_this_many_seconds)
+                    plt.close()
+                else:
+                    plt.show(block=True)
 
     # We're done.
     return fitted_values

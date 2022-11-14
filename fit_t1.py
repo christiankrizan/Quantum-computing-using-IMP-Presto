@@ -10,12 +10,14 @@ import h5py
 import numpy as np
 from numpy import hanning as von_hann
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 
 def fit_exponential_decay_t1(
     data_or_filepath_to_data,
     delay_arr = [],
     i_provided_a_filepath = True,
-    i_renamed_the_delay_arr_to = ''
+    i_renamed_the_delay_arr_to = '',
+    plot_for_this_many_seconds = 0.0
     ):
     ''' From supplied data or datapath, fit the energy relaxation decay
         to find out the exponent of which the energy decays.
@@ -133,6 +135,31 @@ def fit_exponential_decay_t1(
             
             # Store fit and its plusminus error bar.
             (fitted_values[current_res_ii]).append((t1_time, fit_error/2))
+            
+            # Plot?
+            if plot_for_this_many_seconds != 0.0:
+                # Get trace data using the fitter's function and acquired values.
+                fit_curve = exponential_decay(
+                    t         = delay_arr_values,
+                    T1        = optimal_vals_x[0],
+                    y_excited = optimal_vals_x[1],
+                    y_ground  = optimal_vals_x[2],
+                )
+                plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
+                plt.plot(delay_arr_values, fit_curve, color="#ef1620")
+                plt.title('Energy relaxation from the excited state')
+                plt.ylabel('Demodulated amplitude [FS]')
+                plt.xlabel('Delay after the initial π pulse [s]')
+                
+                # If inserting a positive time for which we want to plot for,
+                # then plot for that duration of time. If given a negative
+                # time, then instead block the plotted display.
+                if plot_for_this_many_seconds > 0.0:
+                    plt.show(block=False)
+                    plt.pause(plot_for_this_many_seconds)
+                    plt.close()
+                else:
+                    plt.show(block=True)
 
     # We're done.
     return fitted_values
