@@ -15,14 +15,14 @@ def fit_exponential_decay_t1(
     data_or_filepath_to_data,
     delay_arr = [],
     i_provided_a_filepath = True,
-    i_renamed_the_delay_arr_to = '',
-    plot_fit_for_these_many_seconds = 0.0
+    i_renamed_the_delay_arr_to = ''
     ):
     ''' From supplied data or datapath, fit the energy relaxation decay
         to find out the exponent of which the energy decays.
         
-        In principle, the decays is essentially = e^(t/T1).
-        Meaning that when t = T1 => e^(-1) = 0.367879.
+        In principle, the decay is essentially = e^(t/T1).
+        Meaning that when t = T1 => e^(-1) = 0.367879 for some normalised
+        peak-to-peak value.
         
         Meaning in turn that the returned value T1 is ~roughly~ the time value
         at which the qubit has lost 63.21% of its excited state population.
