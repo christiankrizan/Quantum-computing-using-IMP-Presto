@@ -627,7 +627,9 @@ def export_processed_data_to_file(
         labber_import_worked = True
     except:
         print("Could not import the Labber library; " + \
-              "no data was saved in the Log Browser compatible format")
+              "no data was saved in the Log Browser compatible format. " + \
+              "You should check whether your Python version is supported " + \
+              "by the Labber API, as is visible in the Labber/Scripts folder.")
     if labber_import_worked:
         # Create the log file. Note that the Log Browser API is bugged,
         # and adds a duplicate '.hdf5' file ending when using the database.
@@ -794,8 +796,8 @@ def convert_numpy_entries_in_ext_keys_to_list( ext_keys_to_convert ):
 def stitch(
     list_of_h5_files_to_stitch,
     delete_old_files_after_stitching = False,
-    halt_if_x_and_z_axes_are_identical = True, # Halt to ensure there is no overwrite because of poor user arguments.
-    use_this_scale = [1.0],
+    merge_if_x_and_z_axes_are_identical = True, # Halt to ensure there is no overwrite because of poor user arguments.
+    use_this_scale  = [1.0],
     use_this_offset = [0.0],
     log_browser_tag  = 'default',
     log_browser_user = 'default',
@@ -803,77 +805,80 @@ def stitch(
     suppress_log_browser_export = False,
     select_resonator_for_single_log_export = ''
     ):
-    ''' A function previously known as "stitch_exported_data_files."
-    
+    ''' A function that stiches together exported data files.
+        
         For all .h5 files in the .h5 file list argument,
         grab all data and stitch together one export.
         
-        Finally, delete all old files if requested.
+        Finally, delete all old files if so requested.
     '''
     
-    assert 1 == 0, "Halted! There is a 'Probability for state |00>' has the wrong size (500 vs 25) error that must be solved. The 500 vs. 25 scaling depends on the number of files input to the stitcher. Likely, the log_dict_list is not updated properly before sending the stitched file data into the data export routine."
-    
+    # First things first, let's check that the stitcher has something
+    # to work with.
     try:
         assert len(list_of_h5_files_to_stitch) != 0, \
-            "Error: the stitched routine was called for exported data files. " + \
-            "But, no data filepaths were provided."
+            "Error: the stitching routine was ordered to treat " + \
+            "exported data files. But, no data filepaths were provided."
     except TypeError as e:
         raise TypeError("Error: the data export stitcher was called with a non-list argument. The full type error is: \n"+str(e))
     
-    # There may be different scales and offsets in the files.
+    # There may be different scales and offsets in the provided files.
     # We'll keep a running tab to make sure these scales and offsets do
     # not differ.
-    running_scale  = []
-    running_offset = []
+    ##running_scale  = []
+    ##running_offset = []
     ## TODO: Grab the scale and offset data, and re-scale + re-offset the data.
     ##       The arguments use_this_scale and use_this_offset have been
-    ##       prepared for this purpose.
+    ##       prepared for this purpose. TODO NOTE: currently disabled.
     
     # There may be different time traces in the files.
     # We'll keep track so that no data files have data collected at
-    # different time trace settings.
+    # different time trace settings. Likewise, it's also possible that
+    # the user is attempting to stitch together a file
+    # that has no time trace information, with a file that does. In that
+    # case, let's catch this, and halt.
     running_vector_of_time = []
+    time_vectors_are_expected_in_the_data = False
     ## TODO: Somehow, stitch things together even if the data is
-    ##       collected at non-identical times.
+    ##       collected at non-identical times. TODO NOTE: currently disabled.
     
-    # There will be an attempt at grabbing a filepath for data exporting.
+    # Where are we supposed to output the stitched data?
+    # Let's create a blank variable for now, that will be filled-in
+    # once it's time to check for a suitable filepath.
     filepath_of_calling_script = []
     
-    # Prepare lists that will be appended onto in the upcoming with-case loop.
+    # The files that are to be stiched together will have two (or one) axes
+    # in common that were swept over during the measurement. Let's
+    # make sure we only consider these axes' swept data. Make flags.
+    first_swept_key_found  = False
+    second_swept_key_found = False
+    first_key  = []
+    second_key = []
+    
+    # Prepare lists that will hold the measurement file axes' data,
+    # as well as the measurement data held at these positions.
     list_of_swept_keys = []
-    swept_content      = []
+    curr_swept_content = []
+    # Do the same thing again, but with the stationary items
+    # that are not swept.
     list_of_unswept_keys = []
     unswept_content      = []
     
-    # Prepare a canvas. Its X and Z sizes are the sizes of the swept keys.
-    # These axes represent the swept keys. While, the content of the entry
-    # (so Y) is the processed_data entry for this XZ key.
-    canvas = []
-    canvas_axis_x = []
-    canvas_axis_z = []
-    previous_x_axes = []
-    previous_z_axes = []
+    # Prepare to extract and hog all of the processed data fed
+    # into the stitcher. Remember that processed_data feeds back information
+    # from every resonator. The first entry of processed_data corresponds
+    # to the first resonator (or first probability log), the second one to the
+    # second resonator (or second probability log) and so on.
+    big_fat_list_of_canvases = []
+    big_fat_list_of_x_axes   = []
+    big_fat_list_of_z_axes   = []
+    big_fat_list_length_has_been_established = False
     
     # Prepare ext_keys and log_dict_list, these variables will be
     # dictified later.
     ext_keys = []
     log_dict_list = []
     
-    # This def is used later for comparison.
-    def check_if_subarray_of_bigger_array( arr_to_test, big_array ):
-        ''' Take array, for every element in big array,
-            see if the array is present.
-        '''
-        # Forced numpy typecasting
-        arr_to_test = np.array(arr_to_test)
-        big_array   = np.array(big_array)
-        
-        # Perform test
-        present = False
-        for curr_row in big_array:
-            if (arr_to_test == curr_row).all():
-                present = True
-        return present
     
     # Treat every provided item in the list!
     for current_filepath_item_in_list in list_of_h5_files_to_stitch:
@@ -889,7 +894,7 @@ def stitch(
             # Notify the user.
             print("Stitching file: "+str(current_filepath_item_in_list))
             
-            # Did this file have a scale set for its data?
+            """# Did this file have a scale set for its data?
             try:
                 scale = h5f["User_set_scale_to_Y_axis"][()]
                 if running_scale == []:
@@ -899,9 +904,9 @@ def stitch(
                         raise NotImplementedError("File \""+current_filepath_item_in_list+"\" has a different scale than all previous files in the stitching; the stitcher does currently not support re-scaling.")
             except KeyError:
                 # "There is no scale, Gromit."
-                pass
+                pass"""
             
-            # Did this file have an offset to its data?
+            """# Did this file have an offset to its data?
             try:
                 offset = h5f["User_set_offset_to_Y_axis"][()]
                 if running_offset == []:
@@ -911,36 +916,144 @@ def stitch(
                         raise NotImplementedError("File \""+current_filepath_item_in_list+"\" has a different offset than all previous files in the stitching; the stitcher does currently not support re-offsetting the data files.")
             except KeyError:
                 # "There is no offset, Gromit."
-                pass
+                pass"""
             
-            # Make sure that the time traces are compatible.
+            # Make sure that the time traces are compatible in the
+            # provided data files.
             try:
                 vector_of_time = h5f["time_vector"][()]
+                # This worked, likely. Let's set the flag
+                # "we expect there to be time traces" = True.
+                time_vectors_are_expected_in_the_data = True
+                
+                # Do we know how the proper time trace for this stitching
+                # should look like? If not, then set a reference.
                 if running_vector_of_time == []:
                     running_vector_of_time = vector_of_time
                 else:
                     if not (vector_of_time == running_vector_of_time).all():
-                        raise NotImplementedError("File \""+current_filepath_item_in_list+"\" contains data collected with a time trace, that in turn differs from every other time trace in all other stitched files. Currently, the data stitcher does not support data collected with different time traces. In practice, time traces will be identical if the sampling rate and sampling window length are identical between the two measurements.")
+                        raise NotImplementedError( \
+                            "File \""+current_filepath_item_in_list+\
+                            "\" contains data, collected with a time trace "+ \
+                            "differing from every other time trace in the " + \
+                            "other to-be-stitched files. Currently, the "   + \
+                            "data stitcher does not support stitching data "+ \
+                            "collected using different time traces. In "    + \
+                            "practice, time traces will be identical if "   + \
+                            "the sampling rate and sampling window length " + \
+                            "are identical between measurements.")
             except KeyError:
-                # "There is no time, Gromit."
-                pass
+                # There is no time information in this file.
+                # But was there supposed to be any time information?
+                if time_vectors_are_expected_in_the_data:
+                    # Then the stitching is incompatible, at least as of now.
+                    raise NotImplementedError( \
+                        "Error! The file "+current_filepath_item_in_list    + \
+                        " contained no legible time trace information. But "+ \
+                        "previous file(s) did. Stitching files together "   + \
+                        "with and without time trace information is "       + \
+                        "currently not supported.")
             
-            # Get filepath and file name for making a file export.
+            # At this point in the code, the time trace information (if any)
+            # in the current file, matches the expected time trace information
+            # based on all other files processed this far.
+            
+            # Where should we put the export once finished?
+            # If this is not known by now, then let's get a filepath
+            # and file name for realising said file export.
             if filepath_of_calling_script == []:
                 try:
                     filepath_of_calling_script = os.path.abspath((h5f["filepath_of_calling_script"][()]).decode('UTF-8'))
+                    # Are you currently working from a different
+                    # computer than that which made this data?
+                    if not os.path.exists(filepath_of_calling_script):
+                        # You are. Then get a better filepath.
+                        filepath_of_calling_script = os.path.realpath(__file__)
                 except KeyError:
-                    # "There is no path, Gromit."
+                    # The first file-to-be-stitched contained insufficient
+                    # information for figuring out where to store the
+                    # stitched-together export. Let's just grab
+                    # the path of the file which called the stitcher.
                     filepath_of_calling_script = os.path.realpath(__file__)
             
-            # Grab data! List all .keys(), remove the known culprits,
-            # and make arrays.
-            ##list_of_swept_keys = [] # See outside of the with-case
-            ##swept_content      = [] # See outside of the with-case
-            for item in h5f.keys():
+            # Our safety checks have all passed this far.
+            
+            # Let's check whether the file contains information about
+            # which keys corresponds to the first (and second) one(s) swept
+            # in the measurement.
+            try:
+                # Do we know which is the "first key" that we want to look for?
+                if not first_swept_key_found:
+                    # We don't. Try to get it. Update the list of swept keys.
+                    first_key = str((h5f["First_key_that_was_swept"][()]).decode("utf-8"))
+                    # Just to make sure we don't mess up the variable
+                    # list_of_swept_keys, let's double-check that it doesn't
+                    # already contain information about a second_key value.
+                    if not second_swept_key_found:
+                        # Good.
+                        list_of_swept_keys.append(first_key)
+                    else:
+                        # Oh shit. Well, make sure that the first key
+                        # is still the first value anyway.
+                        list_of_swept_keys.insert(0, first_key)
+                        # Check that the second key is indeed the second value.
+                        assert list_of_swept_keys[1] == second_key, \
+                            "Error! Irrecoverable discrepancy detected among first and second swept key entries in the provided measurement files. Some file did probably not provide a first_key entry, while providing a second_key entry."
+                    first_swept_key_found = True
+            except KeyError:
+                # This file contains no information regarding which was the
+                # first key to be swept in the measurement.
+                ## BUT WAS IT SUPPOSED TO??
+                if first_swept_key_found:
+                    # Discrepancy detected!
+                    raise KeyError( \
+                    "Error! The data stitcher expected the first swept " + \
+                    "axis of file \""+str(current_filepath_item_in_list) + \
+                    "\" to be \""+first_key+"\", but this file did not " + \
+                    "report that it contains data for this expected axis.")
+                # All right fine, the file what not expected to contain
+                # an entry for the first swept key. But it still has none.
+                raise KeyError( \
+                    "Error! The file \""+str(current_filepath_item_in_list) + \
+                    "\" contains no information regarding which key was "   + \
+                    "the first one to be swept in the measurement. It is "  + \
+                    "not possible to establish which axes are to be "       + \
+                    "assigned to the stitched file, without resorting to "  + \
+                    "guesswork.")
+            try:
+                # Do we know which is the "second key" that we want to look for?
+                if not second_swept_key_found:
+                    # We don't. Try to get it.
+                    second_key = str((h5f["Second_key_that_was_swept"][()]).decode("utf-8"))
+                    second_swept_key_found = True
+            except KeyError:
+                # This file contains no information regarding which was the
+                # second key to be swept in the measurement. That could
+                # very well be fine. Let's just confirm that there
+                # was no expected second swept key in the measurement.
+                if second_swept_key_found:
+                    # Discrepancy detected!
+                    raise KeyError( \
+                    "Error! The data stitcher expected the second swept " + \
+                    "axis of file \""+str(current_filepath_item_in_list) + \
+                    "\" to be \""+second_key+"\", but this file did not " + \
+                    "report that it contains data for this expected axis.")
+            
+            # By now, we know which are the swept axes of the measurement file.
+            # And in fact, we know which are the swept axes of all files,
+            # provided no upcoming file is misconfigured.
+            
+            # Let's get all other, swept, values of this file.
+            if ext_keys == []:
+                ext_keys = json.loads( h5f.attrs["ext_keys"] )
+            if log_dict_list == []:
+                log_dict_list = json.loads( h5f.attrs["log_dict_list"] )
+            
+            ## TODO This part should likely be removed.
+            """for item in h5f.keys():
                 if item.startswith('fetched_data_arr'):
                     # Raw data will not be stitched, that's kind of the point.
-                    print("WARNING: File \""+current_filepath_item_in_list+"\" contains raw data. This data will not be excluded from the stitched-together file export. The whole point of having the data stitcher is to avoid loading the primary PC memory with hundreds of gibibytes of data.")
+                    print("WARNING: File \""+current_filepath_item_in_list+"\" contains raw data. This raw data will be excluded from the stitched-together file export. The whole point of having the data stitcher is to avoid loading the primary PC memory with hundreds of gibibytes of data.")
                 elif ( \
                     (item != 'time_vector') and \
                     (item != 'processed_data') and \
@@ -948,209 +1061,197 @@ def stitch(
                     (item != 'User_set_offset_to_Y_axis') and \
                     (item != 'filepath_of_calling_script') and \
                     (item != 'First_key_that_was_swept') and \
-                    (item != 'Second_key_that_was_swept') ):
-                    
-                    # Was this parameter one that's assumed to be an
-                    # axis in Labber's Log Browser? Then move it to
-                    # place 0 or 1.
-                    first_key = str((h5f["First_key_that_was_swept"][()]).decode("utf-8"))
-                    second_key = str((h5f["Second_key_that_was_swept"][()]).decode("utf-8"))
-                    first_key_found = False
-                    
-                    # If the entry at first_key, or second_key, was stored
-                    # as an attribute, then said value should go in
-                    # unswept_content, not swept content.
-                    try:
-                        dummy1 = h5f[ first_key ][()]
-                        del dummy1
-                    except KeyError:
-                        # The value is an attribute.
-                        first_key = "FIRST_KEY_IS_NOT_A_SWEPT_VALUE"
-                        ## TODO:    But this entry should still be at the
-                        ##          first place of the unswept_content list!
-                    try:
-                        dummy2 = h5f[ second_key ][()]
-                        del dummy2
-                    except KeyError:
-                        # The value is an attribute.
-                        second_key = "SECOND_KEY_IS_NOT_A_SWEPT_VALUE"
-                        ## TODO:    But this entry should still be at the
-                        ##          second place of the unswept_content list!
-                    
-                    # Let's get the swept values.
-                    if not (item in list_of_swept_keys):
-                        # There was a swept parameter that should be added.
-                        if (item == first_key):
-                            # This item must be in the start.
-                            list_of_swept_keys.insert(0,str(item))
-                            swept_content.insert(0,h5f[str(item)][()])
-                            first_key_found = True
-                        elif (item == second_key):
-                            if first_key_found:
-                                # Then insert at position 2, so [1]
-                                list_of_swept_keys.insert(1,str(item))
-                                swept_content.insert(1,h5f[str(item)][()])
-                            else:
-                                # Then insert in the very beginning, so [0]
-                                list_of_swept_keys.insert(0,str(item))
-                                swept_content.insert(0,h5f[str(item)][()])
-                        else:
-                            # Just append this swept item to the list anyhow.
-                            list_of_swept_keys.append(str(item))
-                            swept_content.append(h5f[str(item)][()])
-                        
-                    else:
-                        # The swept quantity was in the previous list.
-                        # Let's update its values.
-                        swept_content[list_of_swept_keys.index(str(item))] = (h5f[str(item)][()])
+                    (item != 'Second_key_that_was_swept') and \
+                    (item != first_key) and (item != second_key)):
+                    # For now, let's just catch whether usage cases exist
+                    # where swept entries must be considered beyond the
+                    # first two swept keys.
+                    assert NotImplementedError("Halted! The file \""+current_filepath_item_in_list+"\" contained more swept entries than just those belonging to the axes of the measurement. The triggering entry was \""+str(item)+"\"")
+            """
             
-            ## Update the canvas with new values!
-            
-            # Get values.
+            # By now, we are ready to grab data held within this file.
             curr_processed_data = h5f["processed_data"][()]
             
-            # First, grab static measurement variables first.
-            # This way, we can "repair" a measurement with only a single
-            # "swept" datapoint.
-            ##list_of_unswept_keys = [] # See outside of the with-case
-            ##unswept_content      = [] # See outside of the with-case
-            for item in h5f.attrs.keys():
-                if  ((item != 'ext_keys') and \
-                    (item != 'log_dict_list') ):
-                    # There was an unswept parameter that might need appendage.
-                    if not (item in list_of_unswept_keys):
-                        list_of_unswept_keys.append(str(item))
-                        unswept_content.append(h5f.attrs[str(item)])
+            # Have we established how big the big_fat_list_of_canvases will be?
+            # It will have the same number of entries as there are resonators
+            # read out between the different files.
+            if not big_fat_list_length_has_been_established:
+                # This has not been established. Then, declare
+                # the big_fat_list_of_canvases to be the same
+                # length as the number of resonators (or probabilities)
+                # Repeat this for the big_fat_list_of_canvases too.
+                big_fat_list_of_canvases = [ [] for _ in range(len(curr_processed_data)) ]
+                big_fat_list_of_x_axes   = [ [] for _ in range(len(curr_processed_data)) ]
+                big_fat_list_of_z_axes   = [ [] for _ in range(len(curr_processed_data)) ]
+                big_fat_list_length_has_been_established = True
             
-            # Store what x- and z axes are being used, in order to look
-            # out for overwrites.
-            try:
-                previous_x_axes.append(swept_content[0])
-            except IndexError:
-                # There are apparently *no* swept values.
-                # Grab the first value of the unswept ones.
-                swept_content[0] = unswept_content[0]
-                previous_x_axes.append(swept_content[0])
-            try:
-                previous_z_axes.append(swept_content[1])
-            except IndexError:
-                # There is only a single swept value.
-                swept_content.append(unswept_content[1])
-                previous_z_axes.append(swept_content[1])
+            # The final data will be stored in a (curr_)"canvas" with
+            # some 2D dimension corresponding to the data collected at
+            # resonator n in the currently treated file.
+            # If there are 7 resonators, there will be 7 canvases held within
+            # the currently processed file.
+            for entry_idx in range(len(curr_processed_data)):
+                # Grab a new canvas (for this resonator) to be added into
+                # the big fat list. curr_canvas WILL be a 2D object,
+                # although this object might have only one row.
+                # Repeat the same procedure for getting the X and Z axes.
+                curr_canvas = curr_processed_data[entry_idx]
+                big_fat_list_of_canvases[entry_idx].append(curr_canvas)
+                big_fat_list_of_x_axes[entry_idx].append( h5f[first_key][()]  )
+                ## It is possible that the 2D-sweep has merely a single
+                ## swept dimension. In that case, let's catch this, and
+                ## simply ignore the big_fat_list_of_z_axes.
+                try:
+                    big_fat_list_of_z_axes[entry_idx].append( h5f[second_key][()] )
+                except KeyError:
+                    # If faced with an "object doesn't exist" error,
+                    # we'll assume that the sweep is one-dimensional.
+                    # The second_key has been stored in a different way in the
+                    # .hdf5 file.
+                    big_fat_list_of_z_axes[entry_idx].append( h5f.attrs[second_key] )
             
-            # Remember, processed_data consists of n entries for n resonators.
-            # Every entry processed_data[n] contains the XZ canvas for that
-            # resonator (or, discriminated state).
+            # The big fat list of canvases has been updated, per resonator.
+            # Meaning that, big_fat_list_of_canvases[res] is the combined
+            # data of every measurement file provided, for resonator res.
             
-            # Figure out how many resonator (or discriminated state) entries
-            # the processed data contains, and what index_x and index_z to
-            # insert at.
-            if len(canvas) == 0:
-                # Simple choice.
-                canvas = curr_processed_data
-                canvas_axis_x = swept_content[0]
-                canvas_axis_z = swept_content[1]
-            else:
-                # Not so simple choice, there are already entries in the
-                # canvas.
-                if np.array_equal(canvas_axis_x, swept_content[0]):
-                    ## All x-values are identical. Should we simply append more rows?
-                    # Ensure that the order is correct (entries fall / rise)
-                    if  (((swept_content[1])[0] > canvas_axis_z[-1]) and
-                        ((swept_content[1])[-1] > canvas_axis_z[0])):
-                        # My new entries all rise from where the canvas stops.
-                        new_canvas = []
-                        for res in range(len(canvas)):
-                            new_canvas.append(np.append(canvas[res], curr_processed_data[res], axis = 0))
-                        canvas = np.array(new_canvas)
-                        canvas_axis_z = np.append(canvas_axis_z, swept_content[1])
-                    elif (((swept_content[1])[-1] < canvas_axis_z[0]) and
-                         ((swept_content[1])[0] < canvas_axis_z[-1])):
-                        # My new entries all fall below the previous entries
-                        # in the canvas.
-                        new_canvas = []
-                        for res in range(len(canvas)):
-                            new_canvas.append(np.append(curr_processed_data[res], canvas[res], axis = 0))
-                        canvas = np.array(new_canvas)
-                        canvas_axis_z = np.append(swept_content[1], canvas_axis_z)
-                    
-                    elif check_if_subarray_of_bigger_array(swept_content[1], previous_z_axes):
-                        ## TODO: The function above performs the following check.
-                        ## elif (swept_content[1] in previous_z_axes):
-                    
-                        # We detected an overwrite risk! Halt?
-                        if halt_if_x_and_z_axes_are_identical:
-                            raise ValueError("Halted! Overwrite risk detected. The file \""+str(current_filepath_item_in_list)+"\" has an identical x-axis to all other previous files, but the new file's z-axis risks overwriting data that has already been added. Set the function argument \"halt_if_x_and_z_axes_are_identical = False\" to ignore and attempt to append the new data anyway.")
-                        # At this point, we try to simply append new resonator / discrimination entries and hope for the best.
-                        canvas = np.append(canvas, curr_processed_data, axis = 0)
-                    else:
-                        raise NotImplementedError("Halted! Interleaving data is currently not supported.") # TODO
-                elif np.array_equal(canvas_axis_z, swept_content[1]):
-                    ## All z-values are identical. Should we simply append more columns?
-                    # Ensure that the order is correct (entries fall / rise)
-                    if  (((swept_content[0])[0] > canvas_axis_x[-1]) and
-                        ((swept_content[0])[-1] > canvas_axis_x[0])):
-                        # My new entries all rise from where the canvas stops.
-                        new_canvas = []
-                        for res in range(len(canvas)):
-                            new_canvas.append(np.append(canvas[res], curr_processed_data[res], axis = -1)) # N.B. appended column-wise
-                        canvas = np.array(new_canvas)
-                        canvas_axis_x = np.append(canvas_axis_x, swept_content[0])
-                    elif (((swept_content[0])[-1] < canvas_axis_x[0]) and
-                         ((swept_content[0])[0] < canvas_axis_x[-1])):
-                        # My new entries all fall below the previous entries
-                        # in the canvas.
-                        new_canvas = []
-                        for res in range(len(canvas)):
-                            new_canvas.append(np.append(curr_processed_data[res], canvas[res], axis = -1)) # N.B. appended column-wise
-                        canvas = np.array(new_canvas)
-                        canvas_axis_x = np.append(swept_content[0], canvas_axis_x)
-                    
-                    elif check_if_subarray_of_bigger_array(swept_content[0], previous_x_axes):
-                        ## TODO: The function above performs the following check.
-                        ##  elif (swept_content[0] == previous_x_axes).all():
-                        
-                        # We detected an overwrite risk! Halt?
-                        if halt_if_x_and_z_axes_are_identical:
-                            raise ValueError("Halted! Overwrite risk detected. The file \""+str(current_filepath_item_in_list)+"\" has an identical z-axis to all other previous files, but the new file's x-axis risks overwriting data that has already been added. Set the function argument \"halt_if_x_and_z_axes_are_identical = False\" to ignore and attempt to append the new data anyway.")
-                        # At this point, we try to simply append new resonator / discrimination entries and hope for the best.
-                        for res in range(len(curr_processed_data)):
-                            canvas = np.append(canvas, curr_processed_data, axis = 0) # N.B. should be axis = 0, not 1.
-                    else:
-                        raise NotImplementedError("Halted! Interleaving data is currently not supported.") # TODO
-                else:
-                    # There are no common axes. All hope is lost; all data entries must be interleaved.
-                    raise NotImplementedError("Halted! Interleaving data is currently not supported.") # TODO
-                    
-            # Get initial values for the ext_keys and log_dict_list keys.
-            if ext_keys == []:
-                ext_keys = json.loads( h5f.attrs["ext_keys"] )
-            elif log_dict_list == []:
-                log_dict_list = json.loads( h5f.attrs["log_dict_list"] )
+    # At this point, we have stored all data that there is to stitch together
+    # in a massive variable. We may now assemble all data together.
+    ## Let's detect at this point whether we like to paint a big canvas,
+    ## or whether every axis is identical, meaning that we'd like to
+    ## merge files together.
+    if merge_if_x_and_z_axes_are_identical:
+        # If this input argument flag is set, then typically
+        # the user expects that all axes are identical,
+        # and that they merely wish to merge one-dimensional sweeps
+        # together. First, we must check that the Z-axis is in fact just
+        # a one-value thing.
+        expected_x_axis = []
+        expected_z_axis = []
+        expected_x_axis_is_defined = False
+        expected_z_axis_is_defined = False
+        single_x_axis_for_this_resonator = [ [] for _ in range(len(big_fat_list_of_x_axes)) ]
+        single_z_axis_for_this_resonator = [ [] for _ in range(len(big_fat_list_of_z_axes)) ]
+        for current_resonator in range(len(big_fat_list_of_canvases)):
+            # Grab expected X-axis if undefined.
+            if not expected_x_axis_is_defined:
+                expected_x_axis = (big_fat_list_of_x_axes[current_resonator])[0]
+            for every_x_axis_in_this_resonator_entry in (big_fat_list_of_x_axes[current_resonator]):
+                is_every_x_value_the_same_value = True
+                for obj in range(len(expected_x_axis)):
+                    if(expected_x_axis[obj] != every_x_axis_in_this_resonator_entry[obj]):
+                        is_every_x_value_the_same_value = False
+                assert is_every_x_value_the_same_value, \
+                    "Error! The user requested a set of files to be merged, stating (by argument) that they would all share the same X-axis. But all axes are not identical, and thus the files cannot be merged this way."
+                del is_every_x_value_the_same_value
+            # If we reached this point, then the X-axis is fine for this
+            # resonator entry.
+            single_x_axis_for_this_resonator[current_resonator] = expected_x_axis
+            
+            # Grab expected Z-axis if undefined.
+            if not expected_z_axis_is_defined:
+                expected_z_axis = (big_fat_list_of_z_axes[current_resonator])[0]
+            for every_z_axis_in_this_resonator_entry in (big_fat_list_of_z_axes[current_resonator]):
+                is_every_z_value_the_same_value = True
+                for obj in range(len(expected_z_axis)):
+                    if(expected_z_axis[obj] != every_z_axis_in_this_resonator_entry[obj]):
+                        is_every_z_value_the_same_value = False
+                assert is_every_z_value_the_same_value, \
+                    "Error! The user requested a set of files to be merged, stating (by argument) that they would all share the same X-axis. But all axes are not identical, and thus the files cannot be merged this way."
+                del is_every_z_value_the_same_value
+            # If we reached this point, then the Z-axis is fine for this
+            # resonator entry.
+            single_z_axis_for_this_resonator[current_resonator] = expected_z_axis
+        
+        ## One more check: for this merge method to work,
+        ## we expect the Z-axis to be just a single value for
+        ## all measurements.
+        assert len(expected_z_axis) == 1, \
+            "Error! All axes are identical in the supplied measurement files, which is OK for the requested data stiching method. But the Z-axes in every file is not single-valued, which is not OK for this stitching method. The files cannot be merged. The length of the Z-axis in every supplied file was: "+str(len(expected_z_axis))
+        
+        # If we've reached this point, then we have confirmed that
+        # every axis (per resonator) is identical in this measurement.
+        # We can go ahead an do the merge as expected.
+        
+        # For this merge, we will change the Z-axis, to reflect the N files
+        # that we are about to merge.
+        merged_file_index = []
+        for make_list in range(len(big_fat_list_of_canvases[0])):
+            merged_file_index.append(make_list + 1)
+        merged_file_index = np.array(merged_file_index)
+        
+        # Create a new Z-axis key, insert it. Remove badness traces.
+        new_key_to_be_inserted = ext_keys[1].copy()
+        new_key_to_be_inserted['name'] = 'merged_file_index'
+        new_key_to_be_inserted['unit'] = ''
+        new_key_to_be_inserted['values'] = merged_file_index
+        ext_keys.insert(1, new_key_to_be_inserted.copy())
+        del new_key_to_be_inserted
+        
+        # Set up the final log dict list.
+        ## Will we have to export a multiplexed readout? Or a file
+        ## bearing several probability maps?
+        if len(big_fat_list_of_canvases) > 1:
+            ## TODO Add support for this kind of a merger of multiplexed readouts.
+            ##      This will require some code to be rewritten here, 10 rows up, 20 rows down, or so. But it's not very hard at all.
+            ##      IF I REMEMBER CORRECTLY then every new list entry in processed_data is just another resonator.
+            raise NotImplementedError("Halted! For now, stitching of multiplexed readout files is not supported. Although adding this support is fairly straight forward.")
+        else:
+            # If we reach this point, we know that the log_dict_list is
+            # fine just the way it is, and needs no modification.
+            pass
+        
+        # Process the big fat canvas into something that can be
+        # sent into the final export. We are still within the special
+        # merger usage case, thus we know that every entry of
+        # big_fat_list_of_canvases, is just another trace for the final data.
+        # Simple enough.
+        processed_data = []
+        ## TODO figure out why the fuck there are [0] all over the damn place.
+        for current_resonator in range(len(big_fat_list_of_canvases)):
+            len_x = len( (big_fat_list_of_canvases[current_resonator])[0][0] )
+            len_z = len(big_fat_list_of_canvases[current_resonator])
+            final_canvas = np.zeros( (len_z, len_x) )
+            for row in range(len_z):
+                final_canvas[row] = (big_fat_list_of_canvases[current_resonator])[row][0]
+            processed_data.append( final_canvas )
+            del final_canvas
+        
+        ## TODO add support for scale and offset.
+        print("WARNING: the data stitcher does currently not support scaling and offseting the data when used for mergers that you are attempting to achieve.")
+        running_scale  = [1.0]
+        running_offset = [0.0]
+        
+        # We may now go on to export the final, stitched, data.
+        
+    else:
+        
+        ## TODO REMEMBER FOR THE FUTURE THAT WHAT IS EXPORTED IN THE END
+        ##      IS (FOR INSTANCE) running_scale, running_offset
     
-    # Prepare the ext_keys and log_dict_list from the stitched data files.
-    for li in range(len(ext_keys)):
-        list_item_dict = ext_keys[li].copy()
-        if list_item_dict['name'] in list_of_swept_keys:
-            # This value in the ext_keys list has been changed, and must
-            # be updated in order not to get a Labber Log Browser error.
-            # The Log browser error, like many Labber API errors,
-            # will be indistinct and unhelpful. The issue is that there
-            # is no correct key entry corresponding to the new plot axes.
-            # We must make these axes here (by updating ext_keys correctly).
-            idx_of_new_value = list_of_swept_keys.index( list_item_dict['name'] )
-            if idx_of_new_value == 0:
-                list_item_dict['values'] = canvas_axis_x
-            elif idx_of_new_value == 1:
-                list_item_dict['values'] = canvas_axis_z
-            else:
-                list_item_dict['values'] = swept_content[idx_of_new_value]
-                # TODO: Now, how should you deal with static values
-                # that change from measurement to measurement, like
-                # "coupler_bias_min" and "coupler_bias_max"?
-                # Currently, I have chosen to ignore it.
-        ext_keys[li] = list_item_dict.copy()
-        del list_item_dict
+        raise NotImplementedError("Halted. Not finished.")
+        for current_resonator in range(len(big_fat_list_of_canvases)):
+            # Get current big fat set of 2D-plots to merge.
+            current_list_of_2D_arrays_to_merge = big_fat_list_of_canvases[current_resonator]
+            current_list_of_corresponding_x_axes = big_fat_list_of_x_axes[current_resonator]
+            current_list_of_corresponding_z_axes = big_fat_list_of_z_axes[current_resonator]
+            
+            # The list current_list_of_2D_arrays_to_merge contains N entries
+            # where N is the number of files the user provided to the stitcher.
+            # Every entry in current_list_of_2D_arrays_to_merge will be
+            # merged together into one 2D array. That 2D array can have a single
+            # pixel in Z-height, mind you. Or X-height for that matter.
+            
+            # Go through every axis and assemble the final X (or Z) axis
+            # of the final canvas.
+            for x_axis_assembly_sweep in range(len(current_list_of_corresponding_x_axes)):
+                print(current_list_of_corresponding_x_axes[x_axis_assembly_sweep])
+            for z_axis_assembly_sweep in range(len(current_list_of_corresponding_z_axes)):
+                pass
+            
+            '''Using these axes values, assemble the final 2D canvas for this resonator.
+            ## First, look at every axis [for resonator N], and make the final expected final_axis [for resonator N] for dims Z and X. Then fill this big-ass 2D plot with 0.0 in every pixel. When making the final 2D plot [for resonator N], go pixelpixel by pixelpixel ALONG THE AXES OF THE CURRENT_2D_PLOT and pick out every value that is to be added to some pixelpixel in the big-ass plot.
+            ## If you notice that some entry in the big-ass plot IS NOT 0.0 --> THIS IS WHERE YOU ARE SUPPOSED TO TRIGGER THE OVERWRITE DETECTION, AND WARN THE USER THAT AN OVERWRITE HAS BEEN DETECTED AT VALUE pixelpixel.
+            '''
     
     # Export combined data!
     filepath_to_exported_h5_file = export_processed_data_to_file(
@@ -1159,7 +1260,7 @@ def stitch(
         ext_keys = ext_keys,
         log_dict_list = log_dict_list,
         
-        processed_data = canvas,
+        processed_data = processed_data,
         fetched_data_scale = running_scale,
         fetched_data_offset = running_offset,
         
@@ -1184,4 +1285,3 @@ def stitch(
             pass #TODO
     
     return filepath_to_exported_h5_file
-    
