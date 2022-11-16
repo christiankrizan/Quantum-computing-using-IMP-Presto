@@ -61,6 +61,7 @@ def ramsey01_readout0(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -492,6 +493,7 @@ def ramsey01_readout0(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
@@ -540,6 +542,7 @@ def ramsey01_multiplexed_ro(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -559,9 +562,10 @@ def ramsey01_multiplexed_ro(
         DC-tunable SQUID coupler. Readout is multiplexed on both qubits.
     '''
     
+    raise NotImplementedError("Halted! This function has too much legacy code in it. In principle it works just fine, but to be sure - I've hard-halted the function for now.")
+    
     # Declare time delay array for saving time data.
     delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)
-    
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -1046,6 +1050,7 @@ def ramsey12_readout1(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1495,6 +1500,7 @@ def ramsey12_readout1(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))

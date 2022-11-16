@@ -60,6 +60,7 @@ def t1_sweep_flux(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -481,6 +482,7 @@ def t1_sweep_flux(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
@@ -528,6 +530,7 @@ def t1_sweep_flux_multiplexed_ro0(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1018,6 +1021,7 @@ def t1_sweep_flux_multiplexed_ro0(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
