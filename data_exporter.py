@@ -795,7 +795,6 @@ def convert_numpy_entries_in_ext_keys_to_list( ext_keys_to_convert ):
 
 def stitch(
     list_of_h5_files_to_stitch,
-    delete_old_files_after_stitching = False,
     merge_if_x_and_z_axes_are_identical = True, # Halt to ensure there is no overwrite because of poor user arguments.
     use_this_scale  = [1.0],
     use_this_offset = [0.0],
@@ -804,6 +803,7 @@ def stitch(
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     select_resonator_for_single_log_export = ''
+    delete_old_files_after_stitching = False,
     ):
     ''' A function that stiches together exported data files.
         
@@ -1279,9 +1279,9 @@ def stitch(
     
     # Now, delete the old files.
     if delete_old_files_after_stitching:
-        raise NotImplementedError("Halted! Deleting old files not yet implemented.")
         for item_to_delete in list_of_h5_files_to_stitch:
-            # TODO DELETE!
-            pass #TODO
-    
+            # Does the file exist? Sanity check.
+            if os.path.exists(item_to_delete):
+                # Gentlemen, it has been a pleasure to play with you all tonight.
+                os.remove(item_to_delete)
     return filepath_to_exported_h5_file
