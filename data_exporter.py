@@ -802,7 +802,7 @@ def stitch(
     log_browser_user = 'default',
     use_log_browser_database = True,
     suppress_log_browser_export = False,
-    select_resonator_for_single_log_export = ''
+    select_resonator_for_single_log_export = '',
     delete_old_files_after_stitching = False,
     ):
     ''' A function that stiches together exported data files.
