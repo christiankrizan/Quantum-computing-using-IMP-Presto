@@ -474,7 +474,7 @@ def t1_sweep_flux(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = '01'+with_or_without_bias_string,
+            append_to_log_name_before_timestamp = with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             

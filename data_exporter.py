@@ -594,7 +594,7 @@ def export_processed_data_to_file(
         Log Browser (if possible) and as a .hdf5 file using H5PY.
     '''
     
-    # First, check if the timestamp is valid.
+    # Check if the timestamp is valid.
     if timestamp == 0:
         # Invalid. Make valid.
         timestamp = get_timestamp_string()
@@ -620,16 +620,35 @@ def export_processed_data_to_file(
     if (not timestamp.startswith('_')) and (timestamp != ''):
         timestamp = '_' + timestamp
     
+    # Just to be sure, check whether there is an overwrite risk imminent.
+    # Such an overwrite has in fact happened, typically when stitching
+    # just a few files together from some command line script.
+    safe_from_overwrite = False
+    while (not safe_from_overwrite):
+        h5py_string = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.h5'
+        log_browser_string = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.hdf5'
+        if ((os.path.exists(h5py_string)) or (os.path.exists(log_browser_string))):
+            # The file exists! Let's change the timestamp and try again.
+            timestamp = '_' + get_timestamp_string()
+            print("WARNING! Filepath-induced overwrite detected, changing timestamp string. The new file name, without file ending, is:\n"+ name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp)
+        else:
+            # The file does not exist. We're good to go.
+            safe_from_overwrite = True
+            del h5py_string
+            del log_browser_string
+    del safe_from_overwrite
+    
     # Attempt an export to Labber's Log Browser!
     labber_import_worked = False
     try:
         import Labber
         labber_import_worked = True
     except:
-        print("Could not import the Labber library; " + \
-              "no data was saved in the Log Browser compatible format. " + \
+        print("Could not import the Labber library; "                      + \
+              "no data was saved in the Log Browser compatible format. "   + \
               "You should check whether your Python version is supported " + \
-              "by the Labber API, as is visible in the Labber/Scripts folder.")
+              "by the Labber API. This fact can be seen in the "           + \
+              "Labber/Scripts folder.")
     if labber_import_worked:
         # Create the log file. Note that the Log Browser API is bugged,
         # and adds a duplicate '.hdf5' file ending when using the database.
@@ -892,7 +911,7 @@ def stitch(
         with h5py.File(current_filepath_item_in_list, 'r') as h5f:
             
             # Notify the user.
-            print("Stitching file: "+str(current_filepath_item_in_list))
+            print("Extracting data: "+str(current_filepath_item_in_list))
             
             """# Did this file have a scale set for its data?
             try:
@@ -1116,6 +1135,7 @@ def stitch(
             
     # At this point, we have stored all data that there is to stitch together
     # in a massive variable. We may now assemble all data together.
+    print("Data extracted successfully from all files!\n")
     ## Let's detect at this point whether we like to paint a big canvas,
     ## or whether every axis is identical, meaning that we'd like to
     ## merge files together.
