@@ -15,6 +15,7 @@ import time
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
+from phase_calculator import bandsign
 from datetime import datetime
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -31,6 +32,7 @@ def t1_sweep_flux(
     
     readout_stimulus_port,
     readout_sampling_port,
+    readout_freq_nco,
     readout_freq,
     readout_amp,
     readout_duration,
@@ -43,6 +45,7 @@ def t1_sweep_flux(
     
     control_port,
     control_amp_01,
+    control_freq_nco,
     control_freq_01,
     control_duration_01,
     
@@ -148,15 +151,15 @@ def t1_sweep_flux(
         
         # Readout port mixer
         pls.hardware.configure_mixer(
-            freq      = readout_freq,
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
-            sync      = False, # Sync at next call
+            sync      = False,
         )
         # Control port mixer
         pls.hardware.configure_mixer(
-            freq      = control_freq_01,
+            freq      = control_freq_nco,
             out_ports = control_port,
             tune      = True,
             sync      = (coupler_dc_port == []),
@@ -185,14 +188,15 @@ def t1_sweep_flux(
             group           = 0,
             scales          = control_amp_01,
         )
-        # Coupler port amplitude(s) (to be swept)
-        pls.setup_scale_lut(
-            output_ports    = coupler_dc_port,
-            group           = 0,
-            scales          = coupler_amp_arr,
-        )
-
-
+        # Coupler port amplitude (the bias)
+        if coupler_dc_port != []:
+            pls.setup_scale_lut(
+                output_ports    = coupler_dc_port,
+                group           = 0,
+                scales          = coupler_amp_arr,
+            )
+        
+        
         ### Setup readout pulse ###
         
         # Setup readout pulse envelope
@@ -206,12 +210,13 @@ def t1_sweep_flux(
             fall_time   = 0e-9
         )
         # Setup readout carrier, considering that there is a digital mixer
+        readout_freq_if = readout_freq_nco - readout_freq
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(readout_freq_if),
             phases       = 0.0,
-            phases_q     = 0.0
+            phases_q     = bandsign(readout_freq_if),
         )
         
         
@@ -228,12 +233,13 @@ def t1_sweep_flux(
             envelope    = True,
         )
         # Setup control_pulse_pi_01 carrier tone, considering that there is a digital mixer.
+        control_freq_if_01 = control_freq_nco - control_freq_01
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = bandsign(control_freq_if_01),
         )
         
         
@@ -337,6 +343,18 @@ def t1_sweep_flux(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias > 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
+        
         # Data to be stored.
         ## Create a linear vector corresponding to the time sweep.
         delay_arr = np.linspace(0, num_delays * dt_per_time_step, num_delays)
@@ -348,6 +366,7 @@ def t1_sweep_flux(
         hdf5_singles = [
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
+            'readout_freq_nco', "Hz",
             'readout_freq', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
@@ -356,6 +375,7 @@ def t1_sweep_flux(
             'repetition_delay', "s",
             'control_port', "",
             'control_amp_01', "FS",
+            'control_freq_nco', "Hz", 
             'control_freq_01', "Hz", 
             'control_duration_01', "s",
             #'coupler_dc_port', "",
@@ -442,7 +462,7 @@ def t1_sweep_flux(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [],
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -454,7 +474,7 @@ def t1_sweep_flux(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
-            append_to_log_name_before_timestamp = '',
+            append_to_log_name_before_timestamp = '01'+with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
