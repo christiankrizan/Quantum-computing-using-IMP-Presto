@@ -35,6 +35,10 @@ def fit_exponential_decay_t2_echo(
         plot_for_this_many_seconds will show a plot for a given number of
         seconds. If provided a negative value, then the plot will remain
         "blocking" until closed by the user.
+        
+        i_provided_a_filepath sets whether you as a user
+        provided a filepath (to data) that is to be fitted bu the code,
+        or whether you provided raw data straight away.
     '''
     
     ## TODO: Somehow, add support so that the user can provide themselves
@@ -234,6 +238,10 @@ def fit_oscillating_exponential_decay_t2_asterisk(
         plot_for_this_many_seconds will show a plot for a given number of
         seconds. If provided a negative value, then the plot will remain
         "blocking" until closed by the user.
+        
+        i_provided_a_filepath sets whether you as a user
+        provided a filepath (to data) that is to be fitted bu the code,
+        or whether you provided raw data straight away.
     '''
     
     ## TODO: Somehow, add support so that the user can provide themselves

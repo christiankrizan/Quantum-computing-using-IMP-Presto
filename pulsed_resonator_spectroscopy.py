@@ -73,6 +73,14 @@ def find_f_ro0_sweep_coupler(
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         as a function of a swept pairwise coupler bias.
+        
+        If skip_saving_control_data = True, then no information about
+        the control pulse settings will be stored when exporting the
+        data file. If you intend to merge readout data files together,
+        then this flag must be set to True. Because otherwise there
+        will be information about (for instance) the |f>-state in
+        some files, and no information in other files, meaning that
+        various data merging routines will reject the data merge.
     '''
     
     ## Input sanitisation
@@ -791,6 +799,14 @@ def find_f_ro1_sweep_coupler(
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |1>,
         as a function of a swept pairwise coupler bias.
+        
+        If skip_saving_control_data = True, then no information about
+        the control pulse settings will be stored when exporting the
+        data file. If you intend to merge readout data files together,
+        then this flag must be set to True. Because otherwise there
+        will be information about (for instance) the |f>-state in
+        some files, and no information in other files, meaning that
+        various data merging routines will reject the data merge.
     '''
     
     ## Input sanitisation
@@ -1655,6 +1671,14 @@ def find_f_ro2_sweep_coupler(
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |2>,
         as a function of a swept pairwise coupler bias.
+        
+        If skip_saving_control_data = True, then no information about
+        the control pulse settings will be stored when exporting the
+        data file. If you intend to merge readout data files together,
+        then this flag must be set to True. Because otherwise there
+        will be information about (for instance) the |f>-state in
+        some files, and no information in other files, meaning that
+        various data merging routines will reject the data merge.
     '''
     
     ## Input sanitisation

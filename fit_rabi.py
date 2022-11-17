@@ -22,6 +22,10 @@ def fit_amplitude(
     ''' From supplied data or datapath,
         fit the Rabi oscillations to get a "period" in amplitude.
         This "amplitude period" / 2 = the π-pulse amplitude.
+        
+        i_provided_a_filepath sets whether you as a user
+        provided a filepath (to data) that is to be fitted bu the code,
+        or whether you provided raw data straight away.
     '''
     
     ## TODO: Somehow, add support so that the user can provide themselves
