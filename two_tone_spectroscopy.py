@@ -96,6 +96,11 @@ def pulsed01_flux_sweep(
             print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
             coupler_bias_min = 0.0
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (control_freq_01_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        control_freq_01_span = 0.0
     
     ## Initial array declaration
     
@@ -573,6 +578,12 @@ def pulsed01_flux_sweep_multiplexed_ro(
             print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
             coupler_bias_min = 0.0
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and ((control_freq_01_A_span != 0.0) or (control_freq_01_B_span != 0.0)) ):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        control_freq_01_A_span = 0.0
+        control_freq_01_B_span = 0.0
     
     ## Initial array declaration
     
@@ -1109,6 +1120,11 @@ def pulsed01_power_sweep(
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (control_freq_01_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        control_freq_01_span = 0.0
     
     ## Initial array declaration
 
@@ -1530,6 +1546,11 @@ def pulsed12_flux_sweep(
             print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
             coupler_bias_min = 0.0
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (control_freq_12_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        control_freq_12_span = 0.0
     
     ## Initial array declaration
     

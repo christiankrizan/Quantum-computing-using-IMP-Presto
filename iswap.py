@@ -104,6 +104,11 @@ def iswap_sweep_duration_and_detuning(
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_iswap_span != 0.0)):
+        print("Note: single coupler frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_iswap_span = 0.0
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -729,6 +734,12 @@ def iswap_sweep_duration_and_detuning_state_probability(
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_iswap_span != 0.0)):
+        print("Note: single coupler frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_iswap_span = 0.0
     
     
     # Instantiate the interface
@@ -1955,6 +1966,13 @@ def iswap_sweep_amplitude_and_detuning(
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_iswap_span != 0.0)):
+        print("Note: single coupler frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_iswap_span = 0.0
+    
     
     ## Initial array declaration
     

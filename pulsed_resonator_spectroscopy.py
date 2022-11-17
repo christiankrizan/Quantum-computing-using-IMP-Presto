@@ -100,6 +100,11 @@ def find_f_ro0_sweep_coupler(
             print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
             coupler_bias_min = 0.0
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (readout_freq_span != 0.0)):
+        print("Note: single readout frequency point requested, ignoring span parameter.")
+        readout_freq_span = 0.0
     
     ## Initial array declaration
     
@@ -487,6 +492,11 @@ def find_f_ro0_sweep_power(
     # Declare amplitude array for sweeping the power
     readout_amp_arr = np.linspace(readout_amp_min, readout_amp_max, num_amplitudes)
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (readout_freq_span != 0.0)):
+        print("Note: single readout frequency point requested, ignoring span parameter.")
+        readout_freq_span = 0.0
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -825,6 +835,12 @@ def find_f_ro1_sweep_coupler(
         if coupler_bias_min != 0.0:
             print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
             coupler_bias_min = 0.0
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (readout_freq_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        readout_freq_span = 0.0
     
     ## Initial array declaration
     
@@ -1308,6 +1324,11 @@ def find_f_ro1_sweep_power(
     # Declare amplitude array for sweeping the power
     readout_amp_arr = np.linspace(readout_amp_min, readout_amp_max, num_amplitudes)
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (readout_freq_span != 0.0)):
+        print("Note: single readout frequency point requested, ignoring span parameter.")
+        readout_freq_span = 0.0
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -1697,6 +1718,13 @@ def find_f_ro2_sweep_coupler(
         if coupler_bias_min != 0.0:
             print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
             coupler_bias_min = 0.0
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (readout_freq_span != 0.0)):
+        print("Note: single readout frequency point requested, ignoring span parameter.")
+        readout_freq_span = 0.0
+    
     
     ## Initial array declaration
     
@@ -2220,6 +2248,11 @@ def find_f_ro2_sweep_power(
     # Declare amplitude array for sweeping the power
     readout_amp_arr = np.linspace(readout_amp_min, readout_amp_max, num_amplitudes)
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (readout_freq_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        readout_freq_span = 0.0
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")

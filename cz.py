@@ -106,6 +106,12 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_cz20_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_cz20_span = 0
+    
     ## Initial array declaration
     
     # Declare amplitude array for the AC coupler tone to be swept
@@ -710,6 +716,13 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_cz20_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_cz20_span = 0
+    
     
     ## Initial array declaration
     
@@ -1383,6 +1396,12 @@ def cz20_sweep_duration_and_detuning_state_probability(
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_cz20_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_cz20_span = 0
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -4544,6 +4563,13 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
     
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_cz20_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_cz20_span = 0
+    
+    
     ## Initial array declaration
     
     # Declare what phases are available
@@ -5171,6 +5197,13 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_cz20_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_cz20_span = 0
+    
     
     ## Initial array declaration
     
