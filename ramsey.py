@@ -1514,8 +1514,8 @@ def ramsey01_echo_readout0(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_freq,
     readout_freq_nco,
+    readout_freq,
     readout_amp,
     readout_duration,
     
@@ -1527,8 +1527,8 @@ def ramsey01_echo_readout0(
     
     control_port,
     control_amp_01,
-    control_freq_01_nco,
-    control_freq_01_centre_if,
+    control_freq_nco,
+    control_freq_01_centre,
     control_freq_01_span,
     control_duration_01,
     
@@ -1630,7 +1630,7 @@ def ramsey01_echo_readout0(
         )
         # Control port mixer
         pls.hardware.configure_mixer(
-            freq      = control_freq_01_nco,
+            freq      = control_freq_nco,
             out_ports = control_port,
             tune      = True,
             sync      = (coupler_dc_port == []),
@@ -1693,22 +1693,16 @@ def ramsey01_echo_readout0(
         
         ### Setup pulse "control_pulse_pi_01" ###
         
-        # TODO! Not finalised at all.
-        # Setup control_pulse_pi_01 pulse envelope.
+        # Setup control_pulse_pi_01 and control_pulse_pi_01_half pulse envelopes.
         control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template.
         control_envelope_01 = sin2(control_ns_01)
         control_pulse_pi_01 = pls.setup_template(
             output_port = control_port,
             group       = 0,
-            template    = control_envelope_01, # Note!
-            template_q  = control_envelope_01, # Halved.
+            template    = control_envelope_01,
+            template_q  = control_envelope_01,
             envelope    = True,
         )
-        # /TODO
-
-        # Setup control_pulse_pi_01 pulse envelope.
-        control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template.
-        control_envelope_01 = sin2(control_ns_01)
         control_pulse_pi_01_half = pls.setup_template(
             output_port = control_port,
             group       = 0,
@@ -1718,20 +1712,21 @@ def ramsey01_echo_readout0(
         )
         
         # Setup control pulse carrier, this tone will be swept in frequency.
+        control_freq_01_centre_if = control_freq_nco - control_freq_01_centre  
         f_start = control_freq_01_centre_if - control_freq_01_span / 2
-        f_stop = control_freq_01_centre_if + control_freq_01_span / 2
+        f_stop  = control_freq_01_centre_if + control_freq_01_span / 2
         control_freq_01_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the lower sideband. Note the minus sign.
-        control_pulse_01_half_freq_arr = control_freq_01_nco - control_freq_01_if_arr
+        control_pulse_01_half_freq_arr = control_freq_nco - control_freq_01_if_arr
 
         # Setup LUT
         pls.setup_freq_lut(
             output_ports    = control_port,
             group           = 0,
-            frequencies     = control_freq_01_if_arr,
+            frequencies     = np.abs(control_freq_01_if_arr),
             phases          = np.full_like(control_freq_01_if_arr, 0.0),
-            phases_q        = np.full_like(control_freq_01_if_arr, +np.pi / 2),  # +pi/2 for LSB!
+            phases_q        = bandsign(control_freq_01_if_arr),
         )
         
         
