@@ -81,6 +81,8 @@ def find_f_ro0_sweep_coupler(
         will be information about (for instance) the |f>-state in
         some files, and no information in other files, meaning that
         various data merging routines will reject the data merge.
+        
+        ro0 designates that "the readout is done in state |0⟩."
     '''
     
     ## Input sanitisation
@@ -485,6 +487,8 @@ def find_f_ro0_sweep_power(
         }
     ):
     ''' Plot the readout frequency versus swept readout amplitude, pulsed.
+        
+        ro0 designates that "the readout is done in state |0⟩."
     '''
     
     ## Initial array declaration
@@ -817,6 +821,8 @@ def find_f_ro1_sweep_coupler(
         will be information about (for instance) the |f>-state in
         some files, and no information in other files, meaning that
         various data merging routines will reject the data merge.
+        
+        ro1 designates that "the readout is done in state |1⟩."
     '''
     
     ## Input sanitisation
@@ -1317,6 +1323,8 @@ def find_f_ro1_sweep_power(
     ):
     ''' Plot the readout frequency versus swept readout amplitude, pulsed.
         The readout power is swept for the |1>-state.
+        
+        ro1 designates that "the readout is done in state |1⟩."
     '''
     
     ## Initial array declaration
@@ -1700,6 +1708,8 @@ def find_f_ro2_sweep_coupler(
         will be information about (for instance) the |f>-state in
         some files, and no information in other files, meaning that
         various data merging routines will reject the data merge.
+        
+        ro2 designates that "the readout is done in state |2⟩."
     '''
     
     ## Input sanitisation
@@ -2241,6 +2251,8 @@ def find_f_ro2_sweep_power(
     ):
     ''' Plot the readout frequency versus swept readout amplitude, pulsed.
         The readout power is swept for the |2>-state.
+        
+        ro2 designates that "the readout is done in state |2⟩."
     '''
     
     ## Initial array declaration

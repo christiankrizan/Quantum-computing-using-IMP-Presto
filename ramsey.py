@@ -26,7 +26,7 @@ from data_exporter import \
     save
 
 
-def ramsey01_readout0(
+def ramsey01_ro0(
     ip_address,
     ext_clk_present,
     
@@ -80,6 +80,8 @@ def ramsey01_readout0(
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator.
+        
+        ro0 designates that "the readout is done in state |0⟩."
     '''
     
     ## Input sanitisation
@@ -1016,7 +1018,7 @@ def ramsey01_multiplexed_ro(
     
     return string_arr_to_return
     
-def ramsey12_readout1(
+def ramsey12_r1(
     ip_address,
     ext_clk_present,
     
@@ -1072,6 +1074,8 @@ def ramsey12_readout1(
     ):
     ''' Perform a Ramsey_12 spectroscopy on a given qubit with a connected
         resonator. Readout occurs in the excited state.
+        
+        ro1 designates that "the readout is done in state |1⟩."
     '''
     
     ## Input sanitisation
@@ -1516,7 +1520,7 @@ def ramsey12_readout1(
     
     return string_arr_to_return
 
-def ramsey01_echo_readout0(
+def ramsey01_echo_r0(
     ip_address,
     ext_clk_present,
     

@@ -81,6 +81,8 @@ def amplitude_sweep_oscillation01_ro0(
         The energy is found by sweeping the amplitude, instead of
         sweeping the pulse duration. While sweeping, a bias voltage
         can be applied onto a connected coupler.
+        
+        ro0 designates that "the readout is done in state |0⟩."
     '''
     
     ## Input sanitisation
@@ -1645,7 +1647,7 @@ def amplitude_sweep_oscillation12_ro0(
         sweeping the pulse duration. While sweeping, a bias voltage
         can be applied onto a connected coupler.
         
-        Note! Readout is in |0>
+        ro0 designates that "the readout is done in state |0⟩."
     '''
     
     ## Input sanitisation
@@ -2153,7 +2155,7 @@ def amplitude_sweep_oscillation12_ro1(
         sweeping the pulse duration. While sweeping, a bias voltage
         can be applied onto a connected coupler.
         
-        Note! Readout is in |1>
+        ro1 designates that "the readout is done in state |1⟩."
     '''
     
     ## Input sanitisation
@@ -2667,7 +2669,7 @@ def duration_sweep_oscillation12_ro1(
         amplitude. While sweeping, a bias voltage can be applied onto a
         connected coupler.
         
-        Note! Readout is in |1>
+        ro1 designates that "the readout is done in state |1⟩."
     '''
     
     

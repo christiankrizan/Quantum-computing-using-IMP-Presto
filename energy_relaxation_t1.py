@@ -544,6 +544,8 @@ def t1_sweep_flux_multiplexed_ro0(
     ):
     ''' Characterises the energy relaxation time T1 as a function of applied
         coupler bias. Readout is multiplexed onto two resonators.
+        
+        ro0 designates that "the readout is done in state |0⟩."
     '''
     
     ## Input sanitisation
