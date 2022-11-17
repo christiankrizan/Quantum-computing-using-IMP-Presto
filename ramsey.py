@@ -161,7 +161,7 @@ def ramsey01_readout0(
                 freq      = 0.0,
                 out_ports = coupler_dc_port,
                 tune      = True,
-                sync      = True,  # Sync here
+                sync      = True,
             )
         
         
@@ -1869,6 +1869,7 @@ def ramsey01_echo_readout0(
         hdf5_singles = [
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
+            'readout_freq_nco', "Hz",
             'readout_freq', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
@@ -1879,7 +1880,8 @@ def ramsey01_echo_readout0(
             
             'control_port', "",
             'control_amp_01', "FS",
-            'control_freq_01_nco', "Hz",
+            'control_freq_nco', "Hz",
+            'control_freq_01_centre', "Hz",
             'control_freq_01_centre_if', "Hz",
             'control_freq_01_span', "Hz",
             'control_duration_01', "s",
