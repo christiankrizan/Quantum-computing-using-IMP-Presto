@@ -20,16 +20,16 @@ def get_legal_phase( value, available_phases_arr ):
     # Return result.
     return available_phases_arr[index]
     
-def bandsign( if_value, default_to_lsb = False ):
+def bandsign( if_values, default_to_lsb = False ):
     ''' Return +pi/2 or -pi/2 depending on the sign of the input value.
         But, never return 0.
         
         If fed a numpy array of values, return an array filled
         with the appropriate sideband value for all entries.
     '''
-    if isinstance(if_value, np.ndarray):
+    if isinstance(if_values, np.ndarray):
         sign_list = []
-        for item in if_value:
+        for item in if_values:
             if (not default_to_lsb):
                 sign_list.append( (np.sign(item)*np.pi/2) if (item != 0.0) else (-np.pi/2) )
             else:
@@ -37,9 +37,9 @@ def bandsign( if_value, default_to_lsb = False ):
         return sign_list
     else:
         if (not default_to_lsb):
-            return (np.sign(if_value)*np.pi/2) if (if_value != 0.0) else (-np.pi/2)
+            return (np.sign(if_values)*np.pi/2) if (if_values != 0.0) else (-np.pi/2)
         else:
-            return (np.sign(if_value)*np.pi/2) if (if_value != 0.0) else (+np.pi/2)
+            return (np.sign(if_values)*np.pi/2) if (if_values != 0.0) else (+np.pi/2)
     
 def add_virtual_z(
     at_time,
