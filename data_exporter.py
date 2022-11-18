@@ -650,6 +650,7 @@ def export_processed_data_to_file(
             name_of_measurement_that_ran = str(default_exported_log_file_name)
             append_to_log_name_before_timestamp = ''
             append_to_log_name_after_timestamp  = ''
+            timestamp = ''
             
     if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
         append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
