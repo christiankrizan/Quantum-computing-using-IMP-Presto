@@ -63,6 +63,7 @@ def discriminate_state_11(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -498,6 +499,7 @@ def discriminate_state_11(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -654,6 +656,7 @@ def discriminate_state_11(
                 
                 save_complex_data = save_complex_data,
                 source_code_of_executing_file = '', #get_sourcecode(__file__),
+                default_exported_log_file_name = default_exported_log_file_name,
                 append_to_log_name_before_timestamp = '',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
@@ -713,6 +716,7 @@ def discriminate_state_22(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1210,6 +1214,7 @@ def discriminate_state_22(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -1373,6 +1378,7 @@ def discriminate_state_22(
                 
                 save_complex_data = save_complex_data,
                 source_code_of_executing_file = '', #get_sourcecode(__file__),
+                default_exported_log_file_name = default_exported_log_file_name,
                 append_to_log_name_before_timestamp = '',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),

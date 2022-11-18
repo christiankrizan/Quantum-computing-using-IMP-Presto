@@ -56,6 +56,7 @@ def find_f_ro0_sweep_coupler(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -432,6 +433,7 @@ def find_f_ro0_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'ro0' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -471,6 +473,7 @@ def find_f_ro0_sweep_power(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -745,6 +748,7 @@ def find_f_ro0_sweep_power(
             outer_loop_size = num_amplitudes,
             
             save_complex_data = save_complex_data,
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'ro0_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -796,6 +800,7 @@ def find_f_ro1_sweep_coupler(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1262,6 +1267,7 @@ def find_f_ro1_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'ro1' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -1306,6 +1312,7 @@ def find_f_ro1_sweep_power(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1629,6 +1636,7 @@ def find_f_ro1_sweep_power(
             outer_loop_size = num_amplitudes,
             
             save_complex_data = save_complex_data,
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'ro1_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -1683,6 +1691,7 @@ def find_f_ro2_sweep_coupler(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -2186,6 +2195,7 @@ def find_f_ro2_sweep_coupler(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'ro2' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -2234,6 +2244,7 @@ def find_f_ro2_sweep_power(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -2593,6 +2604,7 @@ def find_f_ro2_sweep_power(
             outer_loop_size = num_amplitudes,
             
             save_complex_data = save_complex_data,
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'ro2_power_sweep',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',

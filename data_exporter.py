@@ -160,6 +160,7 @@ def save(
     save_complex_data = True,
     data_to_store_consists_of_time_traces_only = False,
     source_code_of_executing_file = '',
+    default_exported_log_file_name = 'default',
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp  = '',
     select_resonator_for_single_log_export = '',
@@ -180,6 +181,12 @@ def save(
         will bear different timestamps, and be sorted weirdly
         when viewed in folders. This has happened. So don't change how
         the timestamp is fed into this routine.
+        
+        If default_exported_log_file_name is left to 'default',
+        then the files will take the name of the script which performed the
+        measurement. The whole string "default" is merely replaced, meaning
+        that something like arg. = 'qubit_1' + 'default', is a legal call,
+        and will generate "qubit_1_blablabla" as an output filename.
         
         Returns: save path to calling script (string)
     '''
@@ -555,6 +562,7 @@ def save(
         timestamp = timestamp,
         log_browser_tag = log_browser_tag,
         log_browser_user = log_browser_user,
+        default_exported_log_file_name = default_exported_log_file_name,
         append_to_log_name_before_timestamp = append_to_log_name_before_timestamp,
         append_to_log_name_after_timestamp = append_to_log_name_after_timestamp,
         use_log_browser_database = use_log_browser_database,
@@ -582,6 +590,7 @@ def export_processed_data_to_file(
     fetched_data_arr = [],
     log_browser_tag  = 'default',
     log_browser_user = 'default',
+    default_exported_log_file_name = 'default',
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp = '',
     use_log_browser_database = True,
@@ -612,7 +621,36 @@ def export_processed_data_to_file(
     if isinstance(name_of_measurement_that_ran, list):
         name_of_measurement_that_ran = "".join(name_of_measurement_that_ran)
     
-    # Touch up on user-input strings in the calling script.
+    # Touch up on user-input strings in the calling script. And, filename.
+    add_user_string_to_the_filename_beginning = ''
+    add_user_string_to_the_filename_end       = ''
+    if default_exported_log_file_name != 'default':
+        # The user wants something.
+        if ('default' in default_exported_log_file_name):
+            # The user still wants the default string appended.
+            if default_exported_log_file_name.find('default') == 0:
+                # User added something to the end.
+                add_user_string_to_the_filename_end = default_exported_log_file_name.replace('default','')
+                if add_user_string_to_the_filename_end[0] != '_':
+                    add_user_string_to_the_filename_end = '_' + add_user_string_to_the_filename_end
+            elif default_exported_log_file_name.find('default') == 7: ## Where 7 == len('default'):
+                # User added something to the beginning.
+                add_user_string_to_the_filename_beginning = default_exported_log_file_name.replace('default','')
+                if add_user_string_to_the_filename_beginning[-1] != '_':
+                    add_user_string_to_the_filename_beginning = add_user_string_to_the_filename_beginning + '_'
+            else:
+                # User added something somewhere.
+                splitresult = default_exported_log_file_name.split('default')
+                add_user_string_to_the_filename_beginning = splitresult[0]
+                add_user_string_to_the_filename_end       = splitresult[1]
+                del splitresult
+        else:
+            # The default substring is not in the requested string.
+            # Then, rename everything.
+            name_of_measurement_that_ran = str(default_exported_log_file_name)
+            append_to_log_name_before_timestamp = ''
+            append_to_log_name_after_timestamp  = ''
+            
     if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
         append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
     if (not append_to_log_name_before_timestamp.startswith('_')) and (append_to_log_name_before_timestamp != ''):
@@ -625,12 +663,12 @@ def export_processed_data_to_file(
     # just a few files together from some command line script.
     safe_from_overwrite = False
     while (not safe_from_overwrite):
-        h5py_string = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.h5'
-        log_browser_string = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.hdf5'
+        h5py_string = add_user_string_to_the_filename_beginning + name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + add_user_string_to_the_filename_end + '.h5'
+        log_browser_string = add_user_string_to_the_filename_beginning + name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + add_user_string_to_the_filename_end + '.hdf5'
         if ((os.path.exists(h5py_string)) or (os.path.exists(log_browser_string))):
             # The file exists! Let's change the timestamp and try again.
             timestamp = '_' + get_timestamp_string()
-            print("WARNING! Filepath-induced overwrite detected, changing timestamp string. The new file name, without file ending, is:\n"+ name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp)
+            print("WARNING! Filepath-induced overwrite detected, changing timestamp string. The new file name, without file ending, is:\n"+ add_user_string_to_the_filename_beginning + name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + add_user_string_to_the_filename_end)
         else:
             # The file does not exist. We're good to go.
             safe_from_overwrite = True
@@ -653,9 +691,9 @@ def export_processed_data_to_file(
         # Create the log file. Note that the Log Browser API is bugged,
         # and adds a duplicate '.hdf5' file ending when using the database.
         if use_log_browser_database:
-            savefile_string = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp
+            savefile_string = add_user_string_to_the_filename_beginning + name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + add_user_string_to_the_filename_end
         else:
-            savefile_string = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.hdf5'
+            savefile_string = add_user_string_to_the_filename_beginning + name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + add_user_string_to_the_filename_end + '.hdf5'
         
         if not suppress_log_browser_export:
             print("... assembling Log Browser-compatible .HDF5 log file: " + savefile_string)
@@ -744,7 +782,7 @@ def export_processed_data_to_file(
     
     # Make a name for the H5PY savefile-string, and get its save folder path.
     # Depending on the state of the Log Browser export, this string may change.
-    savefile_string_h5py = name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + '.h5'
+    savefile_string_h5py = add_user_string_to_the_filename_beginning + name_of_measurement_that_ran + append_to_log_name_before_timestamp + timestamp + append_to_log_name_after_timestamp + add_user_string_to_the_filename_end + '.h5'
     save_path_h5py = os.path.join(full_folder_path_where_data_will_be_saved, savefile_string_h5py)
     
     # Make a check whether there is a single-point log value that should not
@@ -823,6 +861,7 @@ def stitch(
     suppress_log_browser_export = False,
     select_resonator_for_single_log_export = '',
     delete_old_files_after_stitching = False,
+    default_exported_log_file_name = 'default',
     ):
     ''' A function that stiches together exported data files.
         
@@ -1289,6 +1328,7 @@ def stitch(
         fetched_data_arr = [],
         log_browser_tag = log_browser_tag,
         log_browser_user = log_browser_user,
+        default_exported_log_file_name = default_exported_log_file_name,
         append_to_log_name_before_timestamp = '_stitched',
         append_to_log_name_after_timestamp = '',
         use_log_browser_database = use_log_browser_database,

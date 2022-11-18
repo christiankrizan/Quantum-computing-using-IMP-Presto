@@ -62,6 +62,7 @@ def amplitude_sweep_oscillation01_ro0(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -481,6 +482,7 @@ def amplitude_sweep_oscillation01_ro0(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '01'+with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -537,6 +539,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1050,6 +1053,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
                 
                 save_complex_data = save_complex_data,
                 source_code_of_executing_file = '', #get_sourcecode(__file__),
+                default_exported_log_file_name = default_exported_log_file_name,
                 append_to_log_name_before_timestamp = '01'+with_or_without_bias_string+'_multiplexed',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
@@ -1103,6 +1107,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
     control_amp_01_B_max = +1.0,
     
     use_log_browser_database = True,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1576,6 +1581,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
                 
                 save_complex_data = save_complex_data,
                 source_code_of_executing_file = '', #get_sourcecode(__file__),
+                default_exported_log_file_name = default_exported_log_file_name,
                 append_to_log_name_before_timestamp = '01'+with_or_without_bias_string+'_multiplexed',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
@@ -1627,6 +1633,7 @@ def amplitude_sweep_oscillation12_ro0(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -2082,6 +2089,7 @@ def amplitude_sweep_oscillation12_ro0(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '12' + with_or_without_bias_string + '_ro0',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -2135,6 +2143,7 @@ def amplitude_sweep_oscillation12_ro1(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -2597,6 +2606,7 @@ def amplitude_sweep_oscillation12_ro1(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '12'+with_or_without_bias_string+'_ro1',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -2649,6 +2659,7 @@ def duration_sweep_oscillation12_ro1(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -3141,6 +3152,7 @@ def duration_sweep_oscillation12_ro1(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '12_duration' + with_or_without_bias_string + '_ro1',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',

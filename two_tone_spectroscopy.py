@@ -60,6 +60,7 @@ def pulsed01_flux_sweep(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -487,6 +488,7 @@ def pulsed01_flux_sweep(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '01'+with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -539,6 +541,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1049,6 +1052,7 @@ def pulsed01_flux_sweep_multiplexed_ro(
                 outer_loop_size = num_biases,
                 
                 save_complex_data = save_complex_data,
+                default_exported_log_file_name = default_exported_log_file_name,
                 append_to_log_name_before_timestamp = '01_sweep_bias_multiplexed',
                 append_to_log_name_after_timestamp  = str(u+1)+'_of_2',
                 select_resonator_for_single_log_export = str(u),
@@ -1094,6 +1098,7 @@ def pulsed01_power_sweep(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1510,6 +1515,7 @@ def pulsed12_flux_sweep(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1982,6 +1988,7 @@ def pulsed12_flux_sweep(
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '12_sweep_bias',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',

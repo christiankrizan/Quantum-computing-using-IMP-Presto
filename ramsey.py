@@ -63,6 +63,7 @@ def ramsey01_ro0(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -495,6 +496,7 @@ def ramsey01_ro0(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '01'+with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -549,6 +551,7 @@ def ramsey01_multiplexed_ro(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1057,6 +1060,7 @@ def ramsey12_r1(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1509,6 +1513,7 @@ def ramsey12_r1(
             outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '12' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -1557,6 +1562,7 @@ def ramsey01_echo_r0(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -2003,6 +2009,7 @@ def ramsey01_echo_r0(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = '01_echo'+with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',

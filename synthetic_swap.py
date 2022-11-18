@@ -79,6 +79,7 @@ def iswap_then_cz20_prep_10_state_probability(
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -685,6 +686,7 @@ def iswap_then_cz20_prep_10_state_probability(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'state_probability',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -758,6 +760,7 @@ def iswap_then_cz_prep_10_cross_Ramsey(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -1407,6 +1410,7 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'cross_Ramsey',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
@@ -1479,6 +1483,7 @@ def synthetic_swap_prep_10_cross_Ramsey(
     save_complex_data = True,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     axes =  {
@@ -2126,6 +2131,7 @@ def synthetic_swap_prep_10_cross_Ramsey(
             
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'cross_Ramsey',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',

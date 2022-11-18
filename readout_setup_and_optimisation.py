@@ -106,6 +106,7 @@ def optimise_integration_window_g_e_f(
         pixel.
     '''
     
+    assert 1 == 0, "Halted! This entire file does not support default_exported_log_file_name, because as of writing this assertion message -- it was unknown whether appending default_exported_log_file_name to various calls in this file would break something. Let's go through this file and see where default_exported_log_file_name should be added."
     assert 1 == 0, "Halted! The subroutine get_complex_data_for_readout_optimisation_g_e_f has been modified, but the integration window optimisation routine has not yet been updated to reflect the changes to USB NCO in said subroutine."
     assert 1 == 0, "TODO IMPORTANT Halted again!! There is a fundemental flaw in the routine: if you ever change your integration window, then you must re-draw the readout complex plane to get new population blobs. Because, the blobs move with integration window settings, as is shown here: [FIG. 3, https://arxiv.org/pdf/1504.06030.pdf]"
     
