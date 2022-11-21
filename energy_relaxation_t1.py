@@ -87,6 +87,14 @@ def t1_sweep_flux(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
     if num_biases < 1:
         num_biases = 1
         print("Note: num_biases was less than 1, and was thus set to 1.")
@@ -554,6 +562,14 @@ def t1_sweep_flux_multiplexed_ro0(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
     if num_biases < 1:
         num_biases = 1
         print("Note: num_biases was less than 1, and was thus set to 1.")

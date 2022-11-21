@@ -101,6 +101,14 @@ def iswap_sweep_duration_and_detuning(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
@@ -734,6 +742,14 @@ def iswap_sweep_duration_and_detuning_state_probability(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
@@ -1353,6 +1369,14 @@ def iswap_sweep_duration_and_amplitude(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
@@ -1970,6 +1994,14 @@ def iswap_sweep_amplitude_and_detuning(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
@@ -2575,6 +2607,14 @@ def iswap_cross_ramsey(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
@@ -3231,6 +3271,14 @@ def iswap_tune_local_accumulated_phase(
     ## Input sanitisation
     
     # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
     if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
