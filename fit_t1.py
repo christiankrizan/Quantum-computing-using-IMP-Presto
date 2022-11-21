@@ -120,50 +120,69 @@ def fit_exponential_decay_t1(
             # Get current trace.
             current_trace_to_fit = (mag_vals_matrix[current_res_ii])[current_z_axis_value]
             
-            # Fit current trace.
-            optimal_vals_x, fit_err_x = fit_decay(
-                delays = delay_arr_values,
-                decaying_data = current_trace_to_fit
-            )
-            ##optimal_vals_x, fit_err_x = fit_decay(
-            ##    delays = curr_delay_arr_values,
-            ##    decaying_data = current_trace_to_fit
-            ##)
-            
-            # Grab fitted values.
-            t1_time = optimal_vals_x[0]
-            fit_error = fit_err_x[0]
-            
-            # Print result.
-            print("T1 from exponential decay fit of data: " + str(t1_time) + " ±" + str(fit_error/2))
-            
-            # Store fit and its plusminus error bar.
-            (fitted_values[current_res_ii]).append((t1_time, fit_error/2))
-            
-            # Plot?
-            if plot_for_this_many_seconds != 0.0:
-                # Get trace data using the fitter's function and acquired values.
-                fit_curve = exponential_decay(
-                    t         = delay_arr_values,
-                    T1        = optimal_vals_x[0],
-                    y_excited = optimal_vals_x[1],
-                    y_ground  = optimal_vals_x[2],
+            # Try to fit current trace.
+            try:
+                optimal_vals_x, fit_err_x = fit_decay(
+                    delays = delay_arr_values,
+                    decaying_data = current_trace_to_fit
                 )
-                plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
-                plt.plot(delay_arr_values, fit_curve, color="#ef1620")
-                plt.title('Energy relaxation from the excited state')
-                plt.ylabel('Demodulated amplitude [FS]')
-                plt.xlabel('Delay after the initial π pulse [s]')
+                ##optimal_vals_x, fit_err_x = fit_decay(
+                ##    delays = curr_delay_arr_values,
+                ##    decaying_data = current_trace_to_fit
+                ##)
                 
-                # If inserting a positive time for which we want to plot for,
-                # then plot for that duration of time. If given a negative
-                # time, then instead block the plotted display.
-                if plot_for_this_many_seconds > 0.0:
-                    plt.show(block=False)
-                    plt.pause(plot_for_this_many_seconds)
-                    plt.close()
+                # Grab fitted values.
+                t1_time = optimal_vals_x[0]
+                fit_error = fit_err_x[0]
+                
+                # Print result.
+                print("T1 from exponential decay fit of data: " + str(t1_time) + " ±" + str(fit_error/2))
+                
+                # Store fit and its plusminus error bar.
+                (fitted_values[current_res_ii]).append((t1_time, fit_error/2))
+                
+                # Plot?
+                if plot_for_this_many_seconds != 0.0:
+                    # Get trace data using the fitter's function and acquired values.
+                    fit_curve = exponential_decay(
+                        t         = delay_arr_values,
+                        T1        = optimal_vals_x[0],
+                        y_excited = optimal_vals_x[1],
+                        y_ground  = optimal_vals_x[2],
+                    )
+                    plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
+                    plt.plot(delay_arr_values, fit_curve, color="#ef1620")
+                    plt.title('Energy relaxation from the excited state')
+                    plt.ylabel('Demodulated amplitude [FS]')
+                    plt.xlabel('Delay after the initial π pulse [s]')
+                    
+                    # If inserting a positive time for which we want to plot for,
+                    # then plot for that duration of time. If given a negative
+                    # time, then instead block the plotted display.
+                    if plot_for_this_many_seconds > 0.0:
+                        plt.show(block=False)
+                        plt.pause(plot_for_this_many_seconds)
+                        plt.close()
+                    else:
+                        plt.show(block=True)
+            
+            except RuntimeError:
+                # Fit failure.
+                optimal_vals_x  = [float("nan"), float("nan"), float("nan")]
+                fit_err_x       = [float("nan"), float("nan"), float("nan")]
+                
+                # Grab fitted values.
+                t1_time = optimal_vals_x[0]
+                fit_error = fit_err_x[0]
+                
+                # Print result.
+                if i_provided_a_filepath:
+                    print("T1 energy relaxation decay fit failure! Cannot fit: "+str(data_or_filepath_to_data))
                 else:
-                    plt.show(block=True)
+                    print("T1 energy relaxation decay fit failure! Cannot fit the provided raw data.")
+                
+                # Store failed fit and its failed plusminus error bar.
+                (fitted_values[current_res_ii]).append((t1_time, fit_error/2))
 
     # We're done.
     return fitted_values

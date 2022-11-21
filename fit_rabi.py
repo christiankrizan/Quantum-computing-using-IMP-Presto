@@ -126,54 +126,74 @@ def fit_amplitude(
             # Get current trace.
             current_trace_to_fit = (mag_vals_matrix[current_res_ii])[current_z_axis_value]
             
-            # Fit current trace.
-            optimal_vals_x, fit_err_x = fit_periodicity(
-                x = control_amp_values,
-                y = current_trace_to_fit
-            )
-            ##optimal_vals_x, fit_err_x = fit_periodicity(
-            ##    x = curr_control_amp_values,
-            ##    y = current_trace_to_fit
-            ##)
-            
-            # Grab fitted values.
-            one_rabi_cycle_period = optimal_vals_x[3]
-            fit_error = fit_err_x[3]
-            pi_amplitude = one_rabi_cycle_period / 2
-            
-            # Print result.
-            print("Rabi fit of data: " + str(pi_amplitude) + " ±" + str(fit_error/2))
-            
-            # Store fit and its plusminus error bar.
-            (fitted_values[current_res_ii]).append((pi_amplitude, fit_error/2))
-            
-            # Plot?
-            if plot_for_this_many_seconds != 0.0:
-                # Get trace data using the fitter's function and acquired values.
-                fit_curve = decaying_cosine_function(
-                    t          = control_amp_values,
-                    y_offset   = optimal_vals_x[0],
-                    amplitude  = optimal_vals_x[1],
-                    decay_rate = optimal_vals_x[2],
-                    period     = optimal_vals_x[3],
-                    phase      = optimal_vals_x[4]
+            # Try to fit current trace.
+            try:
+                optimal_vals_x, fit_err_x = fit_periodicity(
+                    x = control_amp_values,
+                    y = current_trace_to_fit
                 )
-                plt.plot(control_amp_values, current_trace_to_fit, color="#034da3")
-                plt.plot(control_amp_values, fit_curve, color="#ef1620")
-                plt.title('Rabi oscillations (amplitude sweep)')
-                plt.ylabel('Demodulated readout amplitude [FS]')
-                plt.xlabel('π-pulse amplitude [FS]')
+                ##optimal_vals_x, fit_err_x = fit_periodicity(
+                ##    x = curr_control_amp_values,
+                ##    y = current_trace_to_fit
+                ##)
                 
-                # If inserting a positive time for which we want to plot for,
-                # then plot for that duration of time. If given a negative
-                # time, then instead block the plotted display.
-                if plot_for_this_many_seconds > 0.0:
-                    plt.show(block=False)
-                    plt.pause(plot_for_this_many_seconds)
-                    plt.close()
+                # Grab fitted values.
+                one_rabi_cycle_period = optimal_vals_x[3]
+                fit_error = fit_err_x[3]
+                pi_amplitude = one_rabi_cycle_period / 2
+                
+                # Print result.
+                print("Rabi fit of data: " + str(pi_amplitude) + " ±" + str(fit_error/2))
+                
+                # Store fit and its plusminus error bar.
+                (fitted_values[current_res_ii]).append((pi_amplitude, fit_error/2))
+                
+                # Plot?
+                if plot_for_this_many_seconds != 0.0:
+                    # Get trace data using the fitter's function and acquired values.
+                    fit_curve = decaying_cosine_function(
+                        t          = control_amp_values,
+                        y_offset   = optimal_vals_x[0],
+                        amplitude  = optimal_vals_x[1],
+                        decay_rate = optimal_vals_x[2],
+                        period     = optimal_vals_x[3],
+                        phase      = optimal_vals_x[4]
+                    )
+                    plt.plot(control_amp_values, current_trace_to_fit, color="#034da3")
+                    plt.plot(control_amp_values, fit_curve, color="#ef1620")
+                    plt.title('Rabi oscillations (amplitude sweep)')
+                    plt.ylabel('Demodulated readout amplitude [FS]')
+                    plt.xlabel('π-pulse amplitude [FS]')
+                    
+                    # If inserting a positive time for which we want to plot for,
+                    # then plot for that duration of time. If given a negative
+                    # time, then instead block the plotted display.
+                    if plot_for_this_many_seconds > 0.0:
+                        plt.show(block=False)
+                        plt.pause(plot_for_this_many_seconds)
+                        plt.close()
+                    else:
+                        plt.show(block=True)
+            
+            except RuntimeError:
+                # Fit failure.
+                optimal_vals_x  = [float("nan"), float("nan"), float("nan"), float("nan"), float("nan")]
+                fit_err_x       = [float("nan"), float("nan"), float("nan"), float("nan"), float("nan")]
+                
+                # Grab fitted values.
+                one_rabi_cycle_period = optimal_vals_x[3]
+                fit_error = fit_err_x[3]
+                pi_amplitude = one_rabi_cycle_period / 2
+                
+                # Print result.
+                if i_provided_a_filepath:
+                    print("Rabi oscillation fit failure! Cannot fit: "+str(data_or_filepath_to_data))
                 else:
-                    plt.show(block=True)
-
+                    print("Rabi oscillation fit failure! Cannot fit the provided raw data.")
+                
+                # Store failed fit and its failed plusminus error bar.
+                (fitted_values[current_res_ii]).append((pi_amplitude, fit_error/2))
+    
     # We're done.
     return fitted_values
     

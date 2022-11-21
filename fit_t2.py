@@ -9,8 +9,10 @@ import os
 import h5py
 import numpy as np
 from numpy import hanning as von_hann
+from math import isnan
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+
 
 def fit_exponential_decay_t2_echo(
     data_or_filepath_to_data,
@@ -125,51 +127,70 @@ def fit_exponential_decay_t2_echo(
             # Get current trace.
             current_trace_to_fit = (mag_vals_matrix[current_res_ii])[current_z_axis_value]
             
-            # Fit current trace.
-            optimal_vals_x, fit_err_x = fit_echoed_decay_single(
-                delays = delay_arr_values,
-                decaying_data = current_trace_to_fit
-            )
-            ##optimal_vals_x, fit_err_x = fit_decay(
-            ##    delays = curr_delay_arr_values,
-            ##    decaying_data = current_trace_to_fit
-            ##)
-            
-            # Grab fitted values.
-            t2_echo_time = optimal_vals_x[0]
-            fit_error = fit_err_x[0]
-            
-            # Print result.
-            print("T2_echo from exponential decay fit of data: " + str(t2_echo_time) + " ±" + str(fit_error/2))
-            
-            # Store fit and its plusminus error bar.
-            (fitted_values[current_res_ii]).append((t2_echo_time, fit_error/2))
-            
-            # Plot?
-            if plot_for_this_many_seconds != 0.0:
-                # Get trace data using the fitter's function and acquired values.
-                fit_curve = exponential_decay_towards_mixed_state(
-                    t          = delay_arr_values,
-                    T2_echo    = optimal_vals_x[0],
-                    y_nonmixed = optimal_vals_x[1],
-                    y_mixed    = optimal_vals_x[2],
+            # Try to fit current trace.
+            try:
+                optimal_vals_x, fit_err_x = fit_echoed_decay_single(
+                    delays = delay_arr_values,
+                    decaying_data = current_trace_to_fit
                 )
-                plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
-                plt.plot(delay_arr_values, fit_curve, color="#ef1620")
-                plt.title('Ramsey spectroscopy with a refocusing pulse')
-                plt.ylabel('Demodulated amplitude [FS]')
-                plt.xlabel('Delay after the initial π/2 pulse [s]')
+                ##optimal_vals_x, fit_err_x = fit_decay(
+                ##    delays = curr_delay_arr_values,
+                ##    decaying_data = current_trace_to_fit
+                ##)
                 
-                # If inserting a positive time for which we want to plot for,
-                # then plot for that duration of time. If given a negative
-                # time, then instead block the plotted display.
-                if plot_for_this_many_seconds > 0.0:
-                    plt.show(block=False)
-                    plt.pause(plot_for_this_many_seconds)
-                    plt.close()
+                # Grab fitted values.
+                t2_echo_time = optimal_vals_x[0]
+                fit_error = fit_err_x[0]
+                
+                # Print result.
+                print("T2_echo from exponential decay fit of data: " + str(t2_echo_time) + " ±" + str(fit_error/2))
+                
+                # Store fit and its plusminus error bar.
+                (fitted_values[current_res_ii]).append((t2_echo_time, fit_error/2))
+                
+                # Plot?
+                if plot_for_this_many_seconds != 0.0:
+                    # Get trace data using the fitter's function and acquired values.
+                    fit_curve = exponential_decay_towards_mixed_state(
+                        t          = delay_arr_values,
+                        T2_echo    = optimal_vals_x[0],
+                        y_nonmixed = optimal_vals_x[1],
+                        y_mixed    = optimal_vals_x[2],
+                    )
+                    plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
+                    plt.plot(delay_arr_values, fit_curve, color="#ef1620")
+                    plt.title('Ramsey spectroscopy with a refocusing pulse')
+                    plt.ylabel('Demodulated amplitude [FS]')
+                    plt.xlabel('Delay after the initial π/2 pulse [s]')
+                    
+                    # If inserting a positive time for which we want to plot for,
+                    # then plot for that duration of time. If given a negative
+                    # time, then instead block the plotted display.
+                    if plot_for_this_many_seconds > 0.0:
+                        plt.show(block=False)
+                        plt.pause(plot_for_this_many_seconds)
+                        plt.close()
+                    else:
+                        plt.show(block=True)
+            
+            except RuntimeError:
+                # Fit failure.
+                optimal_vals_x  = [float("nan"), float("nan"), float("nan")]
+                fit_err_x       = [float("nan"), float("nan"), float("nan")]
+                
+                # Grab fitted values.
+                t2_echo_time = optimal_vals_x[0]
+                fit_error = fit_err_x[0]
+                
+                # Print result.
+                if i_provided_a_filepath:
+                    print("T2_echo fit failure! Cannot fit: "+str(data_or_filepath_to_data))
                 else:
-                    plt.show(block=True)
-
+                    print("T2_echo fit failure! Cannot fit the provided raw data.")
+                
+                # Store failed fit and its failed plusminus error bar.
+                (fitted_values[current_res_ii]).append((t2_echo_time, fit_error/2))
+    
     # We're done.
     return fitted_values
     
@@ -223,6 +244,8 @@ def fit_echoed_decay_single(delays, decaying_data):
     
     return optimal_vals, fit_err
     
+
+
 def fit_oscillating_exponential_decay_t2_asterisk(
     data_or_filepath_to_data,
     delay_arr = [],
@@ -234,6 +257,8 @@ def fit_oscillating_exponential_decay_t2_asterisk(
         to find out the exponent of said dephasing.
         
         The goal is to extract T2*
+        A failed fit (due to illegibly noisy input, for instance)
+        will return a NaN ±NaN result.
         
         plot_for_this_many_seconds will show a plot for a given number of
         seconds. If provided a negative value, then the plot will remain
@@ -328,56 +353,74 @@ def fit_oscillating_exponential_decay_t2_asterisk(
             # Get current trace.
             current_trace_to_fit = (mag_vals_matrix[current_res_ii])[current_z_axis_value]
             
-            # Fit current trace.
-            optimal_vals_x, fit_err_x = fit_oscillatory_decay_single(
-                delays = delay_arr_values,
-                decaying_data = current_trace_to_fit
-            )
-            ##optimal_vals_x, fit_err_x = fit_oscillatory_decay_single(
-            ##    delays = curr_delay_arr_values,
-            ##    decaying_data = current_trace_to_fit
-            ##)
-            
-            # Grab fitted values.
-            t2_asterisk_time = optimal_vals_x[0]
-            fit_error = fit_err_x[0]
-            
-            # Print result.
-            print("T2* from exponential decay fit of data: " + str(t2_asterisk_time) + " ±" + str(fit_error/2))
-            
-            # Store fit and its plusminus error bar.
-            (fitted_values[current_res_ii]).append((t2_asterisk_time, fit_error/2))
-            
-            # Plot?
-            if plot_for_this_many_seconds != 0.0:
-                # Get trace data using the fitter's function and acquired values.
-                fit_curve = exponential_oscillatory_decay(
-                    t           = delay_arr_values,
-                    T2_asterisk = optimal_vals_x[0],
-                    amplitude   = optimal_vals_x[1],
-                    y_offset    = optimal_vals_x[2],
-                    frequency   = optimal_vals_x[3],
-                    phase       = optimal_vals_x[4],
+            # Try to fit current trace.
+            try:
+                optimal_vals_x, fit_err_x = fit_oscillatory_decay_single(
+                    delays = delay_arr_values,
+                    decaying_data = current_trace_to_fit
                 )
-                plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
-                plt.plot(delay_arr_values, fit_curve, color="#ef1620")
-                plt.title('Ramsey spectroscopy')
-                plt.ylabel('Demodulated amplitude [FS]')
-                plt.xlabel('Delay after the initial π/2 pulse [s]')
+                ##optimal_vals_x, fit_err_x = fit_oscillatory_decay_single(
+                ##    delays = curr_delay_arr_values,
+                ##    decaying_data = current_trace_to_fit
+                ##)
                 
-                # If inserting a positive time for which we want to plot for,
-                # then plot for that duration of time. If given a negative
-                # time, then instead block the plotted display.
-                if plot_for_this_many_seconds > 0.0:
-                    plt.show(block=False)
-                    plt.pause(plot_for_this_many_seconds)
-                    plt.close()
+                # Grab fitted values.
+                t2_asterisk_time = optimal_vals_x[0]
+                fit_error = fit_err_x[0]
+                
+                # Print result.
+                print("T2* from exponential decay fit of data: " + str(t2_asterisk_time) + " ±" + str(fit_error/2))
+                
+                # Store fit and its plusminus error bar.
+                (fitted_values[current_res_ii]).append((t2_asterisk_time, fit_error/2))
+                
+                # Plot?
+                if plot_for_this_many_seconds != 0.0:
+                    # Get trace data using the fitter's function and acquired values.
+                    fit_curve = exponential_oscillatory_decay(
+                        t           = delay_arr_values,
+                        T2_asterisk = optimal_vals_x[0],
+                        amplitude   = optimal_vals_x[1],
+                        y_offset    = optimal_vals_x[2],
+                        frequency   = optimal_vals_x[3],
+                        phase       = optimal_vals_x[4],
+                    )
+                    plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
+                    plt.plot(delay_arr_values, fit_curve, color="#ef1620")
+                    plt.title('Ramsey spectroscopy')
+                    plt.ylabel('Demodulated amplitude [FS]')
+                    plt.xlabel('Delay after the initial π/2 pulse [s]')
+                    
+                    # If inserting a positive time for which we want to plot for,
+                    # then plot for that duration of time. If given a negative
+                    # time, then instead block the plotted display.
+                    if plot_for_this_many_seconds > 0.0:
+                        plt.show(block=False)
+                        plt.pause(plot_for_this_many_seconds)
+                        plt.close()
+                    else:
+                        plt.show(block=True)
+            
+            except RuntimeError:
+                # Fit failure.
+                optimal_vals_x  = [float("nan"), float("nan"), float("nan"), float("nan"), float("nan")]
+                fit_err_x       = [float("nan"), float("nan"), float("nan"), float("nan"), float("nan")]
+                
+                # Grab fitted values.
+                t2_asterisk_time = optimal_vals_x[0]
+                fit_error = fit_err_x[0]
+                
+                # Print result.
+                if i_provided_a_filepath:
+                    print("T2* fit failure! Cannot fit: "+str(data_or_filepath_to_data))
                 else:
-                    plt.show(block=True)
-
+                    print("T2* fit failure! Cannot fit the provided raw data.")
+                
+                # Store failed fit and its failed plusminus error bar.
+                (fitted_values[current_res_ii]).append((t2_asterisk_time, fit_error/2))
+    
     # We're done.
     return fitted_values
-
 
 def exponential_oscillatory_decay(
     t,
@@ -390,7 +433,6 @@ def exponential_oscillatory_decay(
     ''' Function to be fitted against.
     '''
     return amplitude * np.exp(-t / T2_asterisk) * np.cos(2.0*np.pi * frequency * t + phase) + y_offset
-
 
 def fit_oscillatory_decay_single(delays, decaying_data):
     ''' Grab submitted data of a single Ramsey spectroscopy trace and perform
