@@ -23,6 +23,9 @@ def fit_amplitude(
         fit the Rabi oscillations to get a "period" in amplitude.
         This "amplitude period" / 2 = the π-pulse amplitude.
         
+        A failed fit (due to illegibly noisy input, for instance)
+        will return a NaN ±NaN result.
+        
         i_provided_a_filepath sets whether you as a user
         provided a filepath (to data) that is to be fitted bu the code,
         or whether you provided raw data straight away.

@@ -22,6 +22,9 @@ def fit_exponential_decay_t1(
     ''' From supplied data or datapath, fit the energy relaxation decay
         to find out the exponent of which the energy decays.
         
+        A failed fit (due to illegibly noisy input, for instance)
+        will return a NaN ±NaN result.
+        
         In principle, the decay is essentially = e^(t/T1).
         Meaning that when t = T1 => e^(-1) = 0.367879 for some normalised
         peak-to-peak value.

@@ -24,7 +24,11 @@ def fit_exponential_decay_t2_echo(
     ''' From supplied data or datapath, fit the energy relaxation decay
         to find out the exponent of which the energy decays.
         
-        In principle, the decay is essentially = e^(-t/T1).
+        The goal is to extract T2_echo
+        A failed fit (due to illegibly noisy input, for instance)
+        will return a NaN ±NaN result.
+        
+        In principle, the decay is essentially = e^(-t/T2_echo).
         Meaning that when t = T2_echo => e^(-1) = 0.367879 for some normalised
         peak-to-peak value.
         
