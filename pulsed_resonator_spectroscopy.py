@@ -15,6 +15,7 @@ import time
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
+from phase_calculator import bandsign
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -23,6 +24,7 @@ from data_exporter import \
     get_dict_for_log_list, \
     save
 
+
 def find_f_ro0_sweep_coupler(
     ip_address,
     ext_clk_present,
@@ -30,7 +32,7 @@ def find_f_ro0_sweep_coupler(
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq_nco,
-    readout_freq_centre_if,
+    readout_freq_centre,
     readout_freq_span,
     readout_amp,
     readout_duration,
@@ -212,20 +214,21 @@ def find_f_ro0_sweep_coupler(
         
         # Setup readout carrier, this tone will be swept in frequency.
         # The user provides an intended span.
+        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
         f_start = readout_freq_centre_if - readout_freq_span / 2
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the upper sideband. Note the plus sign.
-        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
+        # Use the appropriate sideband.
+        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_arr,
+            frequencies  = np.abs(readout_freq_if_arr),
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
+            phases_q     = bandsign(readout_freq_if_arr),
         )
         
         ### Setup pulse "coupler_bias_tone" ###
@@ -307,7 +310,7 @@ def find_f_ro0_sweep_coupler(
         # Average the measurement over 'num_averages' averages
         pls.run(
             period          =   T,
-            repeat_count    =   num_biases, # Note: input sanitisation took care of illegal values here, see beginning of def.
+            repeat_count    =   num_biases,
             num_averages    =   num_averages,
             print_time      =   True,
         )
@@ -346,19 +349,20 @@ def find_f_ro0_sweep_coupler(
             'readout_sampling_port', "",
             
             'readout_freq_nco', "Hz",
-            'readout_freq_centre_if', "Hz",
+            'readout_freq_centre', "Hz",
             'readout_freq_span', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s", 
+            'repetition_delay', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
             
             #'coupler_dc_port', "",
             'added_delay_for_bias_tee', "s",
+            
             'num_freqs', "",
             'num_averages', "",
             
@@ -366,9 +370,19 @@ def find_f_ro0_sweep_coupler(
             'coupler_bias_min', "FS",
             'coupler_bias_max', "FS",
         ]
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
         # Ensure the keyed elements above are valid.
         assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
@@ -430,7 +444,7 @@ def find_f_ro0_sweep_coupler(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
+            resonator_freq_if_arrays_to_fft = [ np.abs(readout_freq_if_arr) ], ## TODO np.abs or not??
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -461,7 +475,7 @@ def find_f_ro0_sweep_power(
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq_nco,
-    readout_freq_centre_if,
+    readout_freq_centre,
     readout_freq_span,
     readout_duration,
     
@@ -548,7 +562,7 @@ def find_f_ro0_sweep_power(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
@@ -581,20 +595,21 @@ def find_f_ro0_sweep_power(
 
         # Setup readout carrier, this tone will be swept in frequency.
         # The user provides an intended span.
+        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
         f_start = readout_freq_centre_if - readout_freq_span / 2
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the upper sideband. Note the plus sign.
-        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
+        # Use the appropriate sideband.
+        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_arr,
+            frequencies  = np.abs(readout_freq_if_arr),
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
+            phases_q     = bandsign(readout_freq_if_arr),
         )
         
         ### Setup sampling window ###
@@ -664,7 +679,7 @@ def find_f_ro0_sweep_power(
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
             'readout_freq_nco', "Hz",
-            'readout_freq_centre_if', "Hz",
+            'readout_freq_centre', "Hz",
             'readout_freq_span', "Hz",
             'readout_duration', "s",
             
@@ -681,9 +696,19 @@ def find_f_ro0_sweep_power(
             'readout_amp_min', "FS",
             'readout_amp_max', "FS",
         ]
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
         # Ensure the keyed elements above are valid.
         assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
@@ -745,13 +770,13 @@ def find_f_ro0_sweep_power(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
+            resonator_freq_if_arrays_to_fft = [ np.abs(readout_freq_if_arr) ], ## TODO np.abs or not??
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
-            integration_window_stop = integration_window_stop,
+            integration_window_stop  = integration_window_stop,
             inner_loop_size = num_freqs,
             outer_loop_size = num_amplitudes,
             
@@ -776,7 +801,7 @@ def find_f_ro1_sweep_coupler(
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq_nco,
-    readout_freq_centre_if,
+    readout_freq_centre,
     readout_freq_span,
     readout_amp,
     readout_duration,
@@ -788,9 +813,10 @@ def find_f_ro1_sweep_coupler(
     integration_window_stop,
     
     control_port,
+    control_freq_nco,
+    
     control_amp_01,
     control_freq_01,
-    control_freq_nco,
     control_duration_01,
     
     coupler_dc_port,
@@ -874,7 +900,6 @@ def find_f_ro1_sweep_coupler(
     # Declare amplitude array for the coupler to be swept
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
     
-    
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
@@ -925,7 +950,7 @@ def find_f_ro1_sweep_coupler(
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
-            sync      = False, # Sync at next call
+            sync      = False,
         )
         # Control port mixer
         pls.hardware.configure_mixer(
@@ -982,20 +1007,21 @@ def find_f_ro1_sweep_coupler(
 
         # Setup readout carrier, this tone will be swept in frequency.
         # The user provides an intended span.
+        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
         f_start = readout_freq_centre_if - readout_freq_span / 2
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the upper sideband. Note the plus sign.
-        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
+        # Use the appropriate sideband.
+        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_arr,
+            frequencies  = np.abs(readout_freq_if_arr),
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
+            phases_q     = bandsign(readout_freq_if_arr),
         )
         
         
@@ -1021,8 +1047,6 @@ def find_f_ro1_sweep_coupler(
             phases       = 0.0,
             phases_q     = bandsign(control_freq_if_01),
         )
-        
-        
         
         
         ### Setup pulse "coupler_bias_tone" ###
@@ -1149,7 +1173,7 @@ def find_f_ro1_sweep_coupler(
             'readout_sampling_port', "",
             
             'readout_freq_nco', "Hz",
-            'readout_freq_centre_if', "Hz",
+            'readout_freq_centre', "Hz",
             'readout_freq_span', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
@@ -1173,94 +1197,77 @@ def find_f_ro1_sweep_coupler(
         if not skip_saving_control_data:
             for ii in [
                 'control_port', "",
+                'control_freq_nco', "Hz",
+                
                 'control_amp_01', "FS",
                 'control_freq_01', "Hz",
                 'control_duration_01', "s",
             ]:
                 hdf5_singles.append(ii)
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
-        # Assert that the received keys bear (an even number of) entries,
-        # implying whether a unit is missing.
-        number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and \
-            ((len(hdf5_singles) % 2) == 0) and \
-            ((len(hdf5_logs) % 2) == 0)
-        assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units provided. Someone likely forgot a comma."
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
         
         # Stylistically rework underscored characters in the axes dict.
-        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
-            axes[axis] = axes[axis].replace('/2','/₂')
-            axes[axis] = axes[axis].replace('/3','/₃')
-            axes[axis] = axes[axis].replace('_01','₀₁')
-            axes[axis] = axes[axis].replace('_02','₀₂')
-            axes[axis] = axes[axis].replace('_03','₀₃')
-            axes[axis] = axes[axis].replace('_12','₁₂')
-            axes[axis] = axes[axis].replace('_13','₁₃')
-            axes[axis] = axes[axis].replace('_20','₂₀')
-            axes[axis] = axes[axis].replace('_23','₂₃')
-            axes[axis] = axes[axis].replace('_0','₀')
-            axes[axis] = axes[axis].replace('_1','₁')
-            axes[axis] = axes[axis].replace('_2','₂')
-            axes[axis] = axes[axis].replace('_3','₃')
-            axes[axis] = axes[axis].replace('lambda','λ')
-            axes[axis] = axes[axis].replace('Lambda','Λ')
+        axes = stylise_axes(axes)
         
-        # Build step lists, re-scale and re-unit where necessary.
+        # Create step lists
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
-                temp_name   = hdf5_steps[ii]
-                temp_object = np.array( eval(hdf5_steps[ii]) )
-                temp_unit   = hdf5_steps[ii+1]
-                if ii == 0:
-                    if (axes['x_name']).lower() != 'default':
-                        # Replace the x-axis name
-                        temp_name = axes['x_name']
-                    if axes['x_scaler'] != 1.0:
-                        # Re-scale the x-axis
-                        temp_object *= axes['x_scaler']
-                    if (axes['x_unit']).lower() != 'default':
-                        # Change the unit on the x-axis
-                        temp_unit = axes['x_unit']
-                elif ii == 2:
-                    if (axes['z_name']).lower() != 'default':
-                        # Replace the z-axis name
-                        temp_name = axes['z_name']
-                    if axes['z_scaler'] != 1.0:
-                        # Re-scale the z-axis
-                        temp_object *= axes['z_scaler']
-                    if (axes['z_unit']).lower() != 'default':
-                        # Change the unit on the z-axis
-                        temp_unit = axes['z_unit']
-                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
-                temp_object = np.array( [eval(hdf5_singles[jj])] )
-                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
-        
-        log_dict_list = []
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
         for qq in range(len(axes['y_scaler'])):
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            log_entry_name = hdf5_logs[kk]
-            # Set unit on the y-axis
-            if (axes['y_unit']).lower() != 'default':
-                temp_log_unit = axes['y_unit']
-            else:
-                temp_log_unit = hdf5_logs[kk+1]
-            if (axes['y_name']).lower() != 'default':
-                # Replace the y-axis name
-                log_entry_name = axes['y_name']
-                if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
-            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
+            if (len(hdf5_logs)/2 > 1):
+                if not ( ('Probability for state |') in hdf5_logs[kk] ):
+                    hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
         
         # Save data!
         string_arr_to_return.append(save(
@@ -1272,7 +1279,7 @@ def find_f_ro1_sweep_coupler(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
+            resonator_freq_if_arrays_to_fft = [ np.abs(readout_freq_if_arr) ], ## TODO np.abs or not??
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1303,7 +1310,7 @@ def find_f_ro1_sweep_power(
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq_nco,
-    readout_freq_centre_if,
+    readout_freq_centre,
     readout_freq_span,
     readout_duration,
     
@@ -1314,6 +1321,8 @@ def find_f_ro1_sweep_power(
     integration_window_stop,
     
     control_port,
+    control_freq_nco,
+    
     control_amp_01,
     control_freq_01,
     control_duration_01,
@@ -1408,7 +1417,7 @@ def find_f_ro1_sweep_power(
         )
         # Control port mixer
         pls.hardware.configure_mixer(
-            freq      = control_freq_01,
+            freq      = control_freq_nco,
             out_ports = control_port,
             tune      = True,
             sync      = True,
@@ -1446,20 +1455,21 @@ def find_f_ro1_sweep_power(
 
         # Setup readout carrier, this tone will be swept in frequency.
         # The user provides an intended span.
+        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
         f_start = readout_freq_centre_if - readout_freq_span / 2
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the upper sideband. Note the plus sign.
-        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
+        # Use the appropriate sideband.
+        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_arr,
+            frequencies  = np.abs(readout_freq_if_arr),
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
+            phases_q     = bandsign(readout_freq_if_arr),
         )
         
         ### Setup pulse "control_pulse_pi_01" ###
@@ -1475,12 +1485,13 @@ def find_f_ro1_sweep_power(
             envelope    = True,
         )
         # Setup control pulse carrier, considering that there is a digital mixer
+        control_freq_if_01 = control_freq_nco - control_freq_01
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = bandsign(control_freq_if_01),
         )
         
         ### Setup sampling window ###
@@ -1555,7 +1566,7 @@ def find_f_ro1_sweep_power(
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
             'readout_freq_nco', "Hz",
-            'readout_freq_centre_if', "Hz",
+            'readout_freq_centre', "Hz",
             'readout_freq_span', "Hz",
             'readout_duration', "s",
             
@@ -1566,6 +1577,8 @@ def find_f_ro1_sweep_power(
             'integration_window_stop', "s",
             
             'control_port', "",
+            'control_freq_nco', "Hz",
+            
             'control_amp_01', "FS",
             'control_freq_01', "Hz",
             'control_duration_01', "s",
@@ -1577,9 +1590,19 @@ def find_f_ro1_sweep_power(
             'readout_amp_min', "FS",
             'readout_amp_max', "FS",
         ]
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
         # Ensure the keyed elements above are valid.
         assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
@@ -1641,7 +1664,7 @@ def find_f_ro1_sweep_power(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
+            resonator_freq_if_arrays_to_fft = [ np.abs(readout_freq_if_arr) ], ## TODO np.abs or not??
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1672,7 +1695,7 @@ def find_f_ro2_sweep_coupler(
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq_nco,
-    readout_freq_centre_if,
+    readout_freq_centre,
     readout_freq_span,
     readout_amp,
     readout_duration,
@@ -1684,6 +1707,8 @@ def find_f_ro2_sweep_coupler(
     integration_window_stop,
     
     control_port,
+    control_freq_nco,
+    
     control_amp_01,
     control_freq_01,
     control_duration_01,
@@ -1691,6 +1716,7 @@ def find_f_ro2_sweep_coupler(
     control_amp_12,
     control_freq_12,
     control_duration_12,
+    
     
     coupler_dc_port,
     added_delay_for_bias_tee,
@@ -1823,16 +1849,13 @@ def find_f_ro2_sweep_coupler(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
-            sync      = False, # Sync at next call
+            sync      = False,
         )
         # Control port mixer
-        high_res  = max( [control_freq_01, control_freq_12] )
-        low_res   = min( [control_freq_01, control_freq_12] )
-        control_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
@@ -1892,20 +1915,21 @@ def find_f_ro2_sweep_coupler(
 
         # Setup readout carrier, this tone will be swept in frequency.
         # The user provides an intended span.
+        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
         f_start = readout_freq_centre_if - readout_freq_span / 2
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the upper sideband. Note the plus sign.
-        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
+        # Use the appropriate sideband.
+        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_arr,
+            frequencies  = np.abs(readout_freq_if_arr),
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
+            phases_q     = bandsign(readout_freq_if_arr),
         )
         
         
@@ -2080,7 +2104,7 @@ def find_f_ro2_sweep_coupler(
             'readout_sampling_port', "",
             
             'readout_freq_nco', "Hz",
-            'readout_freq_centre_if', "Hz",
+            'readout_freq_centre', "Hz",
             'readout_freq_span', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
@@ -2105,6 +2129,8 @@ def find_f_ro2_sweep_coupler(
         if not skip_saving_control_data:
             for ii in [
                 'control_port', "",
+                'control_freq_nco', "Hz",
+                
                 'control_amp_01', "FS",
                 'control_freq_01', "Hz",
                 'control_duration_01', "s",
@@ -2114,89 +2140,69 @@ def find_f_ro2_sweep_coupler(
                 'control_duration_12', "s",
             ]:
                 hdf5_singles.append(ii)
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
-        # Assert that the received keys bear (an even number of) entries,
-        # implying whether a unit is missing.
-        number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and \
-            ((len(hdf5_singles) % 2) == 0) and \
-            ((len(hdf5_logs) % 2) == 0)
-        assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units provided. Someone likely forgot a comma."
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
         
         # Stylistically rework underscored characters in the axes dict.
-        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
-            axes[axis] = axes[axis].replace('/2','/₂')
-            axes[axis] = axes[axis].replace('/3','/₃')
-            axes[axis] = axes[axis].replace('_01','₀₁')
-            axes[axis] = axes[axis].replace('_02','₀₂')
-            axes[axis] = axes[axis].replace('_03','₀₃')
-            axes[axis] = axes[axis].replace('_12','₁₂')
-            axes[axis] = axes[axis].replace('_13','₁₃')
-            axes[axis] = axes[axis].replace('_20','₂₀')
-            axes[axis] = axes[axis].replace('_23','₂₃')
-            axes[axis] = axes[axis].replace('_0','₀')
-            axes[axis] = axes[axis].replace('_1','₁')
-            axes[axis] = axes[axis].replace('_2','₂')
-            axes[axis] = axes[axis].replace('_3','₃')
-            axes[axis] = axes[axis].replace('lambda','λ')
-            axes[axis] = axes[axis].replace('Lambda','Λ')
+        axes = stylise_axes(axes)
         
-        # Build step lists, re-scale and re-unit where necessary.
+        # Create step lists
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
-                temp_name   = hdf5_steps[ii]
-                temp_object = np.array( eval(hdf5_steps[ii]) )
-                temp_unit   = hdf5_steps[ii+1]
-                if ii == 0:
-                    if (axes['x_name']).lower() != 'default':
-                        # Replace the x-axis name
-                        temp_name = axes['x_name']
-                    if axes['x_scaler'] != 1.0:
-                        # Re-scale the x-axis
-                        temp_object *= axes['x_scaler']
-                    if (axes['x_unit']).lower() != 'default':
-                        # Change the unit on the x-axis
-                        temp_unit = axes['x_unit']
-                elif ii == 2:
-                    if (axes['z_name']).lower() != 'default':
-                        # Replace the z-axis name
-                        temp_name = axes['z_name']
-                    if axes['z_scaler'] != 1.0:
-                        # Re-scale the z-axis
-                        temp_object *= axes['z_scaler']
-                    if (axes['z_unit']).lower() != 'default':
-                        # Change the unit on the z-axis
-                        temp_unit = axes['z_unit']
-                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
-                temp_object = np.array( [eval(hdf5_singles[jj])] )
-                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
-        
-        log_dict_list = []
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
         for qq in range(len(axes['y_scaler'])):
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            log_entry_name = hdf5_logs[kk]
-            # Set unit on the y-axis
-            if (axes['y_unit']).lower() != 'default':
-                temp_log_unit = axes['y_unit']
-            else:
-                temp_log_unit = hdf5_logs[kk+1]
-            if (axes['y_name']).lower() != 'default':
-                # Replace the y-axis name
-                log_entry_name = axes['y_name']
-                if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
-            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
+            if len(hdf5_logs)/2 > 1:
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
         
         # Save data!
         string_arr_to_return.append(save(
@@ -2208,13 +2214,13 @@ def find_f_ro2_sweep_coupler(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
+            resonator_freq_if_arrays_to_fft = [ np.abs(readout_freq_if_arr) ], ## TODO np.abs or not??
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
-            integration_window_stop = integration_window_stop,
+            integration_window_stop  = integration_window_stop,
             inner_loop_size = num_freqs,
             outer_loop_size = num_biases,
             
@@ -2239,7 +2245,7 @@ def find_f_ro2_sweep_power(
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq_nco,
-    readout_freq_centre_if,
+    readout_freq_centre,
     readout_freq_span,
     readout_duration,
     
@@ -2250,6 +2256,8 @@ def find_f_ro2_sweep_power(
     integration_window_stop,
     
     control_port,
+    control_freq_nco,
+    
     control_amp_01,
     control_freq_01,
     control_duration_01,
@@ -2342,16 +2350,13 @@ def find_f_ro2_sweep_power(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
             sync      = False,
         )
         # Control port mixer
-        high_res  = max( [control_freq_01, control_freq_12] )
-        low_res   = min( [control_freq_01, control_freq_12] )
-        control_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
@@ -2396,20 +2401,21 @@ def find_f_ro2_sweep_power(
 
         # Setup readout carrier, this tone will be swept in frequency.
         # The user provides an intended span.
+        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
         f_start = readout_freq_centre_if - readout_freq_span / 2
         f_stop  = readout_freq_centre_if + readout_freq_span / 2
         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the upper sideband. Note the plus sign.
-        readout_pulse_freq_arr = readout_freq_nco + readout_freq_if_arr
+        # Use the appropriate sideband.
+        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = readout_freq_if_arr,
+            frequencies  = np.abs(readout_freq_if_arr),
             phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = np.full_like(readout_freq_if_arr, -np.pi/2), # +pi/2 = LSB
+            phases_q     = bandsign(readout_freq_if_arr),
         )
         
         ### Setup pulse "control_pulse_pi_01" and "control_pulse_pi_12" ###
@@ -2433,22 +2439,23 @@ def find_f_ro2_sweep_power(
             template_q  = control_envelope_12,
             envelope    = True,
         )
+        
         # Setup control pulse carrier tones, considering that there is a digital mixer
-        control_freq_if_01 = np.abs(control_freq_nco - control_freq_01)
+        control_freq_if_01 = control_freq_nco - control_freq_01
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = control_freq_if_01,
+            frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = bandsign(control_freq_if_01),
         )
-        control_freq_if_12 = np.abs(control_freq_nco - control_freq_12)
+        control_freq_if_12 = control_freq_nco - control_freq_12
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 1,
-            frequencies  = control_freq_if_12,
+            frequencies  = np.abs(control_freq_if_12),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = bandsign(control_freq_if_12),
         )
         
         ### Setup sampling window ###
@@ -2527,7 +2534,7 @@ def find_f_ro2_sweep_power(
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
             'readout_freq_nco', "Hz",
-            'readout_freq_centre_if', "Hz",
+            'readout_freq_centre', "Hz",
             'readout_freq_span', "Hz",
             'readout_duration', "s",
             
@@ -2538,6 +2545,8 @@ def find_f_ro2_sweep_power(
             'integration_window_stop', "s",
             
             'control_port', "",
+            'control_freq_nco', "Hz",
+            
             'control_amp_01', "FS",
             'control_freq_01', "Hz",
             'control_duration_01', "s",
@@ -2545,7 +2554,7 @@ def find_f_ro2_sweep_power(
             'control_amp_12', "FS",
             'control_freq_12', "Hz",
             'control_duration_12', "s",
-
+            
             'num_freqs', "",
             'num_amplitudes', "",
             'num_averages', "",
@@ -2553,9 +2562,19 @@ def find_f_ro2_sweep_power(
             'readout_amp_min', "FS",
             'readout_amp_max', "FS",
         ]
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
         # Ensure the keyed elements above are valid.
         assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
@@ -2617,7 +2636,7 @@ def find_f_ro2_sweep_power(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
+            resonator_freq_if_arrays_to_fft = [ np.abs(readout_freq_if_arr) ], ## TODO np.abs or not??
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,

@@ -241,12 +241,12 @@ def ramsey01_ro0(
         )
         
         # Setup control pulse carrier, this tone will be swept in frequency.
-        control_freq_01_centre_if = control_freq_nco - control_freq_01_centre  
+        control_freq_01_centre_if = control_freq_nco - control_freq_01_centre
         f_start = control_freq_01_centre_if - control_freq_01_span / 2
         f_stop  = control_freq_01_centre_if + control_freq_01_span / 2
         control_freq_01_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
+        # Use the appropriate sideband.
         control_pulse_01_half_freq_arr = control_freq_nco - control_freq_01_if_arr
 
         # Setup LUT
@@ -1765,7 +1765,7 @@ def ramsey01_echo_r0(
         f_stop  = control_freq_01_centre_if + control_freq_01_span / 2
         control_freq_01_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the lower sideband. Note the minus sign.
+        # Use the appropriate sideband.
         control_pulse_01_half_freq_arr = control_freq_nco - control_freq_01_if_arr
 
         # Setup LUT
