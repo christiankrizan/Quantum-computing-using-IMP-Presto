@@ -31,6 +31,7 @@ def pulsed01_flux_sweep(
     
     readout_stimulus_port,
     readout_sampling_port,
+    readout_freq_nco,
     readout_freq,
     readout_amp,
     readout_duration,
@@ -162,7 +163,7 @@ def pulsed01_flux_sweep(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq,
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
@@ -221,12 +222,13 @@ def pulsed01_flux_sweep(
             fall_time   = 0e-9
         )
         # Setup readout carrier, considering that there is a digital mixer
+        readout_freq_if = readout_freq_nco - readout_freq
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(readout_freq_if),
             phases       = 0.0,
-            phases_q     = 0.0
+            phases_q     = bandsign(readout_freq_if),
         )
 
         ### Setup pulse "control_pulse_pi_01" ###
@@ -384,6 +386,7 @@ def pulsed01_flux_sweep(
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
             
+            'readout_freq_nco', "Hz",
             'readout_freq', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
@@ -484,13 +487,13 @@ def pulsed01_flux_sweep(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [],
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
             
             integration_window_start = integration_window_start,
-            integration_window_stop = integration_window_stop,
+            integration_window_stop  = integration_window_stop,
             inner_loop_size = num_freqs,
             outer_loop_size = num_biases,
             
