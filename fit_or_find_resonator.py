@@ -17,6 +17,220 @@ import matplotlib.pyplot as plt
 #  See this thesis here: https://scholar.colorado.edu/downloads/q237ht07m  ##
 
 
+def find_power_where_resonator_becomes_linear(
+    data_or_filepath_to_data,
+    pulse_freq_arr = [],
+    readout_amp_arr = [],
+    i_provided_a_filepath = True,
+    i_renamed_the_pulse_freq_arr_to = '',
+    i_renamed_the_readout_amp_arr_to = '',
+    plot_for_this_many_seconds = 0.0,
+    number_of_times_to_filter_noisy_raw_curve = 10,
+    report_lowest_resonance_point_of_filtered_curve = True,
+    ):
+    ''' From supplied data or datapath, fit a Lorentzian to find the
+        point where a series of resonator spectroscopy runs started yielding
+        a linear resonator readout. The goal is to extract a resonator stimulus
+        amplitude to use for the res_f. Resonator frequencies are found
+        either by fitting Lorentzians or by simply filtering the resonator
+        curve(s) - as dictated by the user.
+        
+        A failed fit (due to illegibly noisy input, for instance)
+        will return a NaN ±NaN result.
+        
+        plot_for_this_many_seconds will show a plot for a given number of
+        seconds. If provided a negative value, then the plot will remain
+        "blocking" until closed by the user.
+        
+        i_provided_a_filepath sets whether you as a user
+        provided a filepath (to data) that is to be fitted bu the code,
+        or whether you provided raw data straight away.
+        
+        report_lowest_resonance_point_of_filtered_curve will set whether
+        the reported value is from a Lorentzian fit, which usually
+        is in fact a pretty bad estimate, or whether to instead report
+        to the user what is the lowest point of the (filtered) resonator
+        trace. The latter of which is usually adequate.
+        
+    '''
+    
+    # The resonator spectroscopy experiment could have been done with a
+    # multiplexed readout. Thus, we declare a list for storing different
+    # traces.
+    frequency_values = []
+    
+    # Get data.
+    if i_provided_a_filepath:
+        # The user provided a filepath to data.
+        if (not isinstance(data_or_filepath_to_data, str)):
+            data_or_filepath_to_data = data_or_filepath_to_data[0]
+            assert isinstance(data_or_filepath_to_data, str), "Error: the power-sweep edition of the resonator fitter was provided a non-string datatype, and/or a list whose first element was a non-string datatype. Expected string (filepath to data)."
+        with h5py.File(os.path.abspath(data_or_filepath_to_data), 'r') as h5f:
+            extracted_data = h5f["processed_data"][()]
+            
+            if i_renamed_the_pulse_freq_arr_to == '':
+                pulse_freq_arr_values = h5f[ "readout_pulse_freq_arr" ][()]
+            else:
+                pulse_freq_arr_values = h5f[i_renamed_the_pulse_freq_arr_to][()]
+            
+            if i_renamed_the_readout_amp_arr_to == '':
+                readout_amp_arr_values = h5f[ "readout_amp_arr" ][()]
+            else:
+                readout_amp_arr_values = h5f[i_renamed_the_readout_amp_arr_to][()]
+            
+            # Note! Multiplexed functionality disabled for now. TODO
+        
+    else:
+        # Then the user provided the data raw.
+        assert (not isinstance(data_or_filepath_to_data, str)), "Error: the power-sweep edition of the resonator fitter was provided a string type. Expected raw data. The provided variable was: "+str(data_or_filepath_to_data)
+        
+        # Catch bad user inputs.
+        type_and_length_is_safe = False
+        try:
+            if len(pulse_freq_arr) != 0:
+                type_and_length_is_safe = True
+        except TypeError:
+            pass
+        assert type_and_length_is_safe, "Error: the resonator fitter was provided raw data to fit, but the data for the delay time array could not be used for fitting the data. The argument \"pulse_freq_arr\" was: "+str(pulse_freq_arr)
+        
+        # Assert fittable data.
+        assert len(pulse_freq_arr) == len((data_or_filepath_to_data[0])[0]), "Error: the user-provided raw data does not have the same length as the provided time delay (array) data."
+        
+        # Accept cruel fate and move on.
+        extracted_data = data_or_filepath_to_data
+        pulse_freq_arr_values = pulse_freq_arr
+    
+    # At this point, we should be able to just feed the acquired data
+    # as "raw data" into the normal fitter further down this file.
+    resonator_migration_traces = fit_or_find_resonator_dip_or_lorentzian(
+        data_or_filepath_to_data = extracted_data,
+        pulse_freq_arr = pulse_freq_arr_values,
+        i_provided_a_filepath = False,
+        i_renamed_the_pulse_freq_arr_to = i_renamed_the_pulse_freq_arr_to,
+        plot_for_this_many_seconds = plot_for_this_many_seconds,
+        number_of_times_to_filter_noisy_raw_curve = number_of_times_to_filter_noisy_raw_curve,
+        report_lowest_resonance_point_of_filtered_curve = report_lowest_resonance_point_of_filtered_curve
+    )
+    
+    # resonator_migration_traces is now a list (of resonator entries) of
+    # all fitted traces in the sweep.
+    for curr_resonator in range(len(resonator_migration_traces)):
+        curr_frequencies_in_power_sweep = resonator_migration_traces[curr_resonator]
+        
+        # For analysis, discard error bars. TODO, likely.
+        for entry in range(len(curr_frequencies_in_power_sweep)):
+            curr_frequencies_in_power_sweep[entry] = (curr_frequencies_in_power_sweep[entry])[0]
+        
+        # Try to fit the resonator's traversal to a Gompertz curve.
+        
+        ## TODO Nothing below takes into account that the power
+        ##      sweep could have been done from higher powers,
+        ##      to lower powers. This fact changes whether the
+        ##      Gompertz function's asymptotic plateau is negative or positive.
+        ##      And, the y_offset likely (check this fact).
+        
+        # Get the Gompertzian offset.
+        y_offset = curr_frequencies_in_power_sweep[0]
+        
+        # Grab the x-axis for the Gompertz curve, which would be
+        # the list of powers.
+        '''See readout_amp_arr_values above.'''
+        
+        # Grab the asymptotic plateau for the Gompertz curve.
+        # This number equated to the frequency difference that the curve
+        # traverses from its dressed (ground) state to the linear regime.
+        # A negative value is legal; this corresponds to the curve
+        # shifting from lower frequency to higher frequency.
+        asymptotic_plateau_dressed_to_linear_regime = \
+            curr_frequencies_in_power_sweep[-1] - \
+            curr_frequencies_in_power_sweep[0]
+        
+        # Grab the displacement for the Gompertz curve.
+        # Assuming (wildly?) that the curve goes from 0 to 1, e^(b) sets
+        # where the curve crosses the y-axis. This crossing happens at e^(b)?
+        # 0 and 1 above must be offset according to our data.
+        
+        # For now, let's assume that the crossing happens mid-way
+        # in the sweep, as a guess. TODO: this is not a good approach.
+        crossing_point = curr_frequencies_in_power_sweep[0] + asymptotic_plateau_dressed_to_linear_regime / 2
+        displacement_guess = np.log(crossing_point)
+        
+        # For a known half-way point, we can solve for
+        # the intended growth rate. For this, we need a guess on where
+        # the undefined region is in the power sweep. Which is hard, because
+        # the fits in these regions typically only consist of a bunch of NaN
+        # values.
+        # Let's find where the biggest difference is between two x-axis
+        # values, and take the interpolated value between these two
+        # as the guess for the amplitude-axis value.
+        amp_a = readout_amp_arr_values[0] 
+        amp_b = readout_amp_arr_values[0]
+        x_idx_for_a = 0
+        x_idx_for_b = 0
+        largest_diff = 0.0
+        
+        # Get an initial value for x_midpoint_between_indexes_a_and_b,
+        # the first non-nan point.
+        for get_first_non_nan in range(len(curr_frequencies_in_power_sweep)):
+            if not isnan(curr_frequencies_in_power_sweep[get_first_non_nan]):
+                x_idx_for_a = get_first_non_nan
+        for get_last_non_nan in range(1,len(curr_frequencies_in_power_sweep)+1):
+            if not isnan(curr_frequencies_in_power_sweep[-get_last_non_nan]):
+                x_idx_for_b = get_first_non_nan
+        x_midpoint_between_indexes_a_and_b = np.abs( (curr_frequencies_in_power_sweep[-1] + curr_frequencies_in_power_sweep[0]) / 2 )
+        
+        # Now take a look at where the biggest difference between two adjacent,
+        # non-NaN values would be (in frequency).
+        for jj in range(len(readout_amp_arr_values) -1): # -1, to avoid an IndexError
+            if not isnan(curr_frequencies_in_power_sweep[jj]):
+                amp_a = curr_frequencies_in_power_sweep[jj]
+                x_idx_for_a = jj
+                print(str(curr_frequencies_in_power_sweep[jj]))
+            if not isnan(curr_frequencies_in_power_sweep[jj+1]):
+                amp_b = curr_frequencies_in_power_sweep[jj+1]
+                x_idx_for_b = jj+1
+            # Do comparison?
+            if (amp_a != amp_b) and (not isnan(amp_a)) and (not isnan(amp_b)):
+                # amp_a is legal, amp_b is legal, and they are not the same value.
+                diff = np.abs( amp_b - amp_a )
+                # Is this diff the largest one yet?
+                if diff > largest_diff:
+                    largest_diff = diff
+                    # Get a new midpoint here.
+                    x_midpoint_between_indexes_a_and_b = np.abs( (curr_frequencies_in_power_sweep[x_idx_for_b] + curr_frequencies_in_power_sweep[x_idx_for_a]) / 2 )
+        
+        # At this point, we have a guess for the frequency value
+        # that should be in the middle of the resonator travel path.
+        ## Known as x_midpoint_between_indexes_a_and_b
+        growth_rate_guess = np.log(displacement_guess) - np.log(np.log(2)) / x_midpoint_between_indexes_a_and_b
+    
+    raise NotImplementedError("Halted! This fitting routine is not finished.")
+    
+    # Save final data and return values.
+    safe_resonator_stimulus_power = ["TODO"] # No_resonators long.
+    resonator_frequency_at_safe_power = ["TODO"] # No_resonators long.
+    bare_resonator_frequency = ["TODO"] # No_resonators long.
+    list_of_all_fitted_values = resonator_migration_traces
+    return safe_resonator_stimulus_power, resonator_frequency_at_safe_power, bare_resonator_frequency, list_of_all_fitted_values
+
+def fit_gompertz_curve(
+    ):
+    ''' TODO
+    '''
+    raise NotImplementedError("Halted! This function is not completed.")
+
+def gompertz_curve(
+    x,
+    asymptotic_plateau,
+    displacement,
+    growth_rate,
+    y_offset
+    ):
+    ''' Function to be fitted against.
+    '''
+    return asymptotic_plateau * (2.71828182846)**( -displacement*(2.71828182846)**( -growth_rate*x ) ) + y_offset
+
+
 def fit_or_find_resonator_dip_or_lorentzian(
     data_or_filepath_to_data,
     pulse_freq_arr = [],
@@ -59,7 +273,7 @@ def fit_or_find_resonator_dip_or_lorentzian(
         # The user provided a filepath to data.
         if (not isinstance(data_or_filepath_to_data, str)):
             data_or_filepath_to_data = data_or_filepath_to_data[0]
-            assert isinstance(data_or_filepath_to_data, str), "Error: the Lorentzian resonator fitter was provided a non-string datatype, and/or a list whose first element was a non-string datatype. Expected string (filepath to data)."
+            assert isinstance(data_or_filepath_to_data, str), "Error: the resonator fitter was provided a non-string datatype, and/or a list whose first element was a non-string datatype. Expected string (filepath to data)."
         with h5py.File(os.path.abspath(data_or_filepath_to_data), 'r') as h5f:
             extracted_data = h5f["processed_data"][()]
             
@@ -72,7 +286,7 @@ def fit_or_find_resonator_dip_or_lorentzian(
         
     else:
         # Then the user provided the data raw.
-        assert (not isinstance(data_or_filepath_to_data, str)), "Error: the T2_echo decay fitter was provided a string type. Expected raw data. The provided variable was: "+str(data_or_filepath_to_data)
+        assert (not isinstance(data_or_filepath_to_data, str)), "Error: the resonator fitter was provided a string type. Expected raw data. The provided variable was: "+str(data_or_filepath_to_data)
         
         # Catch bad user inputs.
         type_and_length_is_safe = False
@@ -81,10 +295,10 @@ def fit_or_find_resonator_dip_or_lorentzian(
                 type_and_length_is_safe = True
         except TypeError:
             pass
-        assert type_and_length_is_safe, "Error: the T2_echo decay fitter was provided raw data to fit, but the data for the delay time array could not be used for fitting the data. The argument \"pulse_freq_arr\" was: "+str(pulse_freq_arr)
+        assert type_and_length_is_safe, "Error: the resonator fitter was provided raw data to fit, but the data for the frequency array could not be used for fitting the data. The argument \"pulse_freq_arr\" was: "+str(pulse_freq_arr)
         
         # Assert fittable data.
-        assert len(pulse_freq_arr) == len((data_or_filepath_to_data[0])[0]), "Error: the user-provided raw data does not have the same length as the provided time delay (array) data."
+        assert len(pulse_freq_arr) == len((data_or_filepath_to_data[0])[0]), "Error: the user-provided raw data does not have the same length as the provided frequency (array) data."
         
         # Accept cruel fate and move on.
         extracted_data = data_or_filepath_to_data
@@ -108,7 +322,7 @@ def fit_or_find_resonator_dip_or_lorentzian(
     if i_provided_a_filepath:
         print("Performing Lorentzian resonance fitting on " + data_or_filepath_to_data + "...")
     else:
-        print("Commencing Lorentzian resonance fitting provided raw data...")
+        print("Commencing Lorentzian resonance fitting on provided raw data...")
     
     # There may be multiple resonators involved (a multiplexed readout).
     # Grab every trace (as in, a bias sweep will have many traces),
