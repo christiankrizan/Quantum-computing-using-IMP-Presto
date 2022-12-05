@@ -1308,25 +1308,25 @@ def pulsed01_power_sweep(
         
         
         ### Setup pulse "coupler_bias_tone" ###
-
-        # Setup the coupler tone bias.
-        coupler_bias_tone = pls.setup_long_drive(
-            output_port = coupler_dc_port,
-            group       = 0,
-            duration    = added_delay_for_bias_tee,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
-        )
-        # Setup coupler bias tone "carrier"
-        pls.setup_freq_lut(
-            output_ports = coupler_dc_port,
-            group        = 0,
-            frequencies  = 0.0,
-            phases       = 0.0,
-            phases_q     = 0.0,
-        )
+        if coupler_dc_port != []:
+            # Setup the coupler tone bias.
+            coupler_bias_tone = [pls.setup_long_drive(
+                output_port = _port,
+                group       = 0,
+                duration    = added_delay_for_bias_tee,
+                amplitude   = 1.0,
+                amplitude_q = 1.0,
+                rise_time   = 0e-9,
+                fall_time   = 0e-9
+            ) for _port in coupler_dc_port]
+            # Setup coupler bias tone "carrier"
+            pls.setup_freq_lut(
+                output_ports = coupler_dc_port,
+                group        = 0,
+                frequencies  = 0.0,
+                phases       = 0.0,
+                phases_q     = 0.0,
+            )
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
@@ -1341,19 +1341,22 @@ def pulsed01_power_sweep(
         T = 0.0  # s
 
         # Charge the bias tee.
-        pls.reset_phase(T, coupler_dc_port)
-        pls.output_pulse(T, coupler_bias_tone)
-        T += added_delay_for_bias_tee
-        
-        # Redefine the coupler DC pulse duration for repeated playback
-        # once one tee risetime has passed.
-        coupler_bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
+        if coupler_dc_port != []:
+            pls.reset_phase(T, coupler_dc_port)
+            pls.output_pulse(T, coupler_bias_tone)
+            T += added_delay_for_bias_tee
+            
+            # Redefine the coupler DC pulse duration for repeated playback
+            # once one tee risetime has passed.
+            for bias_tone in coupler_bias_tone:
+                bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
         
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
 
             # Re-apply the coupler bias tone.
-            pls.output_pulse(T, coupler_bias_tone)
+            if coupler_dc_port != []:
+                pls.output_pulse(T, coupler_bias_tone)
             
             # Apply the frequency-swept pi01 pulse.
             pls.reset_phase(T, control_port)
