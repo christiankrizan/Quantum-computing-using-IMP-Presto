@@ -173,12 +173,13 @@ def ramsey01_ro0(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -581,6 +582,23 @@ def ramsey01_multiplexed_ro(
     
     raise NotImplementedError("Halted! This function has too much legacy code in it. In principle it works just fine, but to be sure - I've hard-halted the function for now.")
     
+    ## Input sanitisation
+    
+    # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
+    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
+        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+        coupler_dc_bias = 0.0
+    
+    ## Initial array declaration
+    
     # Declare time delay array for saving time data.
     delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)
     
@@ -610,17 +628,18 @@ def ramsey01_multiplexed_ro(
         pls.hardware.set_inv_sinc(control_port_B, 0)
         
         # Coupler port
-        pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-        pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        if coupler_dc_port != []:
+            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
+            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
         
-        
+        assert 1 == 0, "Hard-halt. Legacy code present, fix it."
         # Make the user-set time variables representable
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
         dt_per_ramsey_iteration = int(round(dt_per_ramsey_iteration / plo_clk_T)) * plo_clk_T
         
         
         ''' Setup mixers '''
-        
+        assert 1 == 0, "Hard-halt. Legacy code present in mixer setup, fix it."
         # Readout port, multiplexed, calculate an optimal NCO frequency.
         high_res  = max( [readout_freq_A, readout_freq_B] )
         low_res   = min( [readout_freq_A, readout_freq_B] )
@@ -643,15 +662,17 @@ def ramsey01_multiplexed_ro(
             freq      = control_freq_01_B_nco,
             out_ports = control_port_B,
             tune      = True,
-            sync      = False,
+            sync      = (coupler_dc_port == []),
         )
         # Coupler port mixer
-        pls.hardware.configure_mixer(
-            freq      = 0.0,
-            out_ports = coupler_dc_port,
-            tune      = True,
-            sync      = True,  # Sync here
-        )
+        if coupler_dc_port != []:
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -678,12 +699,13 @@ def ramsey01_multiplexed_ro(
             group           = 0,
             scales          = control_amp_01_B,
         )
-        # Coupler port amplitude (the bias to be swept)
-        pls.setup_scale_lut(
-            output_ports    = coupler_dc_port,
-            group           = 0,
-            scales          = coupler_dc_bias,
-        )
+        # Coupler bias amplitude
+        if coupler_dc_port != []:
+            pls.setup_scale_lut(
+                output_ports    = coupler_dc_port,
+                group           = 0,
+                scales          = coupler_dc_bias,
+            )
         
         
         ### Setup readout pulses ###
@@ -708,6 +730,7 @@ def ramsey01_multiplexed_ro(
             fall_time   = 0e-9
         )
         # Setup readout carriers, considering the multiplexed readout NCO.
+        assert 1 == 0, "Halted! Legacy code present, fix automatic sideband detection for the resonators present."
         readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_A)
         readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_B)
         pls.setup_freq_lut(
@@ -745,7 +768,7 @@ def ramsey01_multiplexed_ro(
             template_q  = control_envelope_01 / 2, # Halved.
             envelope    = True,
         )
-        
+        assert 1 == 0, "Halted! Legacy code present, fix frequency-swept automatic sideband detection for the control ports."
         # Setup control_pulse_pi_01 carrier tones, considering that there are digital mixers.
         # These tones will be swept in frequency. The NCOs are set to f_01.
         f_start_A = control_freq_01_A_centre_if - control_freq_01_A_span / 2
@@ -776,32 +799,31 @@ def ramsey01_multiplexed_ro(
         )
 
         ### Setup pulse "coupler_bias_tone" ###
-
-        # Setup the coupler tone bias.
-        coupler_bias_tone = [pls.setup_long_drive(
-            output_port = _port,
-            group       = 0,
-            duration    = added_delay_for_bias_tee,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
-        ) for _port in coupler_dc_port]
-        
-        # Setup coupler bias tone "carrier"
-        pls.setup_freq_lut(
-            output_ports = coupler_dc_port,
-            group        = 0,
-            frequencies  = 0.0,
-            phases       = 0.0,
-            phases_q     = 0.0,
-        )
-        
+        if coupler_dc_port != []:
+            # Setup the coupler tone bias.
+            coupler_bias_tone = [pls.setup_long_drive(
+                output_port = _port,
+                group       = 0,
+                duration    = added_delay_for_bias_tee,
+                amplitude   = 1.0,
+                amplitude_q = 1.0,
+                rise_time   = 0e-9,
+                fall_time   = 0e-9
+            ) for _port in coupler_dc_port]
+            # Setup coupler bias tone "carrier"
+            pls.setup_freq_lut(
+                output_ports = coupler_dc_port,
+                group        = 0,
+                frequencies  = 0.0,
+                phases       = 0.0,
+                phases_q     = 0.0,
+            )
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
         
+        assert 1 == 0, "Halted! The data storage code is full of legacy entries, which need to be fixed."
         
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
@@ -811,9 +833,10 @@ def ramsey01_multiplexed_ro(
         T = 0.0  # s
         
         # Charge the bias tee.
-        pls.reset_phase(T, coupler_dc_port)
-        pls.output_pulse(T, coupler_bias_tone)
-        T += added_delay_for_bias_tee
+        if coupler_dc_port != []:
+            pls.reset_phase(T, coupler_dc_port)
+            pls.output_pulse(T, coupler_bias_tone)
+            T += added_delay_for_bias_tee
         
         # For every delay to step through:
         for ii in range(num_delays):
@@ -1169,6 +1192,7 @@ def ramsey12_r1(
             sync      = False,
         )
         # Control port mixer
+        assert 1 == 0, "Halted. This function uses legacy code for setting control frequencies, fix this."
         high_res  = max( [control_freq_01, control_freq_12_centre] )
         low_res   = min( [control_freq_01, control_freq_12_centre] )
         control_freq_nco = high_res - (high_res - low_res)/2 -250e6
@@ -1180,12 +1204,13 @@ def ramsey12_r1(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -1217,7 +1242,7 @@ def ramsey12_r1(
         
         
         ### Setup readout pulse ###
-        
+        assert 1 == 0, "Halted. This function uses legacy code for setting sidebands and IF frequencies of resonator stimulus pulses. Fix this."
         # Setup readout pulse envelope
         readout_pulse_excited = pls.setup_long_drive(
             output_port = readout_stimulus_port,
@@ -1251,6 +1276,7 @@ def ramsey12_r1(
             envelope    = True,
         )
         # Setup control_pulse_pi_01 carrier, considering the digital mixer.
+        assert 1 == 0, "Halted. This function does not use automatic sideband detection for its control pulses. Fix this."
         control_freq_if_01 = np.abs(control_freq_nco - control_freq_01)
         pls.setup_freq_lut(
             output_ports = control_port,
@@ -1271,6 +1297,7 @@ def ramsey12_r1(
             envelope    = True,
         )
         # Setup control_pulse_pi_12_half carrier, this tone will be swept in frequency.
+        assert 1 == 0, "Halted. This function does not use automatic sideband detection for its control pulse frequency sweeps. Fix this."
         control_freq_12_centre_if = np.abs(control_freq_nco - control_freq_12_centre)
         f_start = control_freq_12_centre_if - control_freq_12_span / 2
         f_stop  = control_freq_12_centre_if + control_freq_12_span / 2
@@ -1315,6 +1342,7 @@ def ramsey12_r1(
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
         
+        assert 1 == 0, "Halted. This function needs an update of its data storage routines. Particularly, a segment for using/not using probability data (see \"hdf5_logs = etc.\")"
         
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
@@ -1685,12 +1713,13 @@ def ramsey01_echo_r0(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''

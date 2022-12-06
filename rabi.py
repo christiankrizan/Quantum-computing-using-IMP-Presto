@@ -111,7 +111,6 @@ def amplitude_sweep_oscillation01_ro0(
             print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
             coupler_bias_min = 0.0
     
-    
     ## Initial array declaration
     
     # Declare amplitude array for the Rabi experiment.
@@ -181,12 +180,13 @@ def amplitude_sweep_oscillation01_ro0(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
 
         ''' Setup scale LUTs '''
@@ -679,12 +679,13 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
 
         ''' Setup scale LUTs '''
@@ -1165,7 +1166,6 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
     
-    
     ## Initial array declaration
 
     # Declare amplitude arrays for the Rabi experiment.
@@ -1245,12 +1245,13 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
 
         ''' Setup scale LUTs '''
@@ -1277,7 +1278,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
             group           = 0,
             scales          = control_amp_arr_B,
         )
-        # Coupler bias amplitude (to be swept)
+        # Coupler bias amplitude
         if coupler_dc_port != []:
             pls.setup_scale_lut(
                 output_ports    = coupler_dc_port,
@@ -1361,7 +1362,6 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
             phases       = 0.0,
             phases_q     = 0.0,
         )
-        
         
         ### Setup pulse "coupler_bias_tone" ###
         if coupler_dc_port != []:
@@ -1780,12 +1780,13 @@ def amplitude_sweep_oscillation12_ro0(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -2297,12 +2298,13 @@ def amplitude_sweep_oscillation12_ro1(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
 
         ''' Setup scale LUTs '''
@@ -2841,12 +2843,13 @@ def duration_sweep_oscillation12_ro1(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
 
         ''' Setup scale LUTs '''

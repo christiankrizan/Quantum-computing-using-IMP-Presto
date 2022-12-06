@@ -174,12 +174,13 @@ def find_f_ro0_sweep_coupler(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -961,12 +962,13 @@ def find_f_ro1_sweep_coupler(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -1090,7 +1092,8 @@ def find_f_ro1_sweep_coupler(
         
             # Redefine the coupler DC pulse duration for repeated playback
             # once one tee risetime has passed.
-            coupler_bias_tone.set_total_duration(readout_duration + repetition_delay)
+            for bias_tone in coupler_bias_tone:
+                bias_tone.set_total_duration(readout_duration + repetition_delay)
             
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
@@ -1864,12 +1867,13 @@ def find_f_ro2_sweep_coupler(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -2016,7 +2020,8 @@ def find_f_ro2_sweep_coupler(
         
             # Redefine the coupler DC pulse duration for repeated playback
             # once one tee risetime has passed.
-            coupler_bias_tone.set_total_duration(readout_duration + repetition_delay)
+            for bias_tone in coupler_bias_tone:
+                bias_tone.set_total_duration(readout_duration + repetition_delay)
             
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):

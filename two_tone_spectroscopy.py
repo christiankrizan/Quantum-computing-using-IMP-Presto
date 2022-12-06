@@ -178,12 +178,13 @@ def pulsed01_flux_sweep(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -684,12 +685,13 @@ def pulsed01_flux_sweep_multiplexed_ro(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -1224,12 +1226,13 @@ def pulsed01_power_sweep(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -1667,12 +1670,13 @@ def pulsed12_flux_sweep(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''

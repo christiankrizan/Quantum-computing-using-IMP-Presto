@@ -156,12 +156,14 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             sync      = False,
         )
         # Coupler port mixer
-        pls.hardware.configure_mixer(
-            freq      = 0.0,
-            out_ports = coupler_dc_port,
-            tune      = True,
-            sync      = True,  # Sync here
-        )
+        if coupler_dc_port != []:
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''

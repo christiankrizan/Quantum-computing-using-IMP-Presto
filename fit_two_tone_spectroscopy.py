@@ -12,6 +12,7 @@ from numpy import hanning as von_hann
 from math import isnan, sqrt
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+from smoothener import filter_and_interpolate
 
 def fit_resonance_peak(
     data_or_filepath_to_data,
@@ -21,6 +22,7 @@ def fit_resonance_peak(
     i_renamed_the_control_freq_arr_to = '',
     i_renamed_the_coupler_amp_arr_to = '',
     plot_for_this_many_seconds = 0.0,
+    number_of_times_to_filter_noisy_raw_curve = 10,
     ):
     ''' From supplied data or datapath, fit a Lorentzian to find the
         dip of the resonance curve bottom. The goal is to extract
@@ -125,6 +127,13 @@ def fit_resonance_peak(
             
             # Get current trace.
             current_trace_to_fit = (mag_vals_matrix[current_res_ii])[current_z_axis_value]
+            
+            # Filter and interpolate the trace?
+            if number_of_times_to_filter_noisy_raw_curve > 0:
+                current_trace_to_fit = filter_and_interpolate(
+                    datapoints_to_filter_and_interpolate = current_trace_to_fit
+                    number_of_times_to_filter_and_interpolate = number_of_times_to_filter_noisy_raw_curve
+                )
             
             # Try to fit current trace.
             try:

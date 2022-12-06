@@ -175,12 +175,13 @@ def t1_sweep_flux(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -296,9 +297,11 @@ def t1_sweep_flux(
             # Re-apply the coupler DC pulse once one tee risetime has passed.
             if coupler_dc_port != []:
                 if ii > 0:
-                    coupler_bias_tone.set_total_duration(control_duration_01 + readout_duration + ii * dt_per_time_step + repetition_delay)
+                    for bias_tone in coupler_bias_tone:
+                        bias_tone.set_total_duration(control_duration_01 + readout_duration + ii * dt_per_time_step + repetition_delay)
                 else:
-                    coupler_bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
+                    for bias_tone in coupler_bias_tone:
+                        bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
             
             # Output the pi01-pulse along with the coupler DC tone
             pls.reset_phase(T, control_port)
@@ -663,12 +666,13 @@ def t1_sweep_flux_multiplexed_ro0(
         )
         # Coupler port mixer
         if coupler_dc_port != []:
-            pls.hardware.configure_mixer(
-                freq      = 0.0,
-                out_ports = coupler_dc_port,
-                tune      = True,
-                sync      = True,  # Sync here
-            )
+            for curr_coupler_dc_port in range(len(coupler_dc_port)):
+                pls.hardware.configure_mixer(
+                    freq      = 0.0,
+                    out_ports = coupler_dc_port,
+                    tune      = True,
+                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
+                )
         
         
         ''' Setup scale LUTs '''
@@ -725,6 +729,7 @@ def t1_sweep_flux_multiplexed_ro0(
             rise_time   = 0e-9,
             fall_time   = 0e-9
         )
+        assert 1 == 0, "Halted! The readout in this function needs to be updated to automatic sideband selection."
         # Setup readout carriers, considering the multiplexed readout NCO.
         readout_freq_if_A = np.abs(readout_freq_nco - readout_freq_A)
         readout_freq_if_B = np.abs(readout_freq_nco - readout_freq_B)
@@ -764,6 +769,7 @@ def t1_sweep_flux_multiplexed_ro0(
             envelope    = True,
         )
         # Setup control_pulse_pi_01 _A and _B carrier tones, considering that there is a digital mixer.
+        assert 1 == 0, "Halted! The control pulse generation in this function needs to be updated to automatic sideband selection."
         pls.setup_freq_lut(
             output_ports    = control_port_A,
             group           = 0,
@@ -806,6 +812,7 @@ def t1_sweep_flux_multiplexed_ro0(
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
         
+        assert 1 == 0, "Halted! The data saving routine in this function has to be updated."
         
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
@@ -881,7 +888,6 @@ def t1_sweep_flux_multiplexed_ro0(
     if not pls.dry_run:
         time_vector, fetched_data_arr = pls.get_store_data()
         
-
         print("Saving data")
 
         ###########################################
