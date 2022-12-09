@@ -489,9 +489,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1166,9 +1166,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1830,9 +1830,9 @@ def cz20_sweep_duration_and_detuning_state_probability(
     string_arr_to_return = []
         
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2481,9 +2481,9 @@ def cz20_Vz_ramsey_conditional_on_A(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -3127,9 +3127,9 @@ def cz20_Vz_ramsey_conditional_on_A_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -3761,9 +3761,9 @@ def cz20_tune_local_accumulated_phase(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -4398,9 +4398,9 @@ def cz20_tune_local_accumulated_phase_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -5042,9 +5042,9 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -5687,9 +5687,9 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''

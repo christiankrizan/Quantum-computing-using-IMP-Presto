@@ -347,9 +347,9 @@ def t1_sweep_flux(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -886,9 +886,9 @@ def t1_sweep_flux_multiplexed_ro0(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''

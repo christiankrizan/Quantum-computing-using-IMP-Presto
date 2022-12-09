@@ -663,9 +663,9 @@ def execute(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
         
         ## Create fictional array for data storage.
         discretised_result_arr = np.linspace( \
@@ -1562,9 +1562,9 @@ def execute_DEMO(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
         
         ## Create fictional array for data storage.
         discretised_result_arr = np.linspace( \

@@ -320,9 +320,9 @@ def find_f_ro0_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -663,9 +663,9 @@ def find_f_ro0_sweep_power(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")        
+        print("... download complete!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1146,9 +1146,9 @@ def find_f_ro1_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1552,9 +1552,9 @@ def find_f_ro1_sweep_power(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")        
+        print("... download complete!")        
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2079,9 +2079,9 @@ def find_f_ro2_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")
+        print("... download complete!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2522,9 +2522,9 @@ def find_f_ro2_sweep_power(
     string_arr_to_return = []
     
     if not pls.dry_run:
+        print("Downloading data from instrument...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        
-        print("Saving data")        
+        print("... download complete!")        
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
