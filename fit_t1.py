@@ -35,7 +35,7 @@ def fit_exponential_decay_t1(
         This value goes into the fitter as an initial guess.
         
         i_provided_a_filepath sets whether you as a user
-        provided a filepath (to data) that is to be fitted bu the code,
+        provided a filepath (to data) that is to be fitted by the code,
         or whether you provided raw data straight away.
     '''
     

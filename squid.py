@@ -125,8 +125,8 @@ def blind_anharmonicity(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")

@@ -43,7 +43,7 @@ def fit_exponential_decay_t2_echo(
         "blocking" until closed by the user.
         
         i_provided_a_filepath sets whether you as a user
-        provided a filepath (to data) that is to be fitted bu the code,
+        provided a filepath (to data) that is to be fitted by the code,
         or whether you provided raw data straight away.
     '''
     
@@ -269,7 +269,7 @@ def fit_oscillating_exponential_decay_t2_asterisk(
         "blocking" until closed by the user.
         
         i_provided_a_filepath sets whether you as a user
-        provided a filepath (to data) that is to be fitted bu the code,
+        provided a filepath (to data) that is to be fitted by the code,
         or whether you provided raw data straight away.
     '''
     

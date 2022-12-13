@@ -44,7 +44,7 @@ def find_power_where_resonator_becomes_linear(
         "blocking" until closed by the user.
         
         i_provided_a_filepath sets whether you as a user
-        provided a filepath (to data) that is to be fitted bu the code,
+        provided a filepath (to data) that is to be fitted by the code,
         or whether you provided raw data straight away.
         
         report_lowest_resonance_point_of_filtered_curve will set whether
@@ -254,7 +254,7 @@ def fit_or_find_resonator_dip_or_lorentzian(
         "blocking" until closed by the user.
         
         i_provided_a_filepath sets whether you as a user
-        provided a filepath (to data) that is to be fitted bu the code,
+        provided a filepath (to data) that is to be fitted by the code,
         or whether you provided raw data straight away.
         
         report_lowest_resonance_point_of_filtered_curve will set whether
@@ -418,7 +418,7 @@ def fit_lorentzian(
     # and interpolate the curve so that the number of datapoints match.
     # This curve will only be used for grabbing estimates.
     interpolated_filtered_datapoints = filter_and_interpolate(
-        datapoints_to_filter_and_interpolate = datapoints
+        datapoints_to_filter_and_interpolate = datapoints,
         number_of_times_to_filter_and_interpolate = no_filterings
     )
     
@@ -519,4 +519,3 @@ def lorentzian_function(
     ''' Function to be fitted against.
     '''
     return amplitude * (1/np.pi) * (full_width_half_maximum/2) / ((x-x0)**2 + (full_width_half_maximum/2)**2) + offset
-    

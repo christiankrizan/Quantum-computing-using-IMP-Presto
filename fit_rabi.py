@@ -27,7 +27,7 @@ def fit_amplitude(
         will return a NaN ±NaN result.
         
         i_provided_a_filepath sets whether you as a user
-        provided a filepath (to data) that is to be fitted bu the code,
+        provided a filepath (to data) that is to be fitted by the code,
         or whether you provided raw data straight away.
     '''
     

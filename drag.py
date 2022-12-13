@@ -105,8 +105,8 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -360,9 +360,9 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''

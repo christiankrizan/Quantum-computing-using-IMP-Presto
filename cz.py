@@ -134,8 +134,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -489,9 +489,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -757,8 +757,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -1166,9 +1166,9 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1442,8 +1442,8 @@ def cz20_sweep_duration_and_detuning_state_probability(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -1830,9 +1830,9 @@ def cz20_sweep_duration_and_detuning_state_probability(
     string_arr_to_return = []
         
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2107,8 +2107,8 @@ def cz20_Vz_ramsey_conditional_on_A(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -2481,9 +2481,9 @@ def cz20_Vz_ramsey_conditional_on_A(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2753,8 +2753,8 @@ def cz20_Vz_ramsey_conditional_on_A_state_probability(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -3127,9 +3127,9 @@ def cz20_Vz_ramsey_conditional_on_A_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -3397,8 +3397,8 @@ def cz20_tune_local_accumulated_phase(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -3761,9 +3761,9 @@ def cz20_tune_local_accumulated_phase(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -4034,8 +4034,8 @@ def cz20_tune_local_accumulated_phase_state_probability(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -4398,9 +4398,9 @@ def cz20_tune_local_accumulated_phase_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -4665,8 +4665,8 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -5042,9 +5042,9 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -5310,8 +5310,8 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
         dry_run      =   False
     ) as pls:
         print("Connected. Setting up...")
@@ -5687,9 +5687,9 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Downloading data from instrument...")
+        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... download complete!")
+        print("... data sent to the PC!")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''

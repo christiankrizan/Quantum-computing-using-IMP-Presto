@@ -17,10 +17,10 @@ from smoothener import filter_and_interpolate
 def fit_resonance_peak(
     data_or_filepath_to_data,
     control_freq_arr = [],
-    coupler_amp_arr = [],
+    coupler_amp_arr  = [],
     i_provided_a_filepath = True,
     i_renamed_the_control_freq_arr_to = '',
-    i_renamed_the_coupler_amp_arr_to = '',
+    i_renamed_the_coupler_amp_arr_to  = '',
     plot_for_this_many_seconds = 0.0,
     number_of_times_to_filter_noisy_raw_curve = 10,
     ):
@@ -37,7 +37,7 @@ def fit_resonance_peak(
         "blocking" until closed by the user.
         
         i_provided_a_filepath sets whether you as a user
-        provided a filepath (to data) that is to be fitted bu the code,
+        provided a filepath (to data) that is to be fitted by the code,
         or whether you provided raw data straight away.
     '''
     
@@ -51,7 +51,7 @@ def fit_resonance_peak(
         # The user provided a filepath to data.
         if (not isinstance(data_or_filepath_to_data, str)):
             data_or_filepath_to_data = data_or_filepath_to_data[0]
-            assert isinstance(data_or_filepath_to_data, str), "Error: the resonator fitter was provided a non-string datatype, and/or a list whose first element was a non-string datatype. Expected string (filepath to data)."
+            assert isinstance(data_or_filepath_to_data, str), "Error: the two-tone spectroscopy fitter was provided a non-string datatype, and/or a list whose first element was a non-string datatype. Expected string (filepath to data)."
         with h5py.File(os.path.abspath(data_or_filepath_to_data), 'r') as h5f:
             extracted_data = h5f["processed_data"][()]
             
@@ -131,7 +131,7 @@ def fit_resonance_peak(
             # Filter and interpolate the trace?
             if number_of_times_to_filter_noisy_raw_curve > 0:
                 current_trace_to_fit = filter_and_interpolate(
-                    datapoints_to_filter_and_interpolate = current_trace_to_fit
+                    datapoints_to_filter_and_interpolate = current_trace_to_fit,
                     number_of_times_to_filter_and_interpolate = number_of_times_to_filter_noisy_raw_curve
                 )
             
@@ -159,7 +159,7 @@ def fit_resonance_peak(
                     plt.plot(control_freq_arr_values, fit_curve, color="#ef1620")
                     plt.title('Two-tone spectroscopy')
                     plt.ylabel('Demodulated amplitude [FS]')
-                    plt.xlabel('Stimulus tone frequency [Hz]')
+                    plt.xlabel('Control tone frequency [Hz]')
                     
                     # If inserting a positive time for which we want to plot for,
                     # then plot for that duration of time. If given a negative
@@ -247,7 +247,6 @@ def fit_gaussian( frequencies, datapoints ):
     
     return optimal_vals, fit_err, fit_curve
     
-    
 def gaussian_function(
     x,
     sigma,
@@ -261,4 +260,3 @@ def gaussian_function(
         mu is the Gaussian curve's expected value.
     '''
     return scalar * ((1 / (sigma * 2.5066282746310002)) * (2.718281828459045)**((-(x-mu)**2)/(2*sigma**2))) + offset
-    
