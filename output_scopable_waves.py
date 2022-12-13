@@ -80,7 +80,7 @@ def output_pulse_sweep_frequency(
         
         ''' Setup mixers '''
         
-        # Readout mixer
+        # Waveform mixer
         pls.hardware.configure_mixer(
             freq      = waveform_freq_nco,
             in_ports  = fake_sampling_port,
@@ -112,7 +112,7 @@ def output_pulse_sweep_frequency(
         
         # Setup waveform carrier, this tone will be swept in frequency.
         # The user provides an intended span.
-        waveform_freq_centre_if = readout_freq_nco - readout_freq_centre
+        waveform_freq_centre_if = waveform_freq_nco - waveform_freq_centre
         f_start = waveform_freq_centre_if - waveform_freq_span / 2
         f_stop  = waveform_freq_centre_if + waveform_freq_span / 2
         waveform_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
@@ -163,8 +163,6 @@ def output_pulse_sweep_frequency(
         ''' EXPERIMENT EXECUTES HERE '''
         ################################
         
-        # Repeat the whole sequence `num_amplitudes` times,
-        # then average `num_averages` times
         pls.run(
             period       = T,
             repeat_count = num_freqs,
