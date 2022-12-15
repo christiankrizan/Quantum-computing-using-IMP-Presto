@@ -357,9 +357,8 @@ def amplitude_sweep_oscillation01_ro0(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -897,9 +896,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1455,9 +1453,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1987,9 +1984,8 @@ def amplitude_sweep_oscillation12_ro0(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2145,18 +2141,18 @@ def amplitude_sweep_oscillation12_ro1(
     readout_freq_nco,
     readout_amp,
     readout_duration,
-    sampling_duration,
     
+    sampling_duration,
     readout_sampling_delay,
     repetition_delay,
     integration_window_start,
     integration_window_stop,
     
     control_port,
+    control_freq_nco,
     control_amp_01,
     control_freq_01,
     control_duration_01,
-    
     control_freq_12,
     control_duration_12,
     
@@ -2287,9 +2283,6 @@ def amplitude_sweep_oscillation12_ro1(
             sync      = False,
         )
         # Control port mixer
-        high_res  = max( [control_freq_01, control_freq_12] )
-        low_res   = min( [control_freq_01, control_freq_12] )
-        control_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
@@ -2306,7 +2299,7 @@ def amplitude_sweep_oscillation12_ro1(
                     sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
                 )
         
-
+        
         ''' Setup scale LUTs '''
         
         # Readout amplitude
@@ -2501,9 +2494,8 @@ def amplitude_sweep_oscillation12_ro1(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2541,6 +2533,7 @@ def amplitude_sweep_oscillation12_ro1(
             'integration_window_stop', "s",
             
             'control_port', "",
+            'control_freq_nco', "Hz",
             'control_amp_01', "FS",
             'control_freq_01', "Hz",
             'control_duration_01', "s",
@@ -3055,9 +3048,8 @@ def duration_sweep_oscillation12_ro1(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''

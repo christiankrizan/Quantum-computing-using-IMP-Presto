@@ -16,7 +16,6 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import bandsign
-from datetime import datetime ## TODO Not supposed to be here, I believe.
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -357,15 +356,13 @@ def ramsey01_ro0(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -899,9 +896,8 @@ def ramsey01_multiplexed_ro(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1052,13 +1048,14 @@ def ramsey01_multiplexed_ro(
     
     return string_arr_to_return
     
-def ramsey12_r1(
+def ramsey12_ro1(
     ip_address,
     ext_clk_present,
     
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq_excited,
+    readout_freq_nco,
     readout_amp,
     readout_duration,
     
@@ -1069,6 +1066,8 @@ def ramsey12_r1(
     integration_window_stop,
     
     control_port,
+    control_freq_nco,
+    
     control_amp_01,
     control_freq_01,
     control_duration_01,
@@ -1185,17 +1184,13 @@ def ramsey12_r1(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq_excited,
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
             sync      = False,
         )
         # Control port mixer
-        assert 1 == 0, "Halted. This function uses legacy code for setting control frequencies, fix this."
-        high_res  = max( [control_freq_01, control_freq_12_centre] )
-        low_res   = min( [control_freq_01, control_freq_12_centre] )
-        control_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco,
             out_ports = control_port,
@@ -1242,24 +1237,25 @@ def ramsey12_r1(
         
         
         ### Setup readout pulse ###
-        assert 1 == 0, "Halted. This function uses legacy code for setting sidebands and IF frequencies of resonator stimulus pulses. Fix this."
+        
         # Setup readout pulse envelope
         readout_pulse_excited = pls.setup_long_drive(
-            output_port = readout_stimulus_port,
-            group       = 0,
-            duration    = readout_duration,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = 0e-9,
-            fall_time   = 0e-9
+            output_port =   readout_stimulus_port,
+            group       =   0,
+            duration    =   readout_duration,
+            amplitude   =   1.0,
+            amplitude_q =   1.0,
+            rise_time   =   0e-9,
+            fall_time   =   0e-9
         )
-        # Setup readout carrier, considering that there is a digital mixer
+        # Setup readout carrier, considering the readout mixer.
+        readout_freq_if = readout_freq_nco - readout_freq_excited
         pls.setup_freq_lut(
             output_ports = readout_stimulus_port,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(readout_freq_if),
             phases       = 0.0,
-            phases_q     = 0.0
+            phases_q     = bandsign(readout_freq_if),
         )
         
         
@@ -1276,14 +1272,13 @@ def ramsey12_r1(
             envelope    = True,
         )
         # Setup control_pulse_pi_01 carrier, considering the digital mixer.
-        assert 1 == 0, "Halted. This function does not use automatic sideband detection for its control pulses. Fix this."
-        control_freq_if_01 = np.abs(control_freq_nco - control_freq_01)
+        control_freq_if_01 = control_freq_nco - control_freq_01
         pls.setup_freq_lut(
             output_ports = control_port,
             group        = 0,
-            frequencies  = control_freq_if_01,
+            frequencies  = np.abs(control_freq_if_01),
             phases       = 0.0,
-            phases_q     = -np.pi/2, # USB!
+            phases_q     = bandsign(control_freq_if_01),
         )
         
         # Setup control_pulse_pi_12_half pulse envelope.
@@ -1297,22 +1292,21 @@ def ramsey12_r1(
             envelope    = True,
         )
         # Setup control_pulse_pi_12_half carrier, this tone will be swept in frequency.
-        assert 1 == 0, "Halted. This function does not use automatic sideband detection for its control pulse frequency sweeps. Fix this."
-        control_freq_12_centre_if = np.abs(control_freq_nco - control_freq_12_centre)
+        control_freq_12_centre_if = control_freq_nco - control_freq_12_centre
         f_start = control_freq_12_centre_if - control_freq_12_span / 2
         f_stop  = control_freq_12_centre_if + control_freq_12_span / 2
         control_freq_12_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
-        # Use the upper sideband. Note the plus sign!
-        control_pulse_12_half_freq_arr = control_freq_nco + control_freq_12_if_arr
+        # Use the appropriate side band.
+        control_pulse_12_half_freq_arr = control_freq_nco - control_freq_12_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
             output_ports    = control_port,
             group           = 1,
-            frequencies     = control_freq_12_if_arr,
+            frequencies     = np.abs(control_freq_12_if_arr),
             phases          = np.full_like(control_freq_12_if_arr, 0.0),
-            phases_q        = np.full_like(control_freq_12_if_arr, -np.pi / 2),  # -pi/2 for USB!
+            phases_q        = bandsign(control_freq_12_if_arr),
         )
         
         
@@ -1342,8 +1336,6 @@ def ramsey12_r1(
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
         
-        assert 1 == 0, "Halted. This function needs an update of its data storage routines. Particularly, a segment for using/not using probability data (see \"hdf5_logs = etc.\")"
-        
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
         #################################
@@ -1372,7 +1364,7 @@ def ramsey12_r1(
                         readout_duration + \
                         repetition_delay \
                     )
-            
+                
                 # Re-apply the coupler bias tone.
                 pls.output_pulse(T, coupler_bias_tone)
             
@@ -1424,9 +1416,8 @@ def ramsey12_r1(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1453,6 +1444,8 @@ def ramsey12_r1(
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
             'readout_freq_excited', "Hz",
+            'readout_freq_nco', "Hz",
+            
             'readout_amp', "FS",
             'readout_duration', "s",
             
@@ -1463,6 +1456,8 @@ def ramsey12_r1(
             'integration_window_stop', "s",
             
             'control_port', "",
+            'control_freq_nco', "Hz",
+            
             'control_amp_01', "FS",
             'control_freq_01', "Hz",
             'control_duration_01', "s",
@@ -1482,9 +1477,19 @@ def ramsey12_r1(
             'num_delays', "",
             'dt_per_ramsey_iteration', "s",
         ]
-        hdf5_logs = [
-            'fetched_data_arr', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
         
         # Ensure the keyed elements above are valid.
         assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
@@ -1546,7 +1551,7 @@ def ramsey12_r1(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [],
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1568,6 +1573,7 @@ def ramsey12_r1(
         ))
     
     return string_arr_to_return
+
 
 def ramsey01_echo_r0(
     ip_address,
@@ -1914,15 +1920,13 @@ def ramsey01_echo_r0(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-        
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
