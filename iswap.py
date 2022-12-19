@@ -509,9 +509,8 @@ def iswap_sweep_duration_and_detuning(
     string_arr_to_return = []
 
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1139,9 +1138,8 @@ def iswap_sweep_duration_and_detuning_state_probability(
     string_arr_to_return = []
 
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1746,9 +1744,8 @@ def iswap_sweep_duration_and_amplitude(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2376,9 +2373,8 @@ def iswap_sweep_amplitude_and_detuning(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -3034,9 +3030,8 @@ def iswap_cross_ramsey(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -3712,9 +3707,8 @@ def iswap_tune_local_accumulated_phase(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''

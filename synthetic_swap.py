@@ -543,9 +543,8 @@ def iswap_then_cz20_prep_10_state_probability(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ## Create fictional array for data storage.
         discretised_result_arr = np.linspace( \
@@ -1274,9 +1273,8 @@ def iswap_then_cz_prep_10_cross_Ramsey(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2004,9 +2002,8 @@ def synthetic_swap_prep_10_cross_Ramsey(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
