@@ -30,8 +30,8 @@ def amplitude_sweep_oscillation01_ro0(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_freq,
     readout_freq_nco,
+    readout_freq,
     readout_amp,
     readout_duration,
     
@@ -2137,8 +2137,8 @@ def amplitude_sweep_oscillation12_ro1(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_freq_excited,
     readout_freq_nco,
+    readout_freq_excited,
     readout_amp,
     readout_duration,
     

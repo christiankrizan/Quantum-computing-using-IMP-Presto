@@ -696,7 +696,7 @@ def ramsey01_multiplexed_ro(
             group           = 0,
             scales          = control_amp_01_B,
         )
-        # Coupler bias amplitude
+        # Coupler bias amplitude (the bias)
         if coupler_dc_port != []:
             pls.setup_scale_lut(
                 output_ports    = coupler_dc_port,
@@ -1054,8 +1054,8 @@ def ramsey12_ro1(
     
     readout_stimulus_port,
     readout_sampling_port,
-    readout_freq_excited,
     readout_freq_nco,
+    readout_freq_excited,
     readout_amp,
     readout_duration,
     
