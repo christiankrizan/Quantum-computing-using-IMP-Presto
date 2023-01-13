@@ -54,8 +54,9 @@ def t1_sweep_flux(
     
     num_averages,
     
-    num_delays,
-    dt_per_time_step,
+    delay_arr,
+    ##num_delays,
+    ##dt_per_time_step,
     
     num_biases,
     coupler_bias_min = +0.0,
@@ -150,11 +151,18 @@ def t1_sweep_flux(
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
-        dt_per_time_step = int(round(dt_per_time_step / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
             print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        
+        # Make all values in the delay_arr representatble.
+        for jj in range(len(delay_arr)):
+            delay_arr[jj] = int(round(delay_arr[jj] / plo_clk_T)) * plo_clk_T
+        # Remove duplicate entries in the delay_arr.
+        # Make delay_arr into a numpy array if it already isn't one.
+        delay_arr = np.unique( np.array(delay_arr) )
+        
         
         ''' Setup mixers '''
         
@@ -292,16 +300,17 @@ def t1_sweep_flux(
             pls.output_pulse(T, coupler_bias_tone)
             T += added_delay_for_bias_tee
         
-        for ii in range(num_delays):
+        ## TODO: the repetition delay is not implemented correctly.
+        ##       See for instance the iSWAP and CZ functions, as to
+        ##       how it's supposed to be implemented. Once this is done,
+        ##       that will simplify the duration for the DC tones as well.
         
+        for delay_arr_item in delay_arr:
+            
             # Re-apply the coupler DC pulse once one tee risetime has passed.
             if coupler_dc_port != []:
-                if ii > 0:
-                    for bias_tone in coupler_bias_tone:
-                        bias_tone.set_total_duration(control_duration_01 + readout_duration + ii * dt_per_time_step + repetition_delay)
-                else:
-                    for bias_tone in coupler_bias_tone:
-                        bias_tone.set_total_duration(control_duration_01 + readout_duration + repetition_delay)
+                for bias_tone in coupler_bias_tone:
+                    bias_tone.set_total_duration(control_duration_01 + delay_arr_item + readout_duration + repetition_delay)
             
             # Output the pi01-pulse along with the coupler DC tone
             pls.reset_phase(T, control_port)
@@ -311,7 +320,7 @@ def t1_sweep_flux(
             T += control_duration_01
             
             # Wait for the qubit to decohere some.
-            T += ii * dt_per_time_step
+            T += delay_arr_item
             
             # Commence readout after said delay.
             pls.reset_phase(T, readout_stimulus_port)
@@ -363,10 +372,6 @@ def t1_sweep_flux(
             else:
                 with_or_without_bias_string = ""
         
-        # Data to be stored.
-        ## Create a linear vector corresponding to the time sweep.
-        delay_arr = np.linspace(0, num_delays * dt_per_time_step, num_delays)
-        
         hdf5_steps = [
             'delay_arr', "s",
             'coupler_amp_arr', "FS",
@@ -389,8 +394,6 @@ def t1_sweep_flux(
             #'coupler_dc_port', "",
             'added_delay_for_bias_tee', "s",
             'num_averages', "",
-            'num_delays', "",
-            'dt_per_time_step', "s",
             'num_biases', "",
             'coupler_bias_min', "FS",
             'coupler_bias_max', "FS",
@@ -477,7 +480,7 @@ def t1_sweep_flux(
             
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
-            inner_loop_size = num_delays,
+            inner_loop_size = len(delay_arr), #num_delays,
             outer_loop_size = num_biases,
             
             save_complex_data = save_complex_data,
