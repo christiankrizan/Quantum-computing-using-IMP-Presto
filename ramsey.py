@@ -56,8 +56,9 @@ def ramsey01_ro0(
     num_freqs,
     num_averages,
     
-    num_delays,
-    dt_per_ramsey_iteration,
+    delay_arr,
+    ##num_delays,
+    ##dt_per_ramsey_iteration,
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -82,6 +83,11 @@ def ramsey01_ro0(
         resonator.
         
         ro0 designates that "the readout is done in state |0⟩."
+        
+        delay_arr is the entire array of all delays to be applied in the
+        experiment. Example: for a logarithmic sweep from 2 ns to 150 ns,
+        done in 313 points, you would (as an argument) write:
+            delay_arr = np.logspace( np.log10(2e-09), np.log10(150e-09), 313)
     '''
     
     ## Input sanitisation
@@ -104,12 +110,6 @@ def ramsey01_ro0(
     if ((num_freqs == 1) and (control_freq_01_span != 0.0)):
         print("Note: single control frequency point requested, ignoring span parameter.")
         control_freq_01_span = 0.0
-    
-    ## Initial array declaration
-    
-    # Declare time delay array for saving time data.
-    delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)
-    
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -147,11 +147,18 @@ def ramsey01_ro0(
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
-        dt_per_ramsey_iteration = int(round(dt_per_ramsey_iteration / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
             print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        
+        # Make all values in the delay_arr representatble.
+        for jj in range(len(delay_arr)):
+            delay_arr[jj] = int(round(delay_arr[jj] / plo_clk_T)) * plo_clk_T
+        # Remove duplicate entries in the delay_arr.
+        # Make delay_arr into a numpy array if it already isn't one.
+        delay_arr = np.unique( np.array(delay_arr) )
+        
         
         ''' Setup mixers '''
         
@@ -299,8 +306,13 @@ def ramsey01_ro0(
             pls.output_pulse(T, coupler_bias_tone)
             T += added_delay_for_bias_tee
         
+        ## TODO: the repetition delay is not implemented correctly.
+        ##       See for instance the iSWAP and CZ functions, as to
+        ##       how it's supposed to be implemented. Once this is done,
+        ##       that will simplify the duration for the DC tones as well.
+        
         # For every delay to step through:
-        for ii in range(num_delays):
+        for delay_arr_item in delay_arr:
             
             # Redefine the coupler DC pulse duration to keep on playing once
             # the bias tee has charged.
@@ -308,12 +320,12 @@ def ramsey01_ro0(
                 for bias_tone in coupler_bias_tone:    
                     bias_tone.set_total_duration(
                         control_duration_01 + \
-                        ii * dt_per_ramsey_iteration + \
+                        delay_arr_item + \
                         control_duration_01 + \
                         readout_duration + \
                         repetition_delay \
                     )
-            
+                
                 # Re-apply the coupler bias tone.
                 pls.output_pulse(T, coupler_bias_tone)
             
@@ -323,7 +335,7 @@ def ramsey01_ro0(
             T += control_duration_01
             
             # Await some amount of time between pulses.
-            T += ii * dt_per_ramsey_iteration
+            T += delay_arr_item
             
             # Apply the last pi_01_half pulse.
             pls.output_pulse(T, control_pulse_pi_01_half)
@@ -411,9 +423,6 @@ def ramsey01_ro0(
             
             'num_freqs', "",
             'num_averages', "",
-            
-            'num_delays', "",
-            'dt_per_ramsey_iteration', "s",
         ]
         hdf5_logs = []
         try:
@@ -497,7 +506,7 @@ def ramsey01_ro0(
             
             integration_window_start = integration_window_start,
             integration_window_stop  = integration_window_stop,
-            inner_loop_size = num_delays,
+            inner_loop_size = len(delay_arr),
             outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
@@ -1084,8 +1093,9 @@ def ramsey12_ro1(
     num_freqs,
     num_averages,
     
-    num_delays,
-    dt_per_ramsey_iteration,
+    delay_arr,
+    ##num_delays,
+    ##dt_per_ramsey_iteration,
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -1110,6 +1120,11 @@ def ramsey12_ro1(
         resonator. Readout occurs in the excited state.
         
         ro1 designates that "the readout is done in state |1⟩."
+        
+        delay_arr is the entire array of all delays to be applied in the
+        experiment. Example: for a logarithmic sweep from 2 ns to 150 ns,
+        done in 313 points, you would (as an argument) write:
+            delay_arr = np.logspace( np.log10(2e-09), np.log10(150e-09), 313)
     '''
     
     ## Input sanitisation
@@ -1176,8 +1191,12 @@ def ramsey12_ro1(
             integration_window_stop = integration_window_start + plo_clk_T
             print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
-        # Declare time delay array for saving time data.
-        delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)
+        # Make all values in the delay_arr representatble.
+        for jj in range(len(delay_arr)):
+            delay_arr[jj] = int(round(delay_arr[jj] / plo_clk_T)) * plo_clk_T
+        # Remove duplicate entries in the delay_arr.
+        # Make delay_arr into a numpy array if it already isn't one.
+        delay_arr = np.unique( np.array(delay_arr) )
         
         
         ''' Setup mixers '''
@@ -1349,8 +1368,13 @@ def ramsey12_ro1(
             pls.output_pulse(T, coupler_bias_tone)
             T += added_delay_for_bias_tee
         
+        ## TODO: the repetition delay is not implemented correctly.
+        ##       See for instance the iSWAP and CZ functions, as to
+        ##       how it's supposed to be implemented. Once this is done,
+        ##       that will simplify the duration for the DC tones as well.
+        
         # For every delay to step through:
-        for ii in range(num_delays):
+        for delay_arr_item in delay_arr:
             
             # Redefine the coupler DC pulse duration to keep on playing once
             # the bias tee has charged.
@@ -1359,7 +1383,7 @@ def ramsey12_ro1(
                     bias_tone.set_total_duration(
                         control_duration_01 + \
                         control_duration_12 + \
-                        ii * dt_per_ramsey_iteration + \
+                        delay_arr_item + \
                         control_duration_12 + \
                         readout_duration + \
                         repetition_delay \
@@ -1378,7 +1402,7 @@ def ramsey12_ro1(
             T += control_duration_12
             
             # Await some amount of time between pulses.
-            T += ii * dt_per_ramsey_iteration
+            T += delay_arr_item
             
             # Apply the last pi_12_half pulse.
             pls.output_pulse(T, control_pulse_pi_12_half)
@@ -1473,9 +1497,6 @@ def ramsey12_ro1(
             
             'num_freqs', "",
             'num_averages', "",
-            
-            'num_delays', "",
-            'dt_per_ramsey_iteration', "s",
         ]
         hdf5_logs = []
         try:
@@ -1558,7 +1579,7 @@ def ramsey12_ro1(
             
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
-            inner_loop_size = num_delays,
+            inner_loop_size = len(delay_arr),
             outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
@@ -1606,8 +1627,9 @@ def ramsey01_echo_r0(
     num_freqs,
     num_averages,
     
-    num_delays,
-    dt_per_ramsey_iteration,
+    delay_arr,
+    ##num_delays,
+    ##dt_per_ramsey_iteration,
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -1630,6 +1652,11 @@ def ramsey01_echo_r0(
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator, using a single refocusing pulse ("echo").
+        
+        delay_arr is the entire array of all delays to be applied in the
+        experiment. Example: for a logarithmic sweep from 2 ns to 150 ns,
+        done in 313 points, you would (as an argument) write:
+            delay_arr = np.logspace( np.log10(2e-09), np.log10(150e-09), 313)
     '''
     
     ## Input sanitisation
@@ -1652,11 +1679,6 @@ def ramsey01_echo_r0(
     if ((num_freqs == 1) and (control_freq_01_span != 0.0)):
         print("Note: single control frequency point requested, ignoring span parameter.")
         control_freq_01_span = 0.0
-    
-    ## Initial array declaration
-    
-    # Declare time delay array for saving time data.
-    delay_arr = np.linspace(0.0, (num_delays * dt_per_ramsey_iteration), num_delays)
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -1694,11 +1716,18 @@ def ramsey01_echo_r0(
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
-        dt_per_ramsey_iteration = int(round(dt_per_ramsey_iteration / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
             print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        
+        # Make all values in the delay_arr representatble.
+        for jj in range(len(delay_arr)):
+            delay_arr[jj] = int(round(delay_arr[jj] / plo_clk_T)) * plo_clk_T
+        # Remove duplicate entries in the delay_arr.
+        # Make delay_arr into a numpy array if it already isn't one.
+        delay_arr = np.unique( np.array(delay_arr) )
+        
         
         ''' Setup mixers '''
         
@@ -1802,7 +1831,7 @@ def ramsey01_echo_r0(
         
         # Use the appropriate sideband.
         control_pulse_01_half_freq_arr = control_freq_nco - control_freq_01_if_arr
-
+        
         # Setup LUT
         pls.setup_freq_lut(
             output_ports    = control_port,
@@ -1853,8 +1882,13 @@ def ramsey01_echo_r0(
             pls.output_pulse(T, coupler_bias_tone)
             T += added_delay_for_bias_tee
         
+        ## TODO: the repetition delay is not implemented correctly.
+        ##       See for instance the iSWAP and CZ functions, as to
+        ##       how it's supposed to be implemented. Once this is done,
+        ##       that will simplify the duration for the DC tones as well.
+        
         # For every delay to step through:
-        for ii in range(num_delays):
+        for delay_arr_item in delay_arr:
             
             # Redefine the coupler DC pulse duration to keep on playing once
             # the bias tee has charged.
@@ -1862,12 +1896,12 @@ def ramsey01_echo_r0(
                 for bias_tone in coupler_bias_tone:    
                     bias_tone.set_total_duration(
                         control_duration_01 + \
-                        ii * dt_per_ramsey_iteration + \
+                        delay_arr_item + \
                         control_duration_01 + \
                         readout_duration + \
                         repetition_delay \
                     )
-            
+                
                 # Re-apply the coupler bias tone.
                 pls.output_pulse(T, coupler_bias_tone)
             
@@ -1883,7 +1917,7 @@ def ramsey01_echo_r0(
             ##       I.e. is it supposed to be that way, that playing the echo
             ##       pulse will add some (erroneous?) duration to the total
             ##       measurement, equivalent to the duration of a pi pulse?
-            half_pause = int(round( ((ii * dt_per_ramsey_iteration)/2) / plo_clk_T)) * plo_clk_T
+            half_pause = int(round( ((delay_arr_item)/2) / plo_clk_T)) * plo_clk_T
             T += half_pause
             pls.output_pulse(T, control_pulse_pi_01)
             T += control_duration_01
@@ -1975,9 +2009,6 @@ def ramsey01_echo_r0(
             
             'num_freqs', "",
             'num_averages', "",
-            
-            'num_delays', "",
-            'dt_per_ramsey_iteration', "s",
         ]
         hdf5_logs = []
         try:
@@ -2061,7 +2092,7 @@ def ramsey01_echo_r0(
             
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
-            inner_loop_size = num_delays,
+            inner_loop_size = len(delay_arr),
             outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
