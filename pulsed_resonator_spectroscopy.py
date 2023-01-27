@@ -16,7 +16,6 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import bandsign
-from convert_FS_to_dBm import convert_into_dBm
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -321,9 +320,8 @@ def find_f_ro0_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -664,9 +662,8 @@ def find_f_ro0_sweep_power(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1147,9 +1144,8 @@ def find_f_ro1_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1553,9 +1549,8 @@ def find_f_ro1_sweep_power(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")        
+        print("Raw data downloaded to PC.")        
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2080,9 +2075,8 @@ def find_f_ro2_sweep_coupler(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -2523,9 +2517,8 @@ def find_f_ro2_sweep_power(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")        
+        print("Raw data downloaded to PC.")        
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
