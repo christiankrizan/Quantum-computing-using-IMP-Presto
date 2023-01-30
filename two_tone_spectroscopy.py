@@ -372,7 +372,7 @@ def pulsed01_flux_sweep(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
@@ -1891,7 +1891,7 @@ def pulsed12_flux_sweep(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""

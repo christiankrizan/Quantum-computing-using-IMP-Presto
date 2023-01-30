@@ -387,7 +387,7 @@ def ramsey01_ro0(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
@@ -1454,7 +1454,7 @@ def ramsey12_ro1(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
@@ -1973,7 +1973,7 @@ def ramsey01_echo_r0(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
