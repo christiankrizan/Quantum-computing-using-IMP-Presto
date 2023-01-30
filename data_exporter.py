@@ -191,6 +191,9 @@ def save(
         Returns: save path to calling script (string)
     '''
     
+    # Print status to the user.
+    print("Post-processing and saving data, please hold.")
+    
     # Fetch the save folder for the data to be exported.
     full_folder_path_where_data_will_be_saved, \
     folder_path_to_calling_script_attempting_to_save, \
@@ -258,7 +261,14 @@ def save(
         # will return may identical indices.
         # Ie. something like [124, 124, 124, 124, 124, 125, 125, 125, 125]
         # Instead, we should demodulate the collected data.
+        item_counter = 1
         for _item in integration_indices_list:
+            
+            # Print status to the user.
+            print("Fourier transforming item "+str(item_counter)+" of "+str(len(integration_indices_list))+".")
+            item_counter += 1
+            
+            # Do FFT!
             if len(_item) <= 1:
                 '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1)'''
                 arr_to_fft = fetched_data_arr[:, 0, integration_indices]
@@ -324,6 +334,9 @@ def save(
                             
                 # We have picked the appropriate fq.-swept indices. Return!
                 processed_data.append( 2 * np.array(return_arr) )
+        
+        # Clean up.
+        del item_counter
         
     else:
         # The user is only interested in time trace data.
@@ -685,9 +698,39 @@ def export_processed_data_to_file(
     except:
         print("Could not import the Labber library; "                      + \
               "no data was saved in the Log Browser compatible format. "   + \
-              "You should check whether your Python version is supported " + \
-              "by the Labber API. This fact can be seen in the "           + \
-              "Labber/Scripts folder.")
+              "\n\nTo remedy this error, you should now do the following:" + \
+              "\nFirst, make sure that the Labber Script folder is visible"+ \
+              " to your Python environment. If you are running things via "+ \
+              "Anaconda, then you have two options (one proper, one easy)."+ \
+              " The proper way is to run >> conda-develop "                + \
+              "C:\\Program Files\\Labber\\Script to make the Labber API "  + \
+              "visible to your Python environment. If you are unfamiliar " + \
+              "with conda-develop, then you must absolutely make sure "    + \
+              "that you know where to find the conda.pth file in your "    + \
+              "environment's folder (since people never tend to get the "  + \
+              "command syntax right when using conda-develop).\n\n"        + \
+              "The other, non-proper but easier method, is to skip"        + \
+              " conda-develop. Instead, write sys.path.append(\"C:"        + \
+              "\\Program Files\\Labber\\Script\") in the beginning of the "+ \
+              "Python script that you are using to run your things.\n\n"   + \
+              "If this problem persists, then check whether your Python "  + \
+              "version is supported by the Labber API. This fact can be "  + \
+              "seen in the Labber/Script folder:\nHead to the Script "     + \
+              "folder, and make sure that there is a subfolder somewhere " + \
+              "which matches your Python version. For instance, a folder " + \
+              "named \"py39\" if you are using Python 3.9. If you do not " + \
+              "see a folder whose number matches your Python version, then"+ \
+              " your solution is to downgrade your Python version to a "   + \
+              "version which is supported by your Labber API. For instance"+ \
+              ", if you saw a folder named py37, then you may use Python " + \
+              "3.7. Downgrading within Anaconda typically takes ages, the" + \
+              " non-slow solution is to just uninstall Anaconda, and then "+ \
+              "install an old version of Anaconda that uses the Python "   + \
+              "version that you are after. Reinstalling all \"lost\" pip " + \
+              "packages, is typically still much faster than downgrading " + \
+              "Python.\n\nNote: the problem that you are facing has "      + \
+              "nothing to do with the bitness of your programs, x86 or 64 "+ \
+              "does not matter at all.")
     if labber_import_worked:
         # Create the log file. Note that the Log Browser API is bugged,
         # and adds a duplicate '.hdf5' file ending when using the database.
@@ -871,6 +914,12 @@ def stitch(
         
         Finally, delete all old files if so requested.
     '''
+    
+    # User argument check, if the user is attempting to stich a single file.
+    # This usage case has happened :)
+    if isinstance(list_of_h5_files_to_stitch, str):
+        # The user provided a string instead of a list. Fix this.
+        list_of_h5_files_to_stitch = [list_of_h5_files_to_stitch]
     
     # First things first, let's check that the stitcher has something
     # to work with.
@@ -1226,7 +1275,12 @@ def stitch(
         ## we expect the Z-axis to be just a single value for
         ## all measurements.
         assert len(expected_z_axis) == 1, \
-            "Error! All axes are identical in the supplied measurement files, which is OK for the requested data stiching method. But the Z-axes in every file is not single-valued, which is not OK for this stitching method. The files cannot be merged. The length of the Z-axis in every supplied file was: "+str(len(expected_z_axis))
+            "Error! All axes are identical in the supplied measurement files"+\
+            ",which is OK for the requested data stiching method. But the "  +\
+            "Z-axes in every file is not single-valued, which is not OK for "+\
+            "this stitching method. The files cannot be merged. The length " +\
+            "of the Z-axis in every supplied file was: "                     +\
+            str(len(expected_z_axis))
         
         # If we've reached this point, then we have confirmed that
         # every axis (per resonator) is identical in this measurement.
