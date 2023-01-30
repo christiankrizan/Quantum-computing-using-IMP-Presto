@@ -83,6 +83,11 @@ def t1_sweep_flux(
     ):
     ''' Characterises the energy relaxation time T1 as a function of applied
         coupler bias.
+        
+        delay_arr is the entire array of all delays to be applied in the
+        experiment. Example: for a logarithmic sweep from 2 ns to 150 ns,
+        done in 313 points, you would (as an argument) write:
+            delay_arr = np.logspace( np.log10(2e-09), np.log10(150e-09), 313)
     '''
     
     ## Input sanitisation
@@ -305,6 +310,7 @@ def t1_sweep_flux(
         ##       how it's supposed to be implemented. Once this is done,
         ##       that will simplify the duration for the DC tones as well.
         
+        # For every delay to step through:
         for delay_arr_item in delay_arr:
             
             # Re-apply the coupler DC pulse once one tee risetime has passed.
@@ -367,7 +373,7 @@ def t1_sweep_flux(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""

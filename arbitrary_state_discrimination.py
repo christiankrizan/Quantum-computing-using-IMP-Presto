@@ -375,9 +375,8 @@ def discriminate_state_11(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -531,9 +530,8 @@ def discriminate_state_11(
     save_complex_data = True # TODO, see above.
     
     if not pls.dry_run:
-        #print("Actually sending data from the instrument to the PC...")
         #time_vector, fetched_data_arr = pls.get_store_data()
-        #print("... data sent to the PC!")
+        #print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1092,9 +1090,8 @@ def discriminate_state_22(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1255,9 +1252,8 @@ def discriminate_state_22(
     save_complex_data = True # TODO, see above.
     
     if not pls.dry_run:
-        #print("Actually sending data from the instrument to the PC...")
         #time_vector, fetched_data_arr = pls.get_store_data()
-        #print("... data sent to the PC!")
+        #print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''

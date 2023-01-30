@@ -397,7 +397,7 @@ def acquire_thermal_population_from_12_rabi_ro1(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""

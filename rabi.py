@@ -371,7 +371,7 @@ def amplitude_sweep_oscillation01_ro0(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
@@ -910,7 +910,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
@@ -1472,7 +1472,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
@@ -1998,7 +1998,7 @@ def amplitude_sweep_oscillation12_ro0(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
@@ -2508,7 +2508,7 @@ def amplitude_sweep_oscillation12_ro1(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""
@@ -3062,7 +3062,7 @@ def duration_sweep_oscillation12_ro1(
             else:
                 with_or_without_bias_string = ""
         except NameError:
-            if coupler_dc_bias > 0.0:
+            if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
             else:
                 with_or_without_bias_string = ""

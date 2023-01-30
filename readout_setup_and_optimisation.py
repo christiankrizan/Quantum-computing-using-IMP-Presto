@@ -1326,9 +1326,8 @@ def get_complex_data_for_readout_optimisation_g_e_f(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
         
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1701,9 +1700,8 @@ def get_time_traces_for_g_e_f(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1717,7 +1715,7 @@ def get_time_traces_for_g_e_f(
                 with_or_without_bias_string = ""
         except NameError:
             try:
-                if coupler_dc_bias > 0.0:
+                if coupler_dc_bias != 0.0:
                     with_or_without_bias_string = "_with_bias"
                 else:
                     with_or_without_bias_string = ""
@@ -1983,9 +1981,8 @@ def get_wire_to_readout_delay(
     string_arr_to_return = []
     
     if not pls.dry_run:
-        print("Actually sending data from the instrument to the PC...")
         time_vector, fetched_data_arr = pls.get_store_data()
-        print("... data sent to the PC!")
+        print("Raw data downloaded to PC.")
 
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
@@ -1999,7 +1996,7 @@ def get_wire_to_readout_delay(
                 with_or_without_bias_string = ""
         except NameError:
             try:
-                if coupler_dc_bias > 0.0:
+                if coupler_dc_bias != 0.0:
                     with_or_without_bias_string = "_with_bias"
                 else:
                     with_or_without_bias_string = ""
