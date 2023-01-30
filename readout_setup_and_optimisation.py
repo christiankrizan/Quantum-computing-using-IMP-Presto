@@ -227,6 +227,7 @@ def optimise_integration_window_g_e_f(
                     # If the Presto drops the connection for whatever reason
                     # that has not been figured out yet, return 0.
                     # (2022-04-17: it's an IMP-confirmed bug)
+                    # (2023-01-30: there is a remote-run hotfix available)
                     area_spanned = np.array(0.0)
                     mean_state_distance = np.array(0.0)
                     hamiltonian_path_perimeter = np.array(0.0)
@@ -236,6 +237,7 @@ def optimise_integration_window_g_e_f(
                     print_time_remaining = False
                     
                     # TODO Error due to a device bug, still confirmed 2022-04-17.
+                    # UPDATE 2023-01-30: There is at least a remote fix available.
                     print("DEVICE ERROR: ConnectionRefusedError: the Presto device dropped the Ethernet connection and must be restarted manually.")
             
             tock = time.time() # Get a time estimate.

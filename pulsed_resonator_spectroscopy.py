@@ -16,6 +16,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import bandsign
+from repetition_rate_calculator import get_repetition_rate_T
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -70,7 +71,7 @@ def find_f_ro0_sweep_coupler(
         "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
-        "z_scaler": 0.04761904761, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
+        "z_scaler": 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
         "z_unit":   'default',
         }
     ):
@@ -155,6 +156,7 @@ def find_f_ro0_sweep_coupler(
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
         repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
+        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
@@ -227,7 +229,7 @@ def find_f_ro0_sweep_coupler(
         # Define repetition counter for T.
         repetition_counter = 1
         
-        # For every resonator stimulus pulse frequency to sweep over:
+        # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
         
             # Get a time reference, used for gauging the iteration length.
