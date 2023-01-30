@@ -56,7 +56,11 @@ def fit_resonance_peak(
             extracted_data = h5f["processed_data"][()]
             
             if i_renamed_the_control_freq_arr_to == '':
-                control_freq_arr_values = h5f[ "control_pulse_01_freq_arr" ][()]
+                try:
+                    control_freq_arr_values = h5f[ "control_pulse_01_freq_arr" ][()]
+                except KeyError:
+                    # Catch whether the spectroscopy was done for |1> -> |2>
+                    control_freq_arr_values = h5f[ "control_pulse_12_freq_arr" ][()]
             else:
                 control_freq_arr_values = h5f[i_renamed_the_control_freq_arr_to][()]
             
