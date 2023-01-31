@@ -26,7 +26,7 @@ from data_exporter import \
     get_dict_for_log_list, \
     save
 
-def pulsed01_flux_sweep(
+def pulsed01_flux_sweep_NEW(
     ip_address,
     ext_clk_present,
     
@@ -39,7 +39,7 @@ def pulsed01_flux_sweep(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
 
@@ -152,7 +152,7 @@ def pulsed01_flux_sweep(
         readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
@@ -307,7 +307,8 @@ def pulsed01_flux_sweep(
         )
         
         # Reset the DC bias port(s).
-        pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -348,7 +349,7 @@ def pulsed01_flux_sweep(
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s",
+            'repetition_rate', "s",
             
             'control_port', "",
             'control_amp_01', "FS",
@@ -459,6 +460,7 @@ def pulsed01_flux_sweep(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
@@ -466,7 +468,7 @@ def pulsed01_flux_sweep(
     return string_arr_to_return
 
 
-def pulsed01_flux_sweep_dc_bias_via_RF_ports(
+def pulsed01_flux_sweep(
     ip_address,
     ext_clk_present,
     

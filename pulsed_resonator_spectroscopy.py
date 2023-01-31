@@ -26,7 +26,7 @@ from data_exporter import \
     save
 
 
-def find_f_ro0_sweep_coupler(
+def find_f_ro0_sweep_coupler_NEW(
     ip_address,
     ext_clk_present,
     
@@ -270,7 +270,8 @@ def find_f_ro0_sweep_coupler(
         )
         
         # Reset the DC bias port(s).
-        pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -423,7 +424,7 @@ def find_f_ro0_sweep_coupler(
     
     return string_arr_to_return
     
-def find_f_ro0_sweep_coupler_using_RF_ports(
+def find_f_ro0_sweep_coupler(
     ip_address,
     ext_clk_present,
     
@@ -879,7 +880,7 @@ def find_f_ro0_sweep_power(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
     
@@ -950,7 +951,7 @@ def find_f_ro0_sweep_power(
         readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
@@ -1022,8 +1023,14 @@ def find_f_ro0_sweep_power(
         # Start of sequence
         T = 0.0  # s
         
+        # Define repetition counter for T.
+        repetition_counter = 1
+        
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
+            
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
             
             # Commence readout, swept in frequency.
             pls.reset_phase(T, readout_stimulus_port)
@@ -1033,15 +1040,18 @@ def find_f_ro0_sweep_power(
             
             # Move to next scanned frequency
             pls.next_frequency(T, readout_stimulus_port)
+            T += 20e-9 # Add some time for changing the frequency.
             
-            # Wait for decay
-            T += repetition_delay
+            # Is this the last iteration?
+            if ii == num_freqs-1:
+                # Increment the swept amplitude.
+                pls.next_scale(T, readout_stimulus_port)
+                T += 20e-9 # Add some time for changing the amplitude.
             
-        # Move to next amplitude
-        pls.next_scale(T, readout_stimulus_port)
-        
-        # Move to next iteration.
-        T += repetition_delay
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         
         ################################
@@ -1082,7 +1092,7 @@ def find_f_ro0_sweep_power(
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s",
+            'repetition_rate', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
 
@@ -1260,6 +1270,8 @@ def find_f_ro1_sweep_coupler(
         
         ro1 designates that "the readout is done in state |1⟩."
     '''
+    
+    assert 1 == 0, 'Halted. The measurement is not timed according to the repetition delay. This fact should be fixed before proceeding.'
     
     ## Input sanitisation
     
