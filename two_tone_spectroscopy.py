@@ -26,7 +26,7 @@ from data_exporter import \
     get_dict_for_log_list, \
     save
 
-def pulsed01_flux_sweep_NEW(
+def pulsed01_flux_sweep(
     ip_address,
     ext_clk_present,
     
@@ -286,7 +286,7 @@ def pulsed01_flux_sweep_NEW(
             # Is this the last iteration?
             if ii == len(coupler_amp_arr)-1:
                 # Increment the swept frequency.
-                pls.next_frequency(T, readout_stimulus_port)
+                pls.next_frequency(T, control_port)
                 T += 20e-9 # Add some time for changing the frequency.
             
             # Get T that aligns with the repetition rate.
@@ -467,8 +467,7 @@ def pulsed01_flux_sweep_NEW(
         
     return string_arr_to_return
 
-
-def pulsed01_flux_sweep(
+def pulsed01_flux_sweep_DEPRECATED(
     ip_address,
     ext_clk_present,
     

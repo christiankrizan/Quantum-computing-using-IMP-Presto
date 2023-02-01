@@ -26,7 +26,7 @@ from data_exporter import \
     save
 
 
-def find_f_ro0_sweep_coupler_NEW(
+def find_f_ro0_sweep_coupler(
     ip_address,
     ext_clk_present,
     
@@ -418,13 +418,14 @@ def find_f_ro0_sweep_coupler_NEW(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
     
     return string_arr_to_return
     
-def find_f_ro0_sweep_coupler(
+def find_f_ro0_sweep_coupler_DEPRECATED(
     ip_address,
     ext_clk_present,
     
