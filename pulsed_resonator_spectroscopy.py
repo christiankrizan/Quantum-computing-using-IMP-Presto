@@ -87,6 +87,13 @@ def find_f_ro0_sweep_coupler(
         various data merging routines will reject the data merge.
         
         ro0 designates that "the readout is done in state |0⟩."
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Input sanitisation
@@ -914,6 +921,13 @@ def find_f_ro0_sweep_power(
     ''' Plot the readout frequency versus swept readout amplitude, pulsed.
         
         ro0 designates that "the readout is done in state |0⟩."
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Initial array declaration

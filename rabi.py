@@ -25,7 +25,7 @@ from data_exporter import \
     get_dict_for_log_list, \
     save
 
-def amplitude_sweep_oscillation01_ro0_NEW(
+def amplitude_sweep_oscillation01_ro0(
     ip_address,
     ext_clk_present,
     
@@ -43,8 +43,8 @@ def amplitude_sweep_oscillation01_ro0_NEW(
     integration_window_stop,
     
     control_port,
-    control_freq_01,
     control_freq_nco,
+    control_freq_01,
     control_duration_01,
     
     coupler_dc_port,
@@ -85,6 +85,13 @@ def amplitude_sweep_oscillation01_ro0_NEW(
         can be applied onto a connected coupler.
         
         ro0 designates that "the readout is done in state |0⟩."
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Input sanitisation
@@ -119,7 +126,6 @@ def amplitude_sweep_oscillation01_ro0_NEW(
     
     # Declare amplitude array for the coupler sweep.
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
-
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -265,8 +271,7 @@ def amplitude_sweep_oscillation01_ro0_NEW(
                 pls.output_dc_bias(T, coupler_amp_arr[ii], coupler_dc_port)
                 T += settling_time_of_bias_tee
             
-            # Output the pi01-pulse to be characterised,
-            # along with the coupler DC tone
+            # Output the pi01-pulse to be characterised.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
             T += control_duration_01
@@ -287,7 +292,6 @@ def amplitude_sweep_oscillation01_ro0_NEW(
             T, repetition_counter = get_repetition_rate_T(
                 T_begin, T, repetition_rate, repetition_counter,
             )
-        
         
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
@@ -457,6 +461,7 @@ def amplitude_sweep_oscillation01_ro0_NEW(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
@@ -464,7 +469,7 @@ def amplitude_sweep_oscillation01_ro0_NEW(
     return string_arr_to_return
 
 
-def amplitude_sweep_oscillation01_ro0(
+def amplitude_sweep_oscillation01_ro0_DEPRECATED(
     ip_address,
     ext_clk_present,
     
@@ -482,8 +487,8 @@ def amplitude_sweep_oscillation01_ro0(
     integration_window_stop,
     
     control_port,
-    control_freq_01,
     control_freq_nco,
+    control_freq_01,
     control_duration_01,
     
     coupler_dc_port,

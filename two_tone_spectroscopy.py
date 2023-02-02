@@ -80,6 +80,13 @@ def pulsed01_flux_sweep(
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         as a function of a swept pairwise coupler bias.
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Input sanitisation 
