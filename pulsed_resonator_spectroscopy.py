@@ -1364,7 +1364,7 @@ def find_f_ro1_sweep_coupler(
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
         repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
-        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
+        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
