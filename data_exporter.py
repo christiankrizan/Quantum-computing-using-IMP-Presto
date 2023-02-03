@@ -1132,7 +1132,14 @@ def stitch(
                 # Do we know which is the "second key" that we want to look for?
                 if not second_swept_key_found:
                     # We don't. Try to get it.
-                    second_key = str((h5f["Second_key_that_was_swept"][()]).decode("utf-8"))
+                    catch_key = h5f["Second_key_that_was_swept"][()]
+                    # Catch whether there are some UTF-8 shenanigans going on.
+                    if not isinstance(catch_key, str):
+                        second_key = str(catch_key.decode("utf-8"))
+                    else:
+                        # This seems not to be the case.
+                        second_key = catch_key
+                    del catch_key
                     second_swept_key_found = True
             except KeyError:
                 # This file contains no information regarding which was the
