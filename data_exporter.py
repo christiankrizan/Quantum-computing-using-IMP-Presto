@@ -217,6 +217,9 @@ def save(
         # integration_window_stop respectively.
         integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
         integration_stop_index  = np.argmin(np.abs(time_vector - integration_window_stop ))
+        
+        # Make a list of integers, where each integer corresponds to
+        # an index along the integration window, that will be post-processed.
         integration_indices     = np.arange(integration_start_index, integration_stop_index)
         
         # Acquire the DFT sample frequencies contained within the
@@ -231,10 +234,12 @@ def save(
         # Did the user not send any IF information? Then assume IF = 0 Hz.
         # Did the user drive one resonator on resonance? Then set its IF to 0.
         if len(resonator_freq_if_arrays_to_fft) == 0:
+            print("No IF information provided to FFT. Assuming IF = 0 Hz.")
             resonator_freq_if_arrays_to_fft.append(0)
         else:
             for pp in range(len(resonator_freq_if_arrays_to_fft)):
                 if resonator_freq_if_arrays_to_fft[pp] == []:
+                    print("No IF information provided to FFT at entry "+str(pp)". Assuming IF = 0 Hz for this entry.")
                     resonator_freq_if_arrays_to_fft[pp] = 0
         
         # Note! The user may have done a frequency sweep. In that case,
@@ -244,7 +249,7 @@ def save(
             if (not isinstance(_ro_freq_if, list)) and (not isinstance(_ro_freq_if, np.ndarray)):
                 _curr_item = [_ro_freq_if] # Cast to list if not list.
             else:
-                _curr_item = _ro_freq_if
+                _curr_item = _ro_freq_if   # _ro_freq_if is a list, we're good.
             # The user may have swept the frequency => many IFs.
             curr_array = []
             for if_point in _curr_item:
@@ -255,18 +260,20 @@ def save(
         # contains the FFT of every time trace that was ever collected
         # using .store() -- meaning that for instance resp_fft[0,:]
         # contains the FFT of the first store event in the first repeat.
-        
-        # If the user swept the IF frequency, then picking whatever
-        # frequency in the FFT that is closest to the list of IF frequencies
-        # will return may identical indices.
-        # Ie. something like [124, 124, 124, 124, 124, 125, 125, 125, 125]
-        # Instead, we should demodulate the collected data.
+        #    If the user swept the IF frequency, then picking whatever
+        #    frequency in the FFT that is closest to the list of IF frequencies
+        #    will return may identical indices.
+        #    Ie. something like [124, 124, 124, 124, 124, 125, 125, 125, 125]
+        #    Instead, we should demodulate the collected data.
         item_counter = 1
         for _item in integration_indices_list:
             
             # Print status to the user.
-            print("Fourier transforming item "+str(item_counter)+" of "+str(len(integration_indices_list))+".")
-            item_counter += 1
+            if len(integration_indices_list) > 1:
+                print("Fourier transforming item "+str(item_counter)+" of "+str(len(integration_indices_list))+".")
+                item_counter += 1
+            else:
+                print("Fourier transforming...")
             
             # Do FFT!
             if len(_item) <= 1:
@@ -895,7 +902,7 @@ def convert_numpy_entries_in_ext_keys_to_list( ext_keys_to_convert ):
 
 
 def stitch(
-    list_of_h5_files_to_stitch,
+    h5_files_to_stitch_as_list_or_folder,
     merge_if_x_and_z_axes_are_identical = True, # Halt to ensure there is no overwrite because of poor user arguments.
     use_this_scale  = [1.0],
     use_this_offset = [0.0],
@@ -915,11 +922,20 @@ def stitch(
         Finally, delete all old files if so requested.
     '''
     
-    # User argument check, if the user is attempting to stich a single file.
-    # This usage case has happened :)
-    if isinstance(list_of_h5_files_to_stitch, str):
+    # User argument check, if the user is attempting to stich a single file,
+    # or a whole folder. These usage cases have happened :)
+    if isinstance(h5_files_to_stitch_as_list_or_folder, str):
         # The user provided a string instead of a list. Fix this.
-        list_of_h5_files_to_stitch = [list_of_h5_files_to_stitch]
+        list_of_h5_files_to_stitch = [h5_files_to_stitch_as_list_or_folder]
+        
+    elif os.path.isdir(h5_files_to_stitch_as_list_or_folder):
+        # The user provided a directory.
+        # Ensure that only .hdf5 files (.h5) get added.
+        list_of_h5_files_to_stitch = []
+        for file_item in os.listdir( h5_files_to_stitch_as_list_or_folder ):
+            if (file_item.endswith('.h5')) or (file_item.endswith('.hdf5')):
+                print("Found file: \""+str(file_item)+"\"")
+                list_of_h5_files_to_stitch.append(file_item)
     
     # First things first, let's check that the stitcher has something
     # to work with.
