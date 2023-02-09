@@ -74,7 +74,7 @@ def pulsed01_flux_sweep(
         "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
-        "z_scaler": 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
+        "z_scaler": 1.0, ## 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
         "z_unit":   'default',
         }
     ):
@@ -151,7 +151,8 @@ def pulsed01_flux_sweep(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_amp_arr[0], coupler_dc_port)
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(coupler_amp_arr[0], _port)
             time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
@@ -276,7 +277,8 @@ def pulsed01_flux_sweep(
             
             # Apply the coupler voltage bias.
             if coupler_dc_port != []:
-                pls.output_dc_bias(T, coupler_amp_arr[ii], coupler_dc_port)
+                for _port in coupler_dc_port:
+                    pls.output_dc_bias(T, coupler_amp_arr[ii], _port)
                 T += settling_time_of_bias_tee
             
             # Apply the frequency-swept pi_01 pulse.
@@ -315,7 +317,8 @@ def pulsed01_flux_sweep(
         
         # Reset the DC bias port(s).
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(0.0, _port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []

@@ -37,7 +37,7 @@ def get_repetition_rate_T(
     
     # Check whether the sequence that is currently being scheduled,
     # falls within the time bound set by the user.
-    if (T_needed_initially) < repetition_rate:
+    if (T_needed_initially < repetition_rate):
     
         # All is good. Just report the T that is supposed to happen
         # at that point in the sequence.

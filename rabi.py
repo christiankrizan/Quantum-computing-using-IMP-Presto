@@ -75,7 +75,7 @@ def amplitude_sweep_oscillation01_ro0(
         "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
-        "z_scaler": 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
+        "z_scaler": 1.0, ## 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
         "z_unit":   'default',
         }
     ):
@@ -152,7 +152,8 @@ def amplitude_sweep_oscillation01_ro0(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_amp_arr[0], coupler_dc_port)
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(coupler_amp_arr[0], _port)
             time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
@@ -222,7 +223,6 @@ def amplitude_sweep_oscillation01_ro0(
             phases_q     = bandsign(readout_freq_if),
         )
         
-        
         ### Setup pulse "control_pulse_pi_01" ###
 
         # Setup control_pulse_pi_01 pulse envelope and carrier tone
@@ -268,7 +268,8 @@ def amplitude_sweep_oscillation01_ro0(
             
             # Apply the coupler voltage bias.
             if coupler_dc_port != []:
-                pls.output_dc_bias(T, coupler_amp_arr[ii], coupler_dc_port)
+                for _port in coupler_dc_port:
+                    pls.output_dc_bias(T, coupler_amp_arr[ii], _port)
                 T += settling_time_of_bias_tee
             
             # Output the pi01-pulse to be characterised.
@@ -307,7 +308,8 @@ def amplitude_sweep_oscillation01_ro0(
         
         # Reset the DC bias port(s).
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(0.0, _port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []

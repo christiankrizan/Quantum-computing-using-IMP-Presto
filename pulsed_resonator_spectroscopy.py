@@ -71,7 +71,7 @@ def find_f_ro0_sweep_coupler(
         "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
-        "z_scaler": 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
+        "z_scaler": 1.0, ## 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
         "z_unit":   'default',
         }
     ):
@@ -153,7 +153,8 @@ def find_f_ro0_sweep_coupler(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_amp_arr[0], coupler_dc_port)
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(coupler_amp_arr[0], _port)
             time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
@@ -243,7 +244,8 @@ def find_f_ro0_sweep_coupler(
         
             # Apply the coupler voltage bias.
             if coupler_dc_port != []:
-                pls.output_dc_bias(T, coupler_amp_arr[ii], coupler_dc_port)
+                for _port in coupler_dc_port:
+                    pls.output_dc_bias(T, coupler_amp_arr[ii], _port)
                 T += settling_time_of_bias_tee
             
             # Commence readout, swept in frequency.
@@ -277,7 +279,8 @@ def find_f_ro0_sweep_coupler(
         
         # Reset the DC bias port(s).
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(0.0, _port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -873,7 +876,6 @@ def find_f_ro0_sweep_coupler_DEPRECATED(
     
     return string_arr_to_return
     
- 
 def find_f_ro0_sweep_power(
     ip_address,
     ext_clk_present,
@@ -890,6 +892,10 @@ def find_f_ro0_sweep_power(
     repetition_rate,
     integration_window_start,
     integration_window_stop,
+    
+    coupler_dc_port,
+    coupler_dc_bias,
+    settling_time_of_bias_tee,
     
     num_freqs,
     num_averages,
@@ -931,6 +937,19 @@ def find_f_ro0_sweep_power(
     
     ## Initial array declaration
     
+    # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
+    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
+        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+        coupler_dc_bias = 0.0
+    
     # Declare amplitude array for sweeping the power
     readout_amp_arr = np.linspace(readout_amp_min, readout_amp_max, num_amplitudes)
     
@@ -957,8 +976,13 @@ def find_f_ro0_sweep_power(
         # Readout output and input ports
         pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
         pls.hardware.set_dac_current(readout_stimulus_port, 40_500)
-        pls.hardware.set_inv_sinc(readout_stimulus_port, 0)      
+        pls.hardware.set_inv_sinc(readout_stimulus_port, 0)   
         
+        # Configure the DC bias. Also, let's charge the bias-tee.
+        if coupler_dc_port != []:
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(coupler_dc_bias, _port)
+            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -979,9 +1003,8 @@ def find_f_ro0_sweep_power(
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
-            sync      = True, # Sync here
+            sync      = True,
         )
-        
         
         ''' Setup scale LUTs '''
         
@@ -991,7 +1014,6 @@ def find_f_ro0_sweep_power(
             group           = 0,
             scales          = readout_amp_arr,
         )
-        
         
         ### Setup readout pulse ###
         
@@ -1033,7 +1055,7 @@ def find_f_ro0_sweep_power(
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
         #################################
-
+        
         # Start of sequence
         T = 0.0  # s
         
@@ -1071,7 +1093,7 @@ def find_f_ro0_sweep_power(
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
         ################################
-
+        
         # Average the measurement over 'num_averages' averages
         pls.run(
             period          =   T,
@@ -1079,6 +1101,11 @@ def find_f_ro0_sweep_power(
             num_averages    =   num_averages,
             print_time      =   True,
         )
+        
+        # Reset the DC bias port(s).
+        if coupler_dc_port != []:
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(0.0, _port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1090,6 +1117,18 @@ def find_f_ro0_sweep_power(
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
+        
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias != 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [
@@ -1109,7 +1148,11 @@ def find_f_ro0_sweep_power(
             'repetition_rate', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
-
+            
+            #'coupler_dc_port', "",
+            'coupler_dc_bias', "V",
+            'settling_time_of_bias_tee', "s",
+            
             'num_freqs', "",
             'num_amplitudes', "",
             'num_averages', "",
@@ -1214,7 +1257,6 @@ def find_f_ro0_sweep_power(
     
     return string_arr_to_return
     
-
 def find_f_ro1_sweep_coupler(
     ip_address,
     ext_clk_present,
@@ -1267,7 +1309,7 @@ def find_f_ro1_sweep_coupler(
         "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
-        "z_scaler": 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
+        "z_scaler": 1.0, ## 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
         "z_unit":   'default',
         }
     ):
@@ -1353,7 +1395,8 @@ def find_f_ro1_sweep_coupler(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_amp_arr[0], coupler_dc_port)
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(coupler_amp_arr[0], _port)
             time.sleep( settling_time_of_bias_tee )
         
         
@@ -1482,7 +1525,8 @@ def find_f_ro1_sweep_coupler(
             
             # Apply the coupler voltage bias.
             if coupler_dc_port != []:
-                pls.output_dc_bias(T, coupler_amp_arr[ii], coupler_dc_port)
+                for _port in coupler_dc_port:
+                    pls.output_dc_bias(T, coupler_amp_arr[ii], _port)
                 T += settling_time_of_bias_tee
             
             # Put the system into state |1>
@@ -1521,7 +1565,8 @@ def find_f_ro1_sweep_coupler(
         
         # Reset the DC bias port(s).
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(0.0, _port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1687,7 +1732,6 @@ def find_f_ro1_sweep_coupler(
     
     return string_arr_to_return
     
-
 def find_f_ro1_sweep_coupler_DEPRECATED(
     ip_address,
     ext_clk_present,
@@ -2199,7 +2243,6 @@ def find_f_ro1_sweep_coupler_DEPRECATED(
     
     return string_arr_to_return
     
-
 def find_f_ro1_sweep_power(
     ip_address,
     ext_clk_present,
@@ -2213,7 +2256,7 @@ def find_f_ro1_sweep_power(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
     
@@ -2223,6 +2266,10 @@ def find_f_ro1_sweep_power(
     control_amp_01,
     control_freq_01,
     control_duration_01,
+    
+    coupler_dc_port,
+    coupler_dc_bias,
+    settling_time_of_bias_tee,
     
     num_freqs,
     num_averages,
@@ -2254,9 +2301,29 @@ def find_f_ro1_sweep_power(
         The readout power is swept for the |1>-state.
         
         ro1 designates that "the readout is done in state |1⟩."
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Initial array declaration
+    
+    # Acquire legal values regarding the coupler port settings.
+    if type(coupler_dc_port) == int:
+        raise TypeError( \
+            "Halted! The input argument coupler_dc_port must be provided "  + \
+            "as a list. Typecasting was not done for you, since some user " + \
+            "setups combine several ports together galvanically. Merely "   + \
+            "typecasting the input int to [int] risks damaging their "      + \
+            "setups. All items in the coupler_dc_port list will be treated "+ \
+            "as ports to be used for DC-biasing a coupler.")
+    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
+        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
+        coupler_dc_bias = 0.0
     
     # Declare amplitude array for sweeping the power
     readout_amp_arr = np.linspace(readout_amp_min, readout_amp_max, num_amplitudes)
@@ -2289,6 +2356,12 @@ def find_f_ro1_sweep_power(
         # Control ports
         pls.hardware.set_dac_current(control_port, 40_500)
         pls.hardware.set_inv_sinc(control_port, 0)
+        
+        # Configure the DC bias. Also, let's charge the bias-tee.
+        if coupler_dc_port != []:
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(coupler_dc_bias, _port)
+            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -2403,8 +2476,14 @@ def find_f_ro1_sweep_power(
         # Start of sequence
         T = 0.0  # s
         
+        # Define repetition counter for T.
+        repetition_counter = 1
+        
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
+            
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
             
             # Prepare state |e>
             pls.reset_phase(T, control_port)
@@ -2419,15 +2498,18 @@ def find_f_ro1_sweep_power(
             
             # Move to next scanned frequency
             pls.next_frequency(T, readout_stimulus_port)
+            T += 20e-9 # Add some time for changing the frequency.
             
-            # Wait for decay
-            T += repetition_delay
+            # Is this the last iteration?
+            if ii == num_freqs-1:
+                # Increment the swept amplitude.
+                pls.next_scale(T, readout_stimulus_port)
+                T += 20e-9 # Add some time for changing the amplitude.
             
-        # Move to next amplitude
-        pls.next_scale(T, readout_stimulus_port)
-        
-        # Move to next iteration.
-        T += repetition_delay
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         
         ################################
@@ -2441,6 +2523,11 @@ def find_f_ro1_sweep_power(
             num_averages    =   num_averages,
             print_time      =   True,
         )
+        
+        # Reset the DC bias port(s).
+        if coupler_dc_port != []:
+            for _port in coupler_dc_port:
+                pls.hardware.set_dc_bias(0.0, _port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -2452,6 +2539,18 @@ def find_f_ro1_sweep_power(
         ###########################################
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
+        
+        # Establish whether to include biasing in the exported file name.
+        try:
+            if num_biases > 1:
+                with_or_without_bias_string = "_sweep_bias"
+            else:
+                with_or_without_bias_string = ""
+        except NameError:
+            if coupler_dc_bias != 0.0:
+                with_or_without_bias_string = "_with_bias"
+            else:
+                with_or_without_bias_string = ""
         
         # Data to be stored.
         hdf5_steps = [
@@ -2471,6 +2570,10 @@ def find_f_ro1_sweep_power(
             'repetition_delay', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
+            
+            #'coupler_dc_port', "",
+            'coupler_dc_bias', "V",
+            'settling_time_of_bias_tee', "s",
             
             'control_port', "",
             'control_freq_nco', "Hz",
