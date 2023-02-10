@@ -239,7 +239,7 @@ def save(
         else:
             for pp in range(len(resonator_freq_if_arrays_to_fft)):
                 if resonator_freq_if_arrays_to_fft[pp] == []:
-                    print("No IF information provided to FFT at entry "+str(pp)". Assuming IF = 0 Hz for this entry.")
+                    print("No IF information provided to FFT at entry "+str(pp)+". Assuming IF = 0 Hz for this entry.")
                     resonator_freq_if_arrays_to_fft[pp] = 0
         
         # Note! The user may have done a frequency sweep. In that case,
@@ -922,20 +922,25 @@ def stitch(
         Finally, delete all old files if so requested.
     '''
     
+    ## TODO All 35 lines below this TODO needs optimisation.
+    ##      The .isinstance and TypeError exception-checking
+    ##      should be done in a better way.
+    
     # User argument check, if the user is attempting to stich a single file,
     # or a whole folder. These usage cases have happened :)
     if isinstance(h5_files_to_stitch_as_list_or_folder, str):
         # The user provided a string instead of a list. Fix this.
         list_of_h5_files_to_stitch = [h5_files_to_stitch_as_list_or_folder]
         
-    elif os.path.isdir(h5_files_to_stitch_as_list_or_folder):
-        # The user provided a directory.
-        # Ensure that only .hdf5 files (.h5) get added.
-        list_of_h5_files_to_stitch = []
-        for file_item in os.listdir( h5_files_to_stitch_as_list_or_folder ):
-            if (file_item.endswith('.h5')) or (file_item.endswith('.hdf5')):
-                print("Found file: \""+str(file_item)+"\"")
-                list_of_h5_files_to_stitch.append(file_item)
+    elif (not isinstance(h5_files_to_stitch_as_list_or_folder, list)):
+        if os.path.isdir(h5_files_to_stitch_as_list_or_folder):
+            # The user provided a directory.
+            # Ensure that only .hdf5 files (.h5) get added.
+            list_of_h5_files_to_stitch = []
+            for file_item in os.listdir( h5_files_to_stitch_as_list_or_folder ):
+                if (file_item.endswith('.h5')) or (file_item.endswith('.hdf5')):
+                    print("Found file: \""+str(file_item)+"\"")
+                    list_of_h5_files_to_stitch.append(file_item)
     
     # First things first, let's check that the stitcher has something
     # to work with.
