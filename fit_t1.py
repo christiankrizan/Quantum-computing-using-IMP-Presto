@@ -72,12 +72,15 @@ def fit_exponential_decay_t1(
         the_user_provided_a_file = False
         the_user_provided_a_list_of_files = True
     elif the_user_provided_a_folder:
-        raw_data_or_path_to_data = os.listdir( raw_data_or_path_to_data )
+        root_path = raw_data_or_path_to_data
+        raw_data_or_path_to_data = []
+        for file_in_folder in os.listdir( root_path ):
+            raw_data_or_path_to_data.append( os.path.join(root_path,file_in_folder) )
         the_user_provided_a_folder = False
         the_user_provided_a_list_of_files = True
     if the_user_provided_a_list_of_files:
         # Ensure that only .hdf5 files (.h5) get added.
-        for file_item in os.listdir( raw_data_or_path_to_data ):
+        for file_item in raw_data_or_path_to_data:
             if (file_item.endswith('.h5')) or (file_item.endswith('.hdf5')):
                 print("Found file: \""+str(file_item)+"\"")
                 list_of_h5_files_to_fit.append(file_item)
