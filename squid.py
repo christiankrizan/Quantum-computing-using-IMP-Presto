@@ -99,17 +99,18 @@ def blind_anharmonicity(
     if num_biases < 1:
         num_biases = 1
         print("Note: num_biases was less than 1, and was thus set to 1.")
-        if coupler_bias_min != 0.0:
+        if (coupler_bias_min != 0.0) or (coupler_bias_max != 0.0):
             print("Note: the coupler bias was thus set to 0.")
             coupler_bias_min = 0.0
+            coupler_bias_max = 0.0
     elif coupler_dc_port == []:
         if num_biases != 1:
             num_biases = 1
             print("Note: num_biases was set to 1, since the coupler_port array was empty.")
-        if coupler_bias_min != 0.0:
+        if (coupler_bias_min != 0.0) or (coupler_bias_max != 0.0):
             print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
             coupler_bias_min = 0.0
-    
+            coupler_bias_max = 0.0
     
     ## Initial array declaration
     
