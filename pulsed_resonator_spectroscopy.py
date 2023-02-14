@@ -239,7 +239,7 @@ def find_f_ro0_sweep_coupler(
         
         # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
-        
+            
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
@@ -314,7 +314,6 @@ def find_f_ro0_sweep_coupler(
         hdf5_singles = [
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
-            
             'readout_freq_nco', "Hz",
             'readout_freq_centre', "Hz",
             'readout_freq_span', "Hz",
@@ -422,6 +421,7 @@ def find_f_ro0_sweep_coupler(
             outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
+            source_code_of_executing_file = '', #get_sourcecode(__file__),
             default_exported_log_file_name = default_exported_log_file_name,
             append_to_log_name_before_timestamp = 'ro0' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
@@ -647,7 +647,6 @@ def find_f_ro0_sweep_power(
             T, repetition_counter = get_repetition_rate_T(
                 T_begin, T, repetition_rate, repetition_counter,
             )
-        
         
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
