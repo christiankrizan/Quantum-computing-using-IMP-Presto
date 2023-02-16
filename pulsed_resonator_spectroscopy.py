@@ -16,6 +16,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import bandsign
+from bias_calculator import get_dc_dac_range_integer, change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -24,7 +25,6 @@ from data_exporter import \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save
-
 
 def find_f_ro0_sweep_coupler(
     ip_address,
@@ -71,7 +71,7 @@ def find_f_ro0_sweep_coupler(
         "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
-        "z_scaler": 1.0, ## 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
+        "z_scaler": 1.0,
         "z_unit":   'default',
         }
     ):
@@ -155,7 +155,11 @@ def find_f_ro0_sweep_coupler(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_amp_arr[0], coupler_dc_port)
+            pls.hardware.set_dc_bias( \
+                coupler_amp_arr[0], \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_amp_arr) \
+            )
             time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
@@ -245,9 +249,7 @@ def find_f_ro0_sweep_coupler(
             
             # Apply the coupler voltage bias.
             if coupler_dc_port != []:
-                for _port in coupler_dc_port:
-                    pls.output_dc_bias(T, coupler_amp_arr[ii], _port)
-                    T += 1e-6
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
                 T += settling_time_of_bias_tee
             
             # Commence readout, swept in frequency.
@@ -539,7 +541,11 @@ def find_f_ro0_sweep_power(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_dc_bias, coupler_dc_port)
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
             time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
@@ -866,7 +872,7 @@ def find_f_ro1_sweep_coupler(
         "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
-        "z_scaler": 1.0, ## 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
+        "z_scaler": 1.0,
         "z_unit":   'default',
         }
     ):
@@ -954,9 +960,12 @@ def find_f_ro1_sweep_coupler(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_amp_arr[0], coupler_dc_port)
+            pls.hardware.set_dc_bias( \
+                coupler_amp_arr[0], \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_amp_arr) \
+            )
             time.sleep( settling_time_of_bias_tee )
-        
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -1083,9 +1092,7 @@ def find_f_ro1_sweep_coupler(
             
             # Apply the coupler voltage bias.
             if coupler_dc_port != []:
-                for _port in coupler_dc_port:
-                    pls.output_dc_bias(T, coupler_amp_arr[ii], _port)
-                    T += 1e-6
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
                 T += settling_time_of_bias_tee
             
             # Put the system into state |1>
@@ -1406,7 +1413,11 @@ def find_f_ro1_sweep_power(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_dc_bias, coupler_dc_port)
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
             time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
@@ -1787,7 +1798,7 @@ def find_f_ro2_sweep_coupler(
         "y_offset": [0.0],
         "y_unit":   'default',
         "z_name":   'default',
-        "z_scaler": 1.0, ## 0.047619047619, # Scaled assuming a 1 kΩ output resistance, into a 50 Ω load.
+        "z_scaler": 1.0,
         "z_unit":   'default',
         }
     ):
@@ -1875,7 +1886,11 @@ def find_f_ro2_sweep_coupler(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_amp_arr[0], coupler_dc_port)
+            pls.hardware.set_dc_bias( \
+                coupler_amp_arr[0], \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_amp_arr) \
+            )
             time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
@@ -2028,9 +2043,7 @@ def find_f_ro2_sweep_coupler(
             
             # Apply the coupler voltage bias.
             if coupler_dc_port != []:
-                for _port in coupler_dc_port:
-                    pls.output_dc_bias(T, coupler_amp_arr[ii], _port)
-                    T += 1e-6
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
                 T += settling_time_of_bias_tee
             
             # Put the system into state |1>
@@ -2363,8 +2376,13 @@ def find_f_ro2_sweep_power(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias(coupler_dc_bias, coupler_dc_port)
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
             time.sleep( settling_time_of_bias_tee )
+        
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.

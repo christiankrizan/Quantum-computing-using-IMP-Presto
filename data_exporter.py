@@ -275,20 +275,32 @@ def save(
             else:
                 print("Fourier transforming...")
             
-            # Do FFT!
+            # Do FFT!            
             if len(_item) <= 1:
                 '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1)'''
                 arr_to_fft = fetched_data_arr[:, 0, integration_indices]
+                
+                # For progress plotting during FFT
+                progress = np.linspace(0.0,100.0,len(arr_to_fft)).astype(int)
+                tic = time.time()
+                
                 new_arr = []
                 for row in range(len(arr_to_fft)):
                     new_arr.append(np.append(arr_to_fft[row], np.zeros([1,len(arr_to_fft[0])*7])))
+                    toc = time.time()
+                    if -1*(tic - toc) >= 5:
+                        print("Progress: "+str(progress[row])+"% done.")
+                        tic = time.time()
                 new_arr = np.array(new_arr)
                 resp_fft = np.fft.fft(new_arr, axis=-1)
                 
                 # At this point, to clear up memory, we should clear out
-                # new_arr, arr_to_fft, and possibly also fetched_data_arr
+                # at least new_arr, and arr_to_fft.
                 del new_arr
                 del arr_to_fft
+                del progress
+                del tic
+                del toc
                 
                 '''processed_data.append( 2/num_samples * resp_fft[:, _item[0]] )'''
                 processed_data.append( 2/(num_samples/8) * resp_fft[:, _item[0]] ) # TODO: Should, or should not, the num_samples part be modified after zero-padding the data?

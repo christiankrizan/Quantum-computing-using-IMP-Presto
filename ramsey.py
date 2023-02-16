@@ -16,6 +16,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import bandsign
+from bias_calculator import get_dc_dac_range_integer, change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -141,8 +142,11 @@ def ramsey01_ro0(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            for _port in coupler_dc_port:
-                pls.hardware.set_dc_bias(coupler_dc_bias, _port)
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
             time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
@@ -221,7 +225,6 @@ def ramsey01_ro0(
             phases_q     = bandsign(readout_freq_if),
         )
         
-        
         ### Setup pulse "control_pulse_pi_01" ###
 
         # Setup control_pulse_pi_01 pulse envelope.
@@ -274,9 +277,7 @@ def ramsey01_ro0(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            ## The DC voltage bias is already applied.
-            
-            # Apply the frequency-swept pi01 pulses.
+            # Apply the frequency-swept pi_01 pulses.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01_half)
             T += control_duration_01
@@ -319,8 +320,7 @@ def ramsey01_ro0(
         
         # Reset the DC bias port(s).
         if coupler_dc_port != []:
-            for _port in coupler_dc_port:
-                pls.hardware.set_dc_bias(0.0, _port)
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1521,7 +1521,7 @@ def ramsey12_ro1(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
     
@@ -1539,14 +1539,12 @@ def ramsey12_ro1(
     
     coupler_dc_port,
     coupler_dc_bias,
-    added_delay_for_bias_tee,
+    settling_time_of_bias_tee,
     
     num_freqs,
     num_averages,
     
     delay_arr,
-    ##num_delays,
-    ##dt_per_ramsey_iteration,
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -1576,6 +1574,13 @@ def ramsey12_ro1(
         experiment. Example: for a logarithmic sweep from 2 ns to 150 ns,
         done in 313 points, you would (as an argument) write:
             delay_arr = np.logspace( np.log10(2e-09), np.log10(150e-09), 313)
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Input sanitisation
@@ -1622,21 +1627,24 @@ def ramsey12_ro1(
         pls.hardware.set_dac_current(control_port, 40_500)
         pls.hardware.set_inv_sinc(control_port, 0)
         
-        # Coupler port
+        # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
+            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
         readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
-        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
-        dt_per_ramsey_iteration = int(round(dt_per_ramsey_iteration / plo_clk_T)) * plo_clk_T
+        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
@@ -1665,18 +1673,8 @@ def ramsey12_ro1(
             freq      = control_freq_nco,
             out_ports = control_port,
             tune      = True,
-            sync      = (coupler_dc_port == []),
+            sync      = True,
         )
-        # Coupler port mixer
-        if coupler_dc_port != []:
-            for curr_coupler_dc_port in range(len(coupler_dc_port)):
-                pls.hardware.configure_mixer(
-                    freq      = 0.0,
-                    out_ports = coupler_dc_port,
-                    tune      = True,
-                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
-                )
-        
         
         ''' Setup scale LUTs '''
         
@@ -1697,13 +1695,6 @@ def ramsey12_ro1(
             group           = 1,
             scales          = 1.0,
         )
-        # Coupler port amplitude (the bias)
-        if coupler_dc_port != []:
-            pls.setup_scale_lut(
-                output_ports    = coupler_dc_port,
-                group           = 0,
-                scales          = coupler_dc_bias,
-            )
         
         
         ### Setup readout pulse ###
@@ -1780,28 +1771,6 @@ def ramsey12_ro1(
         )
         
         
-        ### Setup pulse "coupler_bias_tone" ###
-        if coupler_dc_port != []:
-            # Setup the coupler tone bias.
-            coupler_bias_tone = [pls.setup_long_drive(
-                output_port = _port,
-                group       = 0,
-                duration    = added_delay_for_bias_tee,
-                amplitude   = 1.0,
-                amplitude_q = 1.0,
-                rise_time   = 0e-9,
-                fall_time   = 0e-9
-            ) for _port in coupler_dc_port]
-        
-            # Setup coupler bias tone "carrier"
-            pls.setup_freq_lut(
-                output_ports = coupler_dc_port,
-                group        = 0,
-                frequencies  = 0.0,
-                phases       = 0.0,
-                phases_q     = 0.0,
-            )
-        
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
@@ -1813,35 +1782,14 @@ def ramsey12_ro1(
         # Start of sequence
         T = 0.0  # s
         
-        # Charge the bias tee.
-        if coupler_dc_port != []:
-            pls.reset_phase(T, coupler_dc_port)
-            pls.output_pulse(T, coupler_bias_tone)
-            T += added_delay_for_bias_tee
-        
-        ## TODO: the repetition delay is not implemented correctly.
-        ##       See for instance the iSWAP and CZ functions, as to
-        ##       how it's supposed to be implemented. Once this is done,
-        ##       that will simplify the duration for the DC tones as well.
+        # Define repetition counter for T.
+        repetition_counter = 1
         
         # For every delay to step through:
-        for delay_arr_item in delay_arr:
+        for ii in range(len(delay_arr)):
             
-            # Redefine the coupler DC pulse duration to keep on playing once
-            # the bias tee has charged.
-            if coupler_dc_port != []:
-                for bias_tone in coupler_bias_tone:
-                    bias_tone.set_total_duration(
-                        control_duration_01 + \
-                        control_duration_12 + \
-                        delay_arr_item + \
-                        control_duration_12 + \
-                        readout_duration + \
-                        repetition_delay \
-                    )
-                
-                # Re-apply the coupler bias tone.
-                pls.output_pulse(T, coupler_bias_tone)
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
             
             # Put the qubit in the excited state.
             pls.reset_phase(T, control_port)
@@ -1853,7 +1801,7 @@ def ramsey12_ro1(
             T += control_duration_12
             
             # Await some amount of time between pulses.
-            T += delay_arr_item
+            T += delay_arr[ii]
             
             # Apply the last pi_12_half pulse.
             pls.output_pulse(T, control_pulse_pi_12_half)
@@ -1865,15 +1813,16 @@ def ramsey12_ro1(
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
-            # Wait for decay
-            T += repetition_delay
-        
-        # Move to next scanned frequency, for the pi_12/2 pulse
-        pls.next_frequency(T, control_port, group = 1)
-        
-        # Move to next iteration.
-        T += repetition_delay
-        
+            # Is this the last iteration?
+            if ii == len(delay_arr)-1:
+                # Increment the swept frequency.
+                pls.next_frequency(T, control_port, group = 1)
+                T += 20e-9 # Add some time for changing the frequency.
+            
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
@@ -1886,6 +1835,10 @@ def ramsey12_ro1(
             num_averages = num_averages,
             print_time   = True,
         )
+        
+        # Reset the DC bias port(s).
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1943,7 +1896,7 @@ def ramsey12_ro1(
             'control_duration_12', "s",
             
             #'coupler_dc_port', "",
-            'coupler_dc_bias', "FS",
+            'coupler_dc_bias', "V",
             'added_delay_for_bias_tee', "s",
             
             'num_freqs', "",
@@ -2059,7 +2012,7 @@ def ramsey01_echo_r0(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
     
@@ -2072,14 +2025,12 @@ def ramsey01_echo_r0(
     
     coupler_dc_port,
     coupler_dc_bias,
-    added_delay_for_bias_tee,
+    settling_time_of_bias_tee,
     
     num_freqs,
     num_averages,
     
     delay_arr,
-    ##num_delays,
-    ##dt_per_ramsey_iteration,
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -2107,6 +2058,13 @@ def ramsey01_echo_r0(
         experiment. Example: for a logarithmic sweep from 2 ns to 150 ns,
         done in 313 points, you would (as an argument) write:
             delay_arr = np.logspace( np.log10(2e-09), np.log10(150e-09), 313)
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Input sanitisation
@@ -2153,19 +2111,23 @@ def ramsey01_echo_r0(
         pls.hardware.set_dac_current(control_port, 40_500)
         pls.hardware.set_inv_sinc(control_port, 0)
         
-        # Coupler port
+        # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
+            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
         readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
-        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
+        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
         if (integration_window_stop - integration_window_start) < plo_clk_T:
             integration_window_stop = integration_window_start + plo_clk_T
@@ -2194,18 +2156,8 @@ def ramsey01_echo_r0(
             freq      = control_freq_nco,
             out_ports = control_port,
             tune      = True,
-            sync      = (coupler_dc_port == []),
+            sync      = True,
         )
-        # Coupler port mixer
-        if coupler_dc_port != []:
-            for curr_coupler_dc_port in range(len(coupler_dc_port)):
-                pls.hardware.configure_mixer(
-                    freq      = 0.0,
-                    out_ports = coupler_dc_port,
-                    tune      = True,
-                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
-                )
-        
         
         ''' Setup scale LUTs '''
         
@@ -2221,14 +2173,6 @@ def ramsey01_echo_r0(
             group           = 0,
             scales          = control_amp_01,
         )
-        # Coupler port amplitude (the bias)
-        if coupler_dc_port != []:
-            pls.setup_scale_lut(
-                output_ports    = coupler_dc_port,
-                group           = 0,
-                scales          = coupler_dc_bias,
-            )
-        
         
         ### Setup readout pulse ###
         
@@ -2291,29 +2235,6 @@ def ramsey01_echo_r0(
             phases_q        = bandsign(control_freq_01_if_arr),
         )
         
-        
-        ### Setup pulse "coupler_bias_tone" ###
-        if coupler_dc_port != []:
-            # Setup the coupler tone bias.
-            coupler_bias_tone = [pls.setup_long_drive(
-                output_port = _port,
-                group       = 0,
-                duration    = added_delay_for_bias_tee,
-                amplitude   = 1.0,
-                amplitude_q = 1.0,
-                rise_time   = 0e-9,
-                fall_time   = 0e-9
-            ) for _port in coupler_dc_port]
-        
-            # Setup coupler bias tone "carrier"
-            pls.setup_freq_lut(
-                output_ports = coupler_dc_port,
-                group        = 0,
-                frequencies  = 0.0,
-                phases       = 0.0,
-                phases_q     = 0.0,
-            )
-        
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
@@ -2326,34 +2247,14 @@ def ramsey01_echo_r0(
         # Start of sequence
         T = 0.0  # s
         
-        # Charge the bias tee.
-        if coupler_dc_port != []:
-            pls.reset_phase(T, coupler_dc_port)
-            pls.output_pulse(T, coupler_bias_tone)
-            T += added_delay_for_bias_tee
-        
-        ## TODO: the repetition delay is not implemented correctly.
-        ##       See for instance the iSWAP and CZ functions, as to
-        ##       how it's supposed to be implemented. Once this is done,
-        ##       that will simplify the duration for the DC tones as well.
+        # Define repetition counter for T.
+        repetition_counter = 1
         
         # For every delay to step through:
-        for delay_arr_item in delay_arr:
+        for ii in range(len(delay_arr)):
             
-            # Redefine the coupler DC pulse duration to keep on playing once
-            # the bias tee has charged.
-            if coupler_dc_port != []:
-                for bias_tone in coupler_bias_tone:    
-                    bias_tone.set_total_duration(
-                        control_duration_01 + \
-                        delay_arr_item + \
-                        control_duration_01 + \
-                        readout_duration + \
-                        repetition_delay \
-                    )
-                
-                # Re-apply the coupler bias tone.
-                pls.output_pulse(T, coupler_bias_tone)
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
             
             # Apply the frequency-swept pi01 pulses.
             pls.reset_phase(T, control_port)
@@ -2367,7 +2268,7 @@ def ramsey01_echo_r0(
             ##       I.e. is it supposed to be that way, that playing the echo
             ##       pulse will add some (erroneous?) duration to the total
             ##       measurement, equivalent to the duration of a pi pulse?
-            half_pause = int(round( ((delay_arr_item)/2) / plo_clk_T)) * plo_clk_T
+            half_pause = int(round( ((delay_arr[ii])/2) / plo_clk_T)) * plo_clk_T
             T += half_pause
             pls.output_pulse(T, control_pulse_pi_01)
             T += control_duration_01
@@ -2383,15 +2284,16 @@ def ramsey01_echo_r0(
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
-            # Wait for decay
-            T += repetition_delay
-        
-        # Move to next scanned frequency
-        pls.next_frequency(T, control_port)
-        
-        # Move to next iteration.
-        T += repetition_delay
-        
+            # Is this the last iteration?
+            if ii == len(delay_arr)-1:
+                # Increment the swept frequency.
+                pls.next_frequency(T, control_port)
+                T += 20e-9 # Add some time for changing the frequency.
+            
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
@@ -2404,6 +2306,10 @@ def ramsey01_echo_r0(
             num_averages    =   num_averages,
             print_time      =   True,
         )
+        
+        # Reset the DC bias port(s).
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -2454,7 +2360,7 @@ def ramsey01_echo_r0(
             'control_duration_01', "s",
             
             #'coupler_dc_port', "",
-            'coupler_dc_bias', "FS",
+            'coupler_dc_bias', "V",
             'added_delay_for_bias_tee', "s",
             
             'num_freqs', "",
@@ -2548,7 +2454,7 @@ def ramsey01_echo_r0(
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = '01_echo'+with_or_without_bias_string,
+            append_to_log_name_before_timestamp = '01_echo' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
