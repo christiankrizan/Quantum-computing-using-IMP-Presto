@@ -1068,7 +1068,7 @@ def pulsed01_sweep_power(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
 
@@ -1086,7 +1086,7 @@ def pulsed01_sweep_power(
     num_averages,
     
     num_amplitudes,
-    control_amp_01_min = -1.0,
+    control_amp_01_min = +0.0,
     control_amp_01_max = +1.0,
     
     save_complex_data = True,
@@ -1249,7 +1249,7 @@ def pulsed01_sweep_power(
         # Setup control_pulse_pi_01 pulse envelope.
         control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template.
         control_envelope_01 = sin2(control_ns_01)
-        control_pulse_pi_01_half = pls.setup_template(
+        control_pulse_pi_01 = pls.setup_template(
             output_port = control_port,
             group       = 0,
             template    = control_envelope_01,
@@ -1470,7 +1470,7 @@ def pulsed01_sweep_power(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_arr)],
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1487,7 +1487,6 @@ def pulsed01_sweep_power(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
-            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))

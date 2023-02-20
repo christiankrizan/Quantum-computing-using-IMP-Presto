@@ -809,7 +809,7 @@ def find_f_ro0_sweep_power(
             
             save_complex_data = save_complex_data,
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = 'ro0_power_sweep',
+            append_to_log_name_before_timestamp = 'ro0_power_sweep' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
@@ -1731,7 +1731,7 @@ def find_f_ro1_sweep_power(
             
             save_complex_data = save_complex_data,
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = 'ro1_power_sweep',
+            append_to_log_name_before_timestamp = 'ro1_power_sweep' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
@@ -2716,7 +2716,7 @@ def find_f_ro2_sweep_power(
             
             save_complex_data = save_complex_data,
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = 'ro2_power_sweep',
+            append_to_log_name_before_timestamp = 'ro2_power_sweep' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
