@@ -277,19 +277,19 @@ def t1_sweep_coupler(
         # "variable LUTs" in the sequencer, we have zero choice
         # but to make a nested for loop, and setting the repeat argument to 1.
         for ii in range(len(coupler_amp_arr)):
-        
+            
+            # Apply the coupler voltage bias.
+            if coupler_dc_port != []:
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
+                T += settling_time_of_bias_tee
+            
             # For every delay to step through:
             for jj in range(len(delay_arr)):
                 
                 # Get a time reference, used for gauging the iteration length.
                 T_begin = T
                 
-                # Apply the coupler voltage bias.
-                if coupler_dc_port != []:
-                    T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                    T += settling_time_of_bias_tee
-                
-                # Output the pi_01-pulse along with the coupler DC tone
+                # Output the pi_01-pulse
                 pls.reset_phase(T, control_port)
                 pls.output_pulse(T, control_pulse_pi_01)
                 T += control_duration_01
@@ -341,7 +341,10 @@ def t1_sweep_coupler(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -363,19 +366,21 @@ def t1_sweep_coupler(
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
             'repetition_rate', "s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
             
             'control_port', "",
             'control_amp_01', "FS",
-            'control_freq_nco', "Hz", 
-            'control_freq_01', "Hz", 
+            'control_freq_nco', "Hz",
+            'control_freq_01', "Hz",
             'control_duration_01', "s",
             
             #'coupler_dc_port', "",
             'settling_time_of_bias_tee', "s",
             
             'num_averages', "",
-            'num_biases', "",
             
+            'num_biases', "",
             'coupler_bias_min', "V",
             'coupler_bias_max', "V",
         ]
