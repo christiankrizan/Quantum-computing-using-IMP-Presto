@@ -340,7 +340,10 @@ def pulsed01_sweep_coupler(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -1091,6 +1094,7 @@ def pulsed01_sweep_power(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
@@ -1354,7 +1358,10 @@ def pulsed01_sweep_power(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -1487,6 +1494,7 @@ def pulsed01_sweep_power(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
@@ -1717,6 +1725,7 @@ def pulsed12_sweep_coupler(
             template_q  = control_envelope_01,
             envelope    = True,
         )
+        
         # Setup the control_01 pulse carrier, considering the digital mixer
         control_freq_01_if = control_freq_nco - control_freq_01
         pls.setup_freq_lut(
@@ -1842,7 +1851,10 @@ def pulsed12_sweep_coupler(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"

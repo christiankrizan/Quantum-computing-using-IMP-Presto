@@ -301,7 +301,10 @@ def find_f_ro0_sweep_coupler(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -686,7 +689,10 @@ def find_f_ro0_sweep_power(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -840,7 +846,6 @@ def find_f_ro1_sweep_coupler(
     
     control_port,
     control_freq_nco,
-    
     control_amp_01,
     control_freq_01,
     control_duration_01,
@@ -1149,7 +1154,10 @@ def find_f_ro1_sweep_coupler(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -1329,7 +1337,7 @@ def find_f_ro1_sweep_power(
     num_averages,
     
     num_amplitudes,
-    readout_amp_min = -1.0,
+    readout_amp_min = -0.0,
     readout_amp_max = +1.0,
     
     save_complex_data = True,
@@ -1425,7 +1433,7 @@ def find_f_ro1_sweep_power(
         readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
@@ -1601,7 +1609,10 @@ def find_f_ro1_sweep_power(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -1623,7 +1634,7 @@ def find_f_ro1_sweep_power(
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s",
+            'repetition_rate', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
             
@@ -2105,7 +2116,10 @@ def find_f_ro2_sweep_coupler(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"

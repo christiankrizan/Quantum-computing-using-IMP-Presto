@@ -338,7 +338,10 @@ def ramsey01_ro0(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -836,7 +839,10 @@ def ramsey01_ro0_DEPRECATED(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -1856,7 +1862,10 @@ def ramsey12_ro1(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -1879,7 +1888,7 @@ def ramsey12_ro1(
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s",
+            'repetition_rate', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
             
@@ -1897,7 +1906,7 @@ def ramsey12_ro1(
             
             #'coupler_dc_port', "",
             'coupler_dc_bias', "V",
-            'added_delay_for_bias_tee', "s",
+            'settling_time_of_bias_tee', "s",
             
             'num_freqs', "",
             'num_averages', "",
@@ -2327,7 +2336,10 @@ def ramsey01_echo_r0(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
