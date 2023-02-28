@@ -37,7 +37,7 @@ def get_repetition_rate_T(
     
     # Check whether the sequence that is currently being scheduled,
     # falls within the time bound set by the user.
-    if (T_needed_initially < repetition_rate):
+    if (T_needed_initially <= repetition_rate):
     
         # All is good. Just report the T that is supposed to happen
         # at that point in the sequence.
@@ -64,7 +64,7 @@ def get_repetition_rate_T(
             T_begin = T
         
         # Print warning.
-        print("WARNING: the provided repetition rate "+str(repetition_rate)  +\
+        print("WARNING! Repetition rate "+str(repetition_rate)  +\
             " s, was shorter than the least known required sequencer "       +\
             "duration; at least "+str(T_needed_initially)+" s are needed. "  +\
             "One iteration was placed later than its assumed scheduled time "+\

@@ -17,6 +17,8 @@ import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
 from phase_calculator import bandsign
+from bias_calculator import get_dc_dac_range_integer, change_dc_bias
+from repetition_rate_calculator import get_repetition_rate_T
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -45,10 +47,9 @@ def iswap_sweep_duration_and_detuning(
     integration_window_stop,
     
     control_port_A,
-    control_port_B,
-    
     control_amp_01_A,
     control_freq_01_A,
+    control_port_B,
     control_amp_01_B,
     control_freq_01_B,
     control_duration_01,
@@ -58,7 +59,7 @@ def iswap_sweep_duration_and_detuning(
     
     coupler_dc_port,
     coupler_dc_bias,
-    added_delay_for_bias_tee,
+    settling_time_of_bias_tee,
     
     coupler_ac_port,
     coupler_ac_amp_iswap,
@@ -97,6 +98,8 @@ def iswap_sweep_duration_and_detuning(
         a tuneable coupler, by fixing the gate amplitude and gate bias.
         Thus, the gate duration and detuning is swept.
     '''
+    
+    assert 1 == 0, "Halted! Modernisation in progress but not completed. Do not proceed until modernised."
     
     ## Input sanitisation
     
@@ -144,12 +147,18 @@ def iswap_sweep_duration_and_detuning(
         pls.hardware.set_dac_current(control_port_B, 40_500)
         pls.hardware.set_inv_sinc(control_port_B, 0)
         
-        # Coupler port(s)
-        if coupler_dc_port != []:
-            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        # Coupler port
         pls.hardware.set_dac_current(coupler_ac_port, 40_500)
         pls.hardware.set_inv_sinc(coupler_ac_port, 0)
+        
+        # Configure the DC bias. Also, let's charge the bias-tee.
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
+            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -158,7 +167,7 @@ def iswap_sweep_duration_and_detuning(
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
-        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
+        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap_min = int(round(coupler_ac_plateau_duration_iswap_min / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap_max = int(round(coupler_ac_plateau_duration_iswap_max / plo_clk_T)) * plo_clk_T
@@ -224,16 +233,8 @@ def iswap_sweep_duration_and_detuning(
             freq      = coupler_ac_freq_iswap_nco,
             out_ports = coupler_ac_port,
             tune      = True,
-            sync      = (coupler_dc_port == []),
+            sync      = True,
         )
-        if coupler_dc_port != []:
-            for curr_coupler_dc_port in range(len(coupler_dc_port)):
-                pls.hardware.configure_mixer(
-                    freq      = 0.0,
-                    out_ports = coupler_dc_port,
-                    tune      = True,
-                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
-                )
         
         
         ''' Setup scale LUTs '''
@@ -266,12 +267,6 @@ def iswap_sweep_duration_and_detuning(
             group           = 0,
             scales          = coupler_ac_amp_iswap,
         )
-        if coupler_dc_port != []:
-            pls.setup_scale_lut(
-                output_ports    = coupler_dc_port,
-                group           = 0,
-                scales          = coupler_dc_bias,
-            )
         
         
         ### Setup readout pulses ###
@@ -386,27 +381,6 @@ def iswap_sweep_duration_and_detuning(
         )
         
         
-        ### Setup pulse "coupler_bias_tone" ###
-        if coupler_dc_port != []:
-            # Setup the coupler tone bias.
-            coupler_bias_tone = [pls.setup_long_drive(
-                output_port = _port,
-                group       = 0,
-                duration    = added_delay_for_bias_tee,
-                amplitude   = 1.0,
-                amplitude_q = 1.0,
-                rise_time   = 0e-9,
-                fall_time   = 0e-9
-            ) for _port in coupler_dc_port]
-            # Setup coupler bias tone "carrier"
-            pls.setup_freq_lut(
-                output_ports = coupler_dc_port,
-                group        = 0,
-                frequencies  = 0.0,
-                phases       = 0.0,
-                phases_q     = 0.0,
-            )
-        
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
@@ -418,12 +392,6 @@ def iswap_sweep_duration_and_detuning(
 
         # Start of sequence
         T = 0.0  # s
-
-        # Charge the bias tee.
-        if coupler_dc_port != []:
-            pls.reset_phase(T, coupler_dc_port)
-            pls.output_pulse(T, coupler_bias_tone)
-            T += added_delay_for_bias_tee
         
         # Define repetition counter for T.
         repetition_counter = 1
@@ -437,19 +405,6 @@ def iswap_sweep_duration_and_detuning(
             # Redefine the iSWAP pulse's total duration,
             coupler_ac_duration_iswap = ii
             coupler_ac_pulse_iswap.set_total_duration(coupler_ac_duration_iswap)
-            
-            # Redefine the coupler DC pulse duration to keep on playing once
-            # the bias tee has charged.
-            if coupler_dc_port != []:
-                coupler_bias_tone.set_total_duration(
-                    control_duration_01 + \
-                    coupler_ac_duration_iswap + \
-                    readout_duration + \
-                    repetition_delay \
-                )
-                
-                # Re-apply the coupler bias tone.
-                pls.output_pulse(T, coupler_bias_tone)
             
             # Put the system into state |01> or |10> with pi01 pulse(s)
             pls.reset_phase(T, [control_port_A, control_port_B])
@@ -504,7 +459,11 @@ def iswap_sweep_duration_and_detuning(
             num_averages    =   num_averages,
             print_time      =   True,
         )
-
+        
+        # Reset the DC bias port(s).
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+    
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
 
@@ -533,6 +492,8 @@ def iswap_sweep_duration_and_detuning(
             'sampling_duration',"s",
             'readout_sampling_delay',"s",
             'repetition_delay',"s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
             
             'control_port_A',"",
             'control_amp_01_A',"FS",
@@ -543,8 +504,8 @@ def iswap_sweep_duration_and_detuning(
             'control_duration_01',"s",
             
             #'coupler_dc_port',"",
-            'coupler_dc_bias',"FS",
-            'added_delay_for_bias_tee',"s",
+            'coupler_dc_bias',"V",
+            'settling_time_of_bias_tee',"s",
             
             'coupler_ac_port',"",
             'coupler_ac_amp_iswap',"FS",
@@ -1302,6 +1263,7 @@ def iswap_sweep_duration_and_amplitude(
     
     readout_stimulus_port,
     readout_sampling_port,
+    readout_freq_nco,
     readout_freq_A,
     readout_amp_A,
     readout_freq_B,
@@ -1315,16 +1277,18 @@ def iswap_sweep_duration_and_amplitude(
     integration_window_stop,
     
     control_port_A,
-    control_amp_01_A,
+    control_freq_nco_A,
     control_freq_01_A,
+    control_amp_01_A,
     control_port_B,
-    control_amp_01_B,
+    control_freq_nco_B,
     control_freq_01_B,
+    control_amp_01_B,
     control_duration_01,
     
     coupler_dc_port,
     coupler_dc_bias,
-    added_delay_for_bias_tee,
+    settling_time_of_bias_tee,
     
     coupler_ac_port,
     coupler_ac_single_edge_time_iswap,
@@ -1339,6 +1303,8 @@ def iswap_sweep_duration_and_amplitude(
     num_averages,
     num_amplitudes,
     num_time_steps,
+    
+    prepare_input_state = '10',
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -1359,12 +1325,10 @@ def iswap_sweep_duration_and_amplitude(
         }
     ):
     ''' Tune an iSWAP-interaction between two qubits, where it is known at
-        what gate frequency the iSWAP interaction takes place (and with
-        what coupler bias), but not the iSWAP gate amplitude nor the gate
+        what gate frequency the iSWAP interaction takes place (and at
+        which coupler bias), but not the iSWAP gate amplitude nor the gate
         duration.
     '''
-    
-    assert 1 == 0, "Halted! Add arguments for qubit 2, in order to properly set an NCOs for the mixers driving the control ports. And, change to USB mixing."
     
     ## Input sanitisation
     
@@ -1381,6 +1345,10 @@ def iswap_sweep_duration_and_amplitude(
         print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
         coupler_dc_bias = 0.0
     
+    ## Assure that the requested input state to prepare, is valid.
+    assert ( (prepare_input_state == '10') or (prepare_input_state == '01') ),\
+        "Error! Invalid request for input state to prepare. " + \
+        "Legal values are \'10\' and \'01\'"
     
     ## Initial array declaration
     
@@ -1413,12 +1381,18 @@ def iswap_sweep_duration_and_amplitude(
         pls.hardware.set_dac_current(control_port_B, 40_500)
         pls.hardware.set_inv_sinc(control_port_B, 0)
         
-        # Coupler port(s)
-        if coupler_dc_port != []:
-            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        # Coupler port
         pls.hardware.set_dac_current(coupler_ac_port, 40_500)
         pls.hardware.set_inv_sinc(coupler_ac_port, 0)
+        
+        # Configure the DC bias. Also, let's charge the bias-tee.
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
+            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -1427,7 +1401,7 @@ def iswap_sweep_duration_and_amplitude(
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
         repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
-        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
+        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap_min = int(round(coupler_ac_plateau_duration_iswap_min / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap_max = int(round(coupler_ac_plateau_duration_iswap_max / plo_clk_T)) * plo_clk_T
@@ -1452,20 +1426,14 @@ def iswap_sweep_duration_and_amplitude(
         )
         for jj in range(len(iswap_total_pulse_duration_arr)):
             iswap_total_pulse_duration_arr[jj] = int(round(iswap_total_pulse_duration_arr[jj] / plo_clk_T)) * plo_clk_T
-        new_list = []
-        for kk in range(len(iswap_total_pulse_duration_arr)):
-            if not (iswap_total_pulse_duration_arr[kk] in new_list):
-                new_list.append(iswap_total_pulse_duration_arr[kk])
-        iswap_total_pulse_duration_arr = new_list
+        # Remove duplicate entries in the array.
+        iswap_total_pulse_duration_arr = np.unique( np.array(iswap_total_pulse_duration_arr) )
         num_time_steps = len(iswap_total_pulse_duration_arr)
         
         
         ''' Setup mixers '''
         
         # Readout port, multiplexed, calculate an optimal NCO frequency.
-        high_res  = max( [readout_freq_A, readout_freq_B] )
-        low_res   = min( [readout_freq_A, readout_freq_B] )
-        readout_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
@@ -1475,13 +1443,13 @@ def iswap_sweep_duration_and_amplitude(
         )
         # Control port mixers
         pls.hardware.configure_mixer(
-            freq      = control_freq_01_A,
+            freq      = control_freq_nco_A,
             out_ports = control_port_A,
             tune      = True,
             sync      = False,
         )
         pls.hardware.configure_mixer(
-            freq      = control_freq_01_B,
+            freq      = control_freq_nco_B,
             out_ports = control_port_B,
             tune      = True,
             sync      = False,
@@ -1491,17 +1459,8 @@ def iswap_sweep_duration_and_amplitude(
             freq      = coupler_ac_freq_iswap_nco,
             out_ports = coupler_ac_port,
             tune      = True,
-            sync      = (coupler_dc_port == []),
+            sync      = True,
         )
-        if coupler_dc_port != []:
-            for curr_coupler_dc_port in range(len(coupler_dc_port)):
-                pls.hardware.configure_mixer(
-                    freq      = 0.0,
-                    out_ports = coupler_dc_port,
-                    tune      = True,
-                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
-                )
-        
         
         ''' Setup scale LUTs '''
         
@@ -1533,12 +1492,6 @@ def iswap_sweep_duration_and_amplitude(
             group           = 0,
             scales          = coupler_ac_amp_arr, # This value will be swept!
         )
-        if coupler_dc_port != []:        
-            pls.setup_scale_lut(
-                output_ports    = coupler_dc_port,
-                group           = 0,
-                scales          = coupler_dc_bias,
-            )
         
         
         ### Setup readout pulses ###
@@ -1600,20 +1553,22 @@ def iswap_sweep_duration_and_amplitude(
             envelope    = True,
         )
         
-        # Setup control_pulse_pi_01 carrier tones, considering that there are digital mixers.
+        # Setup control pulse carriers, considering that there is a digital mixer
+        control_freq_if_01_A = control_freq_nco_A - control_freq_01_A
         pls.setup_freq_lut(
             output_ports = control_port_A,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(control_freq_if_01_A),
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = bandsign(control_freq_if_01_A),
         )
+        control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
             output_ports = control_port_B,
             group        = 0,
-            frequencies  = 0.0,
+            frequencies  = np.abs(control_freq_if_01_B),
             phases       = 0.0,
-            phases_q     = 0.0,
+            phases_q     = bandsign(control_freq_if_01_B),
         )
         
         
@@ -1642,26 +1597,6 @@ def iswap_sweep_duration_and_amplitude(
             phases_q        = bandsign(coupler_ac_freq_if_iswap),
         )
         
-        ### Setup pulse "coupler_bias_tone" ###
-        if coupler_dc_port != []:
-            # Setup the coupler tone bias.
-            coupler_bias_tone = [pls.setup_long_drive(
-                output_port = _port,
-                group       = 0,
-                duration    = added_delay_for_bias_tee,
-                amplitude   = 1.0,
-                amplitude_q = 1.0,
-                rise_time   = 0e-9,
-                fall_time   = 0e-9
-            ) for _port in coupler_dc_port]
-            # Setup coupler bias tone "carrier"
-            pls.setup_freq_lut(
-                output_ports = coupler_dc_port,
-                group        = 0,
-                frequencies  = 0.0,
-                phases       = 0.0,
-                phases_q     = 0.0,
-            )
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
@@ -1674,12 +1609,6 @@ def iswap_sweep_duration_and_amplitude(
         
         # Start of sequence
         T = 0.0  # s
-
-        # Charge the bias tee.
-        if coupler_dc_port != []:
-            pls.reset_phase(T, coupler_dc_port)
-            pls.output_pulse(T, coupler_bias_tone)
-            T += added_delay_for_bias_tee
         
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in iswap_total_pulse_duration_arr:
@@ -1688,22 +1617,13 @@ def iswap_sweep_duration_and_amplitude(
             coupler_ac_duration_iswap = ii
             coupler_ac_pulse_iswap.set_total_duration(coupler_ac_duration_iswap)
             
-            # Redefine the coupler DC pulse duration to keep on playing once
-            # the bias tee has charged.
-            if coupler_dc_port != []:
-                coupler_bias_tone.set_total_duration(
-                    control_duration_01 + \
-                    coupler_ac_duration_iswap + \
-                    readout_duration + \
-                    repetition_delay \
-                )
-
-                # Re-apply the coupler bias tone.
-                pls.output_pulse(T, coupler_bias_tone)
-            
             # Put the system into state |01> or |10> with pi01 pulse(s)
-            pls.reset_phase(T, [control_port_A, control_port_B])
-            pls.output_pulse(T, [control_pulse_pi_01_A, control_pulse_pi_01_B])
+            if prepare_input_state == '10':
+                pls.reset_phase(T, control_port_A)
+                pls.output_pulse(T, control_pulse_pi_01_A)
+            else:
+                pls.reset_phase(T, control_port_B)
+                pls.output_pulse(T, control_pulse_pi_01_B)
             T += control_duration_01
             
             # Apply the iSWAP gate, with parameters being swept.
@@ -1739,6 +1659,10 @@ def iswap_sweep_duration_and_amplitude(
             num_averages    =   num_averages,
             print_time      =   True,
         )
+        
+        # Reset the DC bias port(s).
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1784,8 +1708,8 @@ def iswap_sweep_duration_and_amplitude(
             'control_duration_01', "s",
             
             #'coupler_dc_port', "",
-            'coupler_dc_bias', "FS",
-            'added_delay_for_bias_tee', "s",
+            'coupler_dc_bias', "V",
+            'settling_time_of_bias_tee', "s",
             
             'coupler_ac_port', "",
             'coupler_ac_freq_iswap', "Hz",

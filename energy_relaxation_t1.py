@@ -175,7 +175,6 @@ def t1_sweep_coupler(
         for jj in range(len(delay_arr)):
             delay_arr[jj] = int(round(delay_arr[jj] / plo_clk_T)) * plo_clk_T
         # Remove duplicate entries in the delay_arr.
-        # Make delay_arr into a numpy array if it already isn't one.
         delay_arr = np.unique( np.array(delay_arr) )
         
         
