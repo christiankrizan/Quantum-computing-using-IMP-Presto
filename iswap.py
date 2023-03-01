@@ -42,7 +42,7 @@ def iswap_sweep_duration_and_detuning(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
     
@@ -53,9 +53,6 @@ def iswap_sweep_duration_and_detuning(
     control_amp_01_B,
     control_freq_01_B,
     control_duration_01,
-    
-    control_freq_12_A,
-    control_freq_12_B,
     
     coupler_dc_port,
     coupler_dc_bias,
@@ -74,6 +71,8 @@ def iswap_sweep_duration_and_detuning(
     coupler_ac_single_edge_time_iswap,
     coupler_ac_plateau_duration_iswap_min,
     coupler_ac_plateau_duration_iswap_max,
+    
+    prepare_input_state = '10',
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -97,9 +96,14 @@ def iswap_sweep_duration_and_detuning(
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler, by fixing the gate amplitude and gate bias.
         Thus, the gate duration and detuning is swept.
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
-    
-    assert 1 == 0, "Halted! Modernisation in progress but not completed. Do not proceed until modernised."
     
     ## Input sanitisation
     
@@ -165,7 +169,7 @@ def iswap_sweep_duration_and_detuning(
         readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
@@ -188,20 +192,14 @@ def iswap_sweep_duration_and_detuning(
         )
         for jj in range(len(iswap_total_pulse_duration_arr)):
             iswap_total_pulse_duration_arr[jj] = int(round(iswap_total_pulse_duration_arr[jj] / plo_clk_T)) * plo_clk_T
-        new_list = []
-        for kk in range(len(iswap_total_pulse_duration_arr)):
-            if not (iswap_total_pulse_duration_arr[kk] in new_list):
-                new_list.append(iswap_total_pulse_duration_arr[kk])
-        iswap_total_pulse_duration_arr = new_list
+        # Remove duplicate entries in the array.
+        iswap_total_pulse_duration_arr = np.unique( np.array(iswap_total_pulse_duration_arr) )
         num_time_steps = len(iswap_total_pulse_duration_arr)
         
         
         ''' Setup mixers '''
         
         # Readout port, multiplexed, calculate an optimal NCO frequency.
-        high_res  = max( [readout_freq_A, readout_freq_B] )
-        low_res   = min( [readout_freq_A, readout_freq_B] )
-        readout_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
@@ -210,18 +208,12 @@ def iswap_sweep_duration_and_detuning(
             sync      = False,
         )
         # Control port mixers
-        high_res_A  = max( [control_freq_01_A, control_freq_12_A] )
-        low_res_A   = min( [control_freq_01_A, control_freq_12_A] )
-        control_freq_nco_A = high_res_A - (high_res_A - low_res_A)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco_A,
             out_ports = control_port_A,
             tune      = True,
             sync      = False,
         )
-        high_res_B  = max( [control_freq_01_B, control_freq_12_B] )
-        low_res_B   = min( [control_freq_01_B, control_freq_12_B] )
-        control_freq_nco_B = high_res_B - (high_res_B - low_res_B)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco_B,
             out_ports = control_port_B,
@@ -397,18 +389,21 @@ def iswap_sweep_duration_and_detuning(
         repetition_counter = 1
         
         # For every pulse duration to sweep over:
-        for ii in iswap_total_pulse_duration_arr:
+        for ii in range(len(iswap_total_pulse_duration_arr)):
             
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
             # Redefine the iSWAP pulse's total duration,
-            coupler_ac_duration_iswap = ii
+            coupler_ac_duration_iswap = iswap_total_pulse_duration_arr[ii]
             coupler_ac_pulse_iswap.set_total_duration(coupler_ac_duration_iswap)
             
             # Put the system into state |01> or |10> with pi01 pulse(s)
             pls.reset_phase(T, [control_port_A, control_port_B])
-            pls.output_pulse(T, [control_pulse_pi_01_A, control_pulse_pi_01_B])
+            if prepare_input_state == '10':
+                pls.output_pulse(T, control_pulse_pi_01_A)
+            else:
+                pls.output_pulse(T, control_pulse_pi_01_B)
             T += control_duration_01
             
             # Apply the iSWAP gate, with parameters being swept.
@@ -422,30 +417,16 @@ def iswap_sweep_duration_and_detuning(
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
-            # Get our last time reference
-            T_last = T
+            # Is this the last iteration?
+            if ii == len(iswap_total_pulse_duration_arr)-1:
+                # Move to the next scanned frequency
+                pls.next_frequency(T, coupler_ac_port, group = 0)
+                T += 20e-9 # Add some time for changing the frequency.
             
-            # Is the iteration longer than the repetition delay?
-            if (T_last - T_begin) >= repetition_delay:
-                while (T_last - T_begin) >= repetition_delay:
-                    # If this happens, then the iteration does not fit within
-                    # one decreed repetion period.
-                    T = repetition_delay * repetition_counter
-                    repetition_counter += 1
-                    
-                    # Move reference
-                    T_begin = T
-            else:
-                # Then all is good.
-                T = repetition_delay * repetition_counter
-                repetition_counter += 1
-        
-        # Move to the next scanned frequency
-        pls.next_frequency(T, coupler_ac_port, group = 0)
-        
-        # Move to next iteration.
-        T = repetition_delay * repetition_counter
-        repetition_counter += 1
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         
         ################################
@@ -1272,7 +1253,7 @@ def iswap_sweep_duration_and_amplitude(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
     
@@ -1299,7 +1280,7 @@ def iswap_sweep_duration_and_amplitude(
     
     coupler_ac_amp_min,
     coupler_ac_amp_max,
-
+    
     num_averages,
     num_amplitudes,
     num_time_steps,
@@ -1308,6 +1289,7 @@ def iswap_sweep_duration_and_amplitude(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
@@ -1328,6 +1310,13 @@ def iswap_sweep_duration_and_amplitude(
         what gate frequency the iSWAP interaction takes place (and at
         which coupler bias), but not the iSWAP gate amplitude nor the gate
         duration.
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Input sanitisation
@@ -1399,7 +1388,7 @@ def iswap_sweep_duration_and_amplitude(
         readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
@@ -1411,10 +1400,6 @@ def iswap_sweep_duration_and_amplitude(
             print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
         
         ''' Make the user-set time variables representable '''
-        
-        ## # Figure out a dt_per_time_step and make the value representable.
-        ## dt_per_time_step = (coupler_ac_plateau_duration_iswap_max-coupler_ac_plateau_duration_iswap_min)/num_time_steps
-        ## dt_per_time_step = int(round(dt_per_time_step / plo_clk_T)) * plo_clk_T
         
         # Generate an array for data storage. For all elements, round to the
         # programmable logic clock period. Then, remove duplicates and update
@@ -1610,19 +1595,24 @@ def iswap_sweep_duration_and_amplitude(
         # Start of sequence
         T = 0.0  # s
         
-        # For every resonator stimulus pulse frequency to sweep over:
-        for ii in iswap_total_pulse_duration_arr:
+        # Define repetition counter for T.
+        repetition_counter = 1
         
+        # For every pulse duration to sweep over:
+        for ii in range(len(iswap_total_pulse_duration_arr)):
+            
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
+            
             # Redefine the iSWAP pulse's total duration,
-            coupler_ac_duration_iswap = ii
+            coupler_ac_duration_iswap = iswap_total_pulse_duration_arr[ii]
             coupler_ac_pulse_iswap.set_total_duration(coupler_ac_duration_iswap)
             
             # Put the system into state |01> or |10> with pi01 pulse(s)
+            pls.reset_phase(T, [control_port_A, control_port_B])
             if prepare_input_state == '10':
-                pls.reset_phase(T, control_port_A)
                 pls.output_pulse(T, control_pulse_pi_01_A)
             else:
-                pls.reset_phase(T, control_port_B)
                 pls.output_pulse(T, control_pulse_pi_01_B)
             T += control_duration_01
             
@@ -1637,15 +1627,16 @@ def iswap_sweep_duration_and_amplitude(
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
-            # Await a new repetition, after which a new coupler DC bias tone
-            # will be added - and a new frequency set for the readout tone.
-            T += repetition_delay
-        
-        # Increment the iSWAP pulse amplitude.
-        pls.next_scale(T, coupler_ac_port, group = 0)
-        
-        # Move to next iteration.
-        T += repetition_delay
+            # Is this the last iteration?
+            if ii == len(iswap_total_pulse_duration_arr)-1:
+                # Increment the swept amplitude.
+                pls.next_scale(T, coupler_ac_port, group = 0)
+                T += 20e-9 # Add some time for changing the amplitude.
+            
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         
         ################################
@@ -1697,7 +1688,7 @@ def iswap_sweep_duration_and_amplitude(
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s",
+            'repetition_rate', "s",
             
             'control_port_A', "",
             'control_amp_01_A', "FS",
@@ -1724,90 +1715,70 @@ def iswap_sweep_duration_and_amplitude(
             'coupler_ac_plateau_duration_iswap_min',"s",
             'coupler_ac_plateau_duration_iswap_max',"s",
         ]
-        hdf5_logs = [
-            'fetched_data_arr_1', "FS",
-            'fetched_data_arr_2', "FS",
-        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr_1', "FS",
+                'fetched_data_arr_2', "FS",
+            ]
         
-        # Assert that the received keys bear (an even number of) entries,
-        # implying whether a unit is missing.
-        number_of_keyed_elements_is_even = \
-            ((len(hdf5_steps) % 2) == 0) and \
-            ((len(hdf5_singles) % 2) == 0) and \
-            ((len(hdf5_logs) % 2) == 0)
-        assert number_of_keyed_elements_is_even, "Error: non-even amount "  + \
-            "of keys and units provided. Someone likely forgot a comma."
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
         
         # Stylistically rework underscored characters in the axes dict.
-        for axis in ['x_name','x_unit','y_name','y_unit','z_name','z_unit']:
-            axes[axis] = axes[axis].replace('/2','/₂')
-            axes[axis] = axes[axis].replace('/3','/₃')
-            axes[axis] = axes[axis].replace('_01','₀₁')
-            axes[axis] = axes[axis].replace('_02','₀₂')
-            axes[axis] = axes[axis].replace('_03','₀₃')
-            axes[axis] = axes[axis].replace('_12','₁₂')
-            axes[axis] = axes[axis].replace('_13','₁₃')
-            axes[axis] = axes[axis].replace('_20','₂₀')
-            axes[axis] = axes[axis].replace('_23','₂₃')
-            axes[axis] = axes[axis].replace('_0','₀')
-            axes[axis] = axes[axis].replace('_1','₁')
-            axes[axis] = axes[axis].replace('_2','₂')
-            axes[axis] = axes[axis].replace('_3','₃')
-            axes[axis] = axes[axis].replace('lambda','λ')
-            axes[axis] = axes[axis].replace('Lambda','Λ')
+        axes = stylise_axes(axes)
         
-        # Build step lists, re-scale and re-unit where necessary.
+        # Create step lists
         ext_keys = []
         for ii in range(0,len(hdf5_steps),2):
-            if (hdf5_steps[ii] != 'fetched_data_arr') and (hdf5_steps[ii] != 'time_vector'):
-                temp_name   = hdf5_steps[ii]
-                temp_object = np.array( eval(hdf5_steps[ii]) )
-                temp_unit   = hdf5_steps[ii+1]
-                if ii == 0:
-                    if (axes['x_name']).lower() != 'default':
-                        # Replace the x-axis name
-                        temp_name = axes['x_name']
-                    if axes['x_scaler'] != 1.0:
-                        # Re-scale the x-axis
-                        temp_object *= axes['x_scaler']
-                    if (axes['x_unit']).lower() != 'default':
-                        # Change the unit on the x-axis
-                        temp_unit = axes['x_unit']
-                elif ii == 2:
-                    if (axes['z_name']).lower() != 'default':
-                        # Replace the z-axis name
-                        temp_name = axes['z_name']
-                    if axes['z_scaler'] != 1.0:
-                        # Re-scale the z-axis
-                        temp_object *= axes['z_scaler']
-                    if (axes['z_unit']).lower() != 'default':
-                        # Change the unit on the z-axis
-                        temp_unit = axes['z_unit']
-                ext_keys.append(dict(name=temp_name, unit=temp_unit, values=temp_object))
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
         for jj in range(0,len(hdf5_singles),2):
-            if (hdf5_singles[jj] != 'fetched_data_arr') and (hdf5_singles[jj] != 'time_vector'):
-                temp_object = np.array( [eval(hdf5_singles[jj])] )
-                ext_keys.append(dict(name=hdf5_singles[jj], unit=hdf5_singles[jj+1], values=temp_object))
-        
-        log_dict_list = []
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
         for qq in range(len(axes['y_scaler'])):
             if (axes['y_scaler'])[qq] != 1.0:
                 ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
             if (axes['y_offset'])[qq] != 0.0:
-                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
         for kk in range(0,len(hdf5_logs),2):
-            log_entry_name = hdf5_logs[kk]
-            # Set unit on the y-axis
-            if (axes['y_unit']).lower() != 'default':
-                temp_log_unit = axes['y_unit']
-            else:
-                temp_log_unit = hdf5_logs[kk+1]
-            if (axes['y_name']).lower() != 'default':
-                # Replace the y-axis name
-                log_entry_name = axes['y_name']
-                if len(hdf5_logs)/2 > 1:
-                    log_entry_name += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
-            log_dict_list.append(dict(name=log_entry_name, unit=temp_log_unit, vector=False, complex=save_complex_data))
+            if len(hdf5_logs)/2 > 1:
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
         
         # Save data!
         string_arr_to_return.append(save(
@@ -1836,6 +1807,7 @@ def iswap_sweep_duration_and_amplitude(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
@@ -1849,6 +1821,7 @@ def iswap_sweep_amplitude_and_detuning(
     
     readout_stimulus_port,
     readout_sampling_port,
+    readout_freq_nco,
     readout_freq_A,
     readout_amp_A,
     readout_freq_B,
@@ -1857,25 +1830,23 @@ def iswap_sweep_amplitude_and_detuning(
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
     
     control_port_A,
-    control_port_B,
-    
-    control_amp_01_A,
+    control_freq_nco_A,
     control_freq_01_A,
-    control_amp_01_B,
+    control_amp_01_A,
+    control_port_B,
+    control_freq_nco_B,
     control_freq_01_B,
+    control_amp_01_B,
     control_duration_01,
-    
-    control_freq_12_A,
-    control_freq_12_B,
     
     coupler_dc_port,
     coupler_dc_bias,
-    added_delay_for_bias_tee,
+    settling_time_of_bias_tee,
     
     coupler_ac_port,
     coupler_ac_single_edge_time_iswap,
@@ -1888,8 +1859,11 @@ def iswap_sweep_amplitude_and_detuning(
     coupler_ac_amp_max,
     
     num_freqs,
-    num_averages,
     num_amplitudes,
+    
+    num_averages,
+    
+    prepare_input_state = '10',
     
     save_complex_data = True,
     use_log_browser_database = True,
@@ -1912,6 +1886,13 @@ def iswap_sweep_amplitude_and_detuning(
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler.
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Input sanitisation
@@ -1935,6 +1916,10 @@ def iswap_sweep_amplitude_and_detuning(
         print("Note: single coupler frequency point requested, ignoring span parameter.")
         coupler_ac_freq_iswap_span = 0.0
     
+    ## Assure that the requested input state to prepare, is valid.
+    assert ( (prepare_input_state == '10') or (prepare_input_state == '01') ),\
+        "Error! Invalid request for input state to prepare. " + \
+        "Legal values are \'10\' and \'01\'"
     
     ## Initial array declaration
     
@@ -1966,21 +1951,27 @@ def iswap_sweep_amplitude_and_detuning(
         pls.hardware.set_dac_current(control_port_B, 40_500)
         pls.hardware.set_inv_sinc(control_port_B, 0)
         
-        # Coupler port(s)
-        if coupler_dc_port != []:
-            pls.hardware.set_dac_current(coupler_dc_port, 40_500)
-            pls.hardware.set_inv_sinc(coupler_dc_port, 0)
+        # Coupler port
         pls.hardware.set_dac_current(coupler_ac_port, 40_500)
         pls.hardware.set_inv_sinc(coupler_ac_port, 0)
+        
+        # Configure the DC bias. Also, let's charge the bias-tee.
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
+            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
         readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
         sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
         readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_delay = int(round(repetition_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
-        added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
+        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap = int(round(coupler_ac_plateau_duration_iswap / plo_clk_T)) * plo_clk_T
         
@@ -1991,9 +1982,6 @@ def iswap_sweep_amplitude_and_detuning(
         ''' Setup mixers '''
         
         # Readout port, multiplexed, calculate an optimal NCO frequency.
-        high_res  = max( [readout_freq_A, readout_freq_B] )
-        low_res   = min( [readout_freq_A, readout_freq_B] )
-        readout_freq_nco = high_res - (high_res - low_res)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
@@ -2002,18 +1990,12 @@ def iswap_sweep_amplitude_and_detuning(
             sync      = False,
         )
         # Control port mixers
-        high_res_A  = max( [control_freq_01_A, control_freq_12_A] )
-        low_res_A   = min( [control_freq_01_A, control_freq_12_A] )
-        control_freq_nco_A = high_res_A - (high_res_A - low_res_A)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco_A,
             out_ports = control_port_A,
             tune      = True,
             sync      = False,
         )
-        high_res_B  = max( [control_freq_01_B, control_freq_12_B] )
-        low_res_B   = min( [control_freq_01_B, control_freq_12_B] )
-        control_freq_nco_B = high_res_B - (high_res_B - low_res_B)/2 -250e6
         pls.hardware.configure_mixer(
             freq      = control_freq_nco_B,
             out_ports = control_port_B,
@@ -2025,16 +2007,8 @@ def iswap_sweep_amplitude_and_detuning(
             freq      = coupler_ac_freq_iswap_nco,
             out_ports = coupler_ac_port,
             tune      = True,
-            sync      = (coupler_dc_port == []),
+            sync      = True,
         )
-        if coupler_dc_port != []:
-            for curr_coupler_dc_port in range(len(coupler_dc_port)):
-                pls.hardware.configure_mixer(
-                    freq      = 0.0,
-                    out_ports = coupler_dc_port,
-                    tune      = True,
-                    sync      = curr_coupler_dc_port == (len(coupler_dc_port)-1),
-                )
         
         
         ''' Setup scale LUTs '''
@@ -2065,15 +2039,8 @@ def iswap_sweep_amplitude_and_detuning(
         pls.setup_scale_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
-            scales          = coupler_ac_amp_arr, # This value will be swept!
+            scales          = coupler_ac_amp_arr,
         )
-        if coupler_dc_port != []:
-            pls.setup_scale_lut(
-                output_ports    = coupler_dc_port,
-                group           = 0,
-                scales          = coupler_dc_bias,
-            )
-        
         
         
         ### Setup readout pulse ###
@@ -2189,28 +2156,6 @@ def iswap_sweep_amplitude_and_detuning(
             phases_q        = np.full_like(coupler_ac_freq_iswap_if_arr, bandsign(coupler_ac_freq_iswap_centre_if)),
         )
         
-        
-        ### Setup pulse "coupler_bias_tone" ###
-        if coupler_dc_port != []:
-            # Setup the coupler tone bias.
-            coupler_bias_tone = [pls.setup_long_drive(
-                output_port = _port,
-                group       = 0,
-                duration    = added_delay_for_bias_tee,
-                amplitude   = 1.0,
-                amplitude_q = 1.0,
-                rise_time   = 0e-9,
-                fall_time   = 0e-9
-            ) for _port in coupler_dc_port]
-            # Setup coupler bias tone "carrier"
-            pls.setup_freq_lut(
-                output_ports = coupler_dc_port,
-                group        = 0,
-                frequencies  = 0.0,
-                phases       = 0.0,
-                phases_q     = 0.0,
-            )
-        
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
@@ -2222,35 +2167,22 @@ def iswap_sweep_amplitude_and_detuning(
         
         # Start of sequence
         T = 0.0  # s
-
-        # Charge the bias tee.
-        if coupler_dc_port != []:
-            pls.reset_phase(T, coupler_dc_port)
-            pls.output_pulse(T, coupler_bias_tone)
-            T += added_delay_for_bias_tee
-        
-            # Redefine the coupler DC pulse duration for repeated playback
-            # once one tee risetime has passed.
-            coupler_bias_tone.set_total_duration(
-                control_duration_01 + \
-                coupler_ac_duration_iswap + \
-                readout_duration + \
-                repetition_delay \
-            )
         
         # Define repetition counter for T.
         repetition_counter = 1
         
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
-
-            # Re-apply the coupler bias tone.
-            if coupler_dc_port != []:
-                pls.output_pulse(T, coupler_bias_tone)
+            
+            # Get a time reference, used for gauging the iteration length.
+            T_begin = T
             
             # Put the system into state |01> or |10> with pi01 pulse(s)
             pls.reset_phase(T, [control_port_A, control_port_B])
-            pls.output_pulse(T, [control_pulse_pi_01_A, control_pulse_pi_01_B])
+            if prepare_input_state == '10':
+                pls.output_pulse(T, control_pulse_pi_01_A)
+            else:
+                pls.output_pulse(T, control_pulse_pi_01_B)
             T += control_duration_01
             
             # Apply the iSWAP gate, with parameters being swept.
@@ -2266,20 +2198,18 @@ def iswap_sweep_amplitude_and_detuning(
             
             # Move to next scanned frequency
             pls.next_frequency(T, coupler_ac_port, group = 0)
+            T += 20e-9 # Add some time for changing the frequency.
             
-            # Await a new repetition, after which a new coupler DC bias tone
-            # will be added - and a new frequency set for the readout tone.
-            T = repetition_delay * repetition_counter
-            repetition_counter += 1
-        
-        
-        # Increment the iSWAP pulse amplitude.
-        pls.next_scale(T, coupler_ac_port, group = 0)
-        
-        # Move to next iteration.
-        T = repetition_delay * repetition_counter
-        repetition_counter += 1
-        
+            # Is this the last iteration?
+            if ii == num_freqs-1:
+                # Increment the swept amplitude.
+                pls.next_scale(T, coupler_ac_port, group = 0)
+                T += 20e-9 # Add some time for changing the amplitude.
+            
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
@@ -2292,6 +2222,10 @@ def iswap_sweep_amplitude_and_detuning(
             num_averages    =   num_averages,
             print_time      =   True,
         )
+        
+        # Reset the DC bias port(s).
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -2336,8 +2270,8 @@ def iswap_sweep_amplitude_and_detuning(
             'control_freq_12_B', "Hz",
             
             #'coupler_dc_port', "",
-            'coupler_dc_bias', "FS",
-            'added_delay_for_bias_tee', "s",
+            'coupler_dc_bias', "V",
+            'settling_time_of_bias_tee', "s",
             
             'coupler_ac_port', "",
             'coupler_ac_duration_iswap', "s",
@@ -3155,6 +3089,7 @@ def iswap_tune_local_accumulated_phase(
     
     save_complex_data = True,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
@@ -3775,6 +3710,7 @@ def iswap_tune_local_accumulated_phase(
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
+            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
         ))
