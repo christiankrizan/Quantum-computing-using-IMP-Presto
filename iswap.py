@@ -34,6 +34,7 @@ def iswap_sweep_duration_and_detuning(
     
     readout_stimulus_port,
     readout_sampling_port,
+    readout_freq_nco,
     readout_freq_A,
     readout_amp_A,
     readout_freq_B,
@@ -47,11 +48,13 @@ def iswap_sweep_duration_and_detuning(
     integration_window_stop,
     
     control_port_A,
-    control_amp_01_A,
+    control_freq_nco_A,
     control_freq_01_A,
+    control_amp_01_A,
     control_port_B,
-    control_amp_01_B,
+    control_freq_nco_B,
     control_freq_01_B,
+    control_amp_01_B,
     control_duration_01,
     
     coupler_dc_port,
@@ -472,7 +475,7 @@ def iswap_sweep_duration_and_detuning(
             
             'sampling_duration',"s",
             'readout_sampling_delay',"s",
-            'repetition_delay',"s",
+            'repetition_rate',"s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
             
@@ -2255,7 +2258,7 @@ def iswap_sweep_amplitude_and_detuning(
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s",
+            'repetition_rate', "s",
             
             'control_port_A', "",
             'control_port_B', "",
@@ -2265,9 +2268,6 @@ def iswap_sweep_amplitude_and_detuning(
             'control_amp_01_B', "FS",
             'control_freq_01_B', "Hz",
             'control_duration_01', "s",
-            
-            'control_freq_12_A', "Hz",
-            'control_freq_12_B', "Hz",
             
             #'coupler_dc_port', "",
             'coupler_dc_bias', "V",
