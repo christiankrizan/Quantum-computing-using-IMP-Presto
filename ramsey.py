@@ -60,6 +60,7 @@ def ramsey01_ro0(
     delay_arr,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -475,6 +476,7 @@ def ramsey01_ro0(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -515,6 +517,7 @@ def ramsey01_ro0_DEPRECATED(
     ##dt_per_ramsey_iteration,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -976,6 +979,7 @@ def ramsey01_ro0_DEPRECATED(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -1021,6 +1025,7 @@ def ramsey01_multiplexed_ro(
     dt_per_ramsey_iteration,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1553,6 +1558,7 @@ def ramsey12_ro1(
     delay_arr,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -2004,6 +2010,7 @@ def ramsey12_ro1(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -2042,6 +2049,7 @@ def ramsey01_echo_r0(
     delay_arr,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -2473,6 +2481,7 @@ def ramsey01_echo_r0(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return

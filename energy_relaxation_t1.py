@@ -60,6 +60,7 @@ def t1_sweep_coupler(
     coupler_bias_max = +0.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -478,6 +479,7 @@ def t1_sweep_coupler(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -521,6 +523,7 @@ def t1_sweep_coupler_multiplexed_ro0(
     coupler_bias_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1028,6 +1031,7 @@ def t1_sweep_coupler_multiplexed_ro0(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return

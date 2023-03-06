@@ -62,6 +62,15 @@ def get_dict_for_step_list(
     ):
     ''' Return a formatted dict for the step list entries.
     '''
+    # Ensure that the user is not accidentally inserting a NoneType object.
+    assert step_entry_object[0] != None, \
+        "Error! Attempted to format object "+str(step_entry_name)            +\
+        ", but this object has a NoneType object type, "                     +\
+        "which cannot be formatted. Likely, the user accidentally sent "     +\
+        "a None as an function argument, and the Presto API itself did not " +\
+        "detect the error. Check your arguments."
+    
+    # Make a suitable dict.
     if axis_parameter.lower() == 'x':
         if (axes['x_name']).lower() != 'default':
             # Replace the x-axis name
@@ -284,11 +293,13 @@ def save(
                 progress = np.linspace(0.0,100.0,len(arr_to_fft)).astype(int)
                 tic = time.time()
                 
+                ## TODO the zero-padding here below,
+                ##      is done within microseconds.
                 new_arr = []
                 for row in range(len(arr_to_fft)):
                     new_arr.append(np.append(arr_to_fft[row], np.zeros([1,len(arr_to_fft[0])*7])))
                     toc = time.time()
-                    if -1*(tic - toc) >= 5:
+                    if (-(tic - toc) >= 5):
                         print("Progress: "+str(progress[row])+"% done.")
                         tic = time.time()
                 new_arr = np.array(new_arr)
@@ -683,7 +694,7 @@ def export_processed_data_to_file(
             append_to_log_name_before_timestamp = ''
             append_to_log_name_after_timestamp  = ''
             timestamp = ''
-            
+    
     if (not append_to_log_name_after_timestamp.startswith('_')) and (append_to_log_name_after_timestamp != ''):
         append_to_log_name_after_timestamp = '_' + append_to_log_name_after_timestamp
     if (not append_to_log_name_before_timestamp.startswith('_')) and (append_to_log_name_before_timestamp != ''):

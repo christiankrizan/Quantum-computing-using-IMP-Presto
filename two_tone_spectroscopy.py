@@ -1093,6 +1093,7 @@ def pulsed01_sweep_power(
     control_amp_01_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1497,6 +1498,7 @@ def pulsed01_sweep_power(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return

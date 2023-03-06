@@ -57,6 +57,7 @@ def find_f_ro0_sweep_coupler(
     skip_saving_control_data = False,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -469,6 +470,7 @@ def find_f_ro0_sweep_power(
     readout_amp_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -822,6 +824,7 @@ def find_f_ro0_sweep_power(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -863,6 +866,7 @@ def find_f_ro1_sweep_coupler(
     skip_saving_control_data = False,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1341,6 +1345,7 @@ def find_f_ro1_sweep_power(
     readout_amp_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1749,6 +1754,7 @@ def find_f_ro1_sweep_power(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -1795,6 +1801,7 @@ def find_f_ro2_sweep_coupler(
     skip_saving_control_data = False,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -2310,6 +2317,7 @@ def find_f_ro2_sweep_power(
     readout_amp_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -2737,6 +2745,7 @@ def find_f_ro2_sweep_power(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return

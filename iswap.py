@@ -78,6 +78,7 @@ def iswap_sweep_duration_and_detuning(
     prepare_input_state = '10',
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -581,7 +582,7 @@ def iswap_sweep_duration_and_detuning(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
+            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -601,6 +602,7 @@ def iswap_sweep_duration_and_detuning(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -659,6 +661,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
     states_to_discriminate_between = ['01', '10'],
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1236,6 +1239,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -1291,6 +1295,7 @@ def iswap_sweep_duration_and_amplitude(
     prepare_input_state = '10',
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1813,6 +1818,7 @@ def iswap_sweep_duration_and_amplitude(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -1869,6 +1875,7 @@ def iswap_sweep_amplitude_and_detuning(
     prepare_input_state = '10',
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -2382,6 +2389,7 @@ def iswap_sweep_amplitude_and_detuning(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -2437,6 +2445,7 @@ def iswap_cross_ramsey(
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -3040,6 +3049,7 @@ def iswap_cross_ramsey(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -3088,6 +3098,7 @@ def iswap_tune_local_accumulated_phase(
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -3713,6 +3724,7 @@ def iswap_tune_local_accumulated_phase(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return

@@ -62,6 +62,7 @@ def acquire_thermal_population_from_12_rabi_ro1(
     control_amp_12_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -395,7 +396,10 @@ def acquire_thermal_population_from_12_rabi_ro1(
             if num_biases > 1:
                 with_or_without_bias_string = "_sweep_bias"
             else:
-                with_or_without_bias_string = ""
+                if coupler_bias_min != 0.0:
+                    with_or_without_bias_string = "_with_bias"
+                else:
+                    with_or_without_bias_string = ""
         except NameError:
             if coupler_dc_bias != 0.0:
                 with_or_without_bias_string = "_with_bias"
@@ -535,6 +539,7 @@ def acquire_thermal_population_from_12_rabi_ro1(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
         
     return string_arr_to_return

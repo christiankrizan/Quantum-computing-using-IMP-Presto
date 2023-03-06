@@ -78,6 +78,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     num_amplitudes,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -636,6 +637,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -1326,6 +1328,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -1991,6 +1994,7 @@ def cz20_sweep_duration_and_detuning_state_probability(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -2047,6 +2051,7 @@ def cz20_Vz_ramsey_conditional_on_A(
     phase_adjustment_coupler_ac_cz20 = 0.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -2632,6 +2637,7 @@ def cz20_Vz_ramsey_conditional_on_A(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -3281,6 +3287,7 @@ def cz20_Vz_ramsey_conditional_on_A_state_probability(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -3334,6 +3341,7 @@ def cz20_tune_local_accumulated_phase(
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -3910,6 +3918,7 @@ def cz20_tune_local_accumulated_phase(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -4548,6 +4557,7 @@ def cz20_tune_local_accumulated_phase_state_probability(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -4600,6 +4610,7 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
     num_averages,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -5187,6 +5198,7 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -5835,6 +5847,7 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return

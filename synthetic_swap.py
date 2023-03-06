@@ -702,6 +702,7 @@ def iswap_then_cz20_prep_10_state_probability(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -766,6 +767,7 @@ def iswap_then_cz_prep_10_cross_Ramsey(
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1434,6 +1436,7 @@ def iswap_then_cz_prep_10_cross_Ramsey(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -1497,6 +1500,7 @@ def synthetic_swap_prep_10_cross_Ramsey(
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -2163,6 +2167,7 @@ def synthetic_swap_prep_10_cross_Ramsey(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return

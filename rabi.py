@@ -62,6 +62,7 @@ def amplitude_sweep_oscillation01_ro0(
     coupler_bias_max = +0.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -513,6 +514,7 @@ def amplitude_sweep_oscillation01_ro0_DEPRECATED(
     coupler_bias_max = 1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -953,6 +955,7 @@ def amplitude_sweep_oscillation01_ro0_DEPRECATED(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -1000,6 +1003,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
     coupler_bias_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -3085,6 +3089,7 @@ def amplitude_sweep_oscillation12_ro0_DEPRECATED(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -3131,6 +3136,7 @@ def amplitude_sweep_oscillation12_ro1(
     coupler_bias_max = +0.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -3623,6 +3629,7 @@ def amplitude_sweep_oscillation12_ro1_DEPRECATED(
     coupler_bias_max = 1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -4106,6 +4113,7 @@ def amplitude_sweep_oscillation12_ro1_DEPRECATED(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
         
     return string_arr_to_return
@@ -4148,6 +4156,7 @@ def duration_sweep_oscillation01_ro0(
     coupler_bias_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -4588,6 +4597,7 @@ def duration_sweep_oscillation01_ro0(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
         
     return string_arr_to_return
@@ -5146,6 +5156,7 @@ def duration_sweep_oscillation12_ro1(
             suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
         
     return string_arr_to_return
