@@ -26,7 +26,7 @@ def find_power_where_resonator_becomes_linear(
     i_renamed_the_pulse_freq_arr_to = '',
     i_renamed_the_readout_amp_arr_to = '',
     plot_for_this_many_seconds = 0.0,
-    number_of_times_to_filter_noisy_raw_curve = 10,
+    number_of_times_to_filter_noisy_raw_curve = 1,
     report_lowest_resonance_point_of_filtered_curve = True,
     ):
     ''' From supplied data or datapath, fit a Lorentzian to find the
@@ -238,7 +238,7 @@ def fit_or_find_resonator_dip_or_lorentzian(
     i_provided_a_filepath = True,
     i_renamed_the_pulse_freq_arr_to = '',
     plot_for_this_many_seconds = 0.0,
-    number_of_times_to_filter_noisy_raw_curve = 10,
+    number_of_times_to_filter_noisy_raw_curve = 1,
     report_lowest_resonance_point_of_filtered_curve = True
     ):
     ''' From supplied data or datapath, fit a Lorentzian to find the
