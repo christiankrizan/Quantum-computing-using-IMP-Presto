@@ -37,6 +37,10 @@ def output_pulse_sweep_frequency(
     
     repetition_delay,
     
+    coupler_dc_port,
+    coupler_dc_bias,
+    settling_time_of_bias_tee,
+    
     num_freqs,
     num_averages,
     
@@ -50,6 +54,16 @@ def output_pulse_sweep_frequency(
     '''
     
     ## Input sanitisation
+    
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     # Sanitisation for whether the user has a
     # span engaged but only a single frequency.
@@ -72,6 +86,15 @@ def output_pulse_sweep_frequency(
         pls.hardware.set_adc_attenuation(fake_sampling_port, 0.0)
         pls.hardware.set_dac_current(waveform_port, 40_500)
         pls.hardware.set_inv_sinc(waveform_port, 0)
+        
+        # Configure the DC bias. Also, let's charge the bias-tee.
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias( \
+                coupler_dc_bias, \
+                coupler_dc_port, \
+                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            )
+            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -169,6 +192,10 @@ def output_pulse_sweep_frequency(
             num_averages = num_averages,
             print_time   = True,
         )
+        
+        # Reset the DC bias port(s).
+        if coupler_dc_port != []:
+            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
         
         # Get fake store data
         time_vector, fetched_data_arr = pls.get_store_data()
