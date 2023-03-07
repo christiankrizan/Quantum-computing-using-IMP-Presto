@@ -16,6 +16,10 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
+from bias_calculator import \
+    sanitise_dc_bias_arguments, \
+    get_dc_dac_range_integer, \
+    change_dc_bias
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -87,30 +91,17 @@ def blind_anharmonicity(
     
     assert 1 == 0, "Halted. This script is not finished, it's a skeleton to be built upon later."
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if num_biases < 1:
-        num_biases = 1
-        print("Note: num_biases was less than 1, and was thus set to 1.")
-        if (coupler_bias_min != 0.0) or (coupler_bias_max != 0.0):
-            print("Note: the coupler bias was thus set to 0.")
-            coupler_bias_min = 0.0
-            coupler_bias_max = 0.0
-    elif coupler_dc_port == []:
-        if num_biases != 1:
-            num_biases = 1
-            print("Note: num_biases was set to 1, since the coupler_port array was empty.")
-        if (coupler_bias_min != 0.0) or (coupler_bias_max != 0.0):
-            print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-            coupler_bias_min = 0.0
-            coupler_bias_max = 0.0
+    ## Input sanitisation
+    
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = coupler_bias_min,
+        coupler_bias_max = coupler_bias_max,
+        num_biases       = num_biases,
+        coupler_dc_bias  = None
+    )
     
     ## Initial array declaration
     
@@ -332,3 +323,92 @@ def blind_anharmonicity(
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
         #################################
+        
+        
+def resonator_spectroscopy_over_iswap_duration(
+    ip_address,
+    ext_clk_present,
+    
+    readout_stimulus_port,
+    readout_sampling_port,
+    readout_freq_nco,
+    readout_freq_centre,
+    readout_freq_span,
+    readout_amp,
+    readout_duration,
+    
+    sampling_duration,
+    readout_sampling_delay,
+    repetition_rate,
+    integration_window_start,
+    integration_window_stop,
+    
+    control_port_A,
+    control_freq_nco_A,
+    control_freq_01_A,
+    control_amp_01_A,
+    control_port_B,
+    control_freq_nco_B,
+    control_freq_01_B,
+    control_amp_01_B,
+    control_duration_01,
+    
+    coupler_dc_port,
+    coupler_dc_bias,
+    settling_time_of_bias_tee,
+    
+    coupler_ac_port,
+    coupler_ac_single_edge_time_iswap,
+    coupler_ac_plateau_duration_iswap_min,
+    coupler_ac_plateau_duration_iswap_max,
+    coupler_ac_freq_iswap_nco,
+    coupler_ac_freq_iswap,
+    coupler_ac_amp_iswap,
+    
+    num_freqs,
+    num_time_steps,
+    
+    num_averages,
+    
+    prepare_input_state = '10',
+    
+    save_complex_data = True,
+    save_raw_time_data = False,
+    use_log_browser_database = True,
+    suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
+    ):
+    ''' Perform resonator spectroscopy while running an iSWAP gate.
+        The duration of the iSWAP gate is swept.
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
+    '''
+    
+    raise NotImplementedError("Halted! This function has not been implemented yet.")
+    
+def resonator_spectroscopy_over_iswap_frequency(
+    ):
+    raise NotImplementedError("Halted! This function has not been implemented yet.")
+
+def resonator_spectroscopy_over_iswap_amplitude(
+    ):
+    raise NotImplementedError("Halted! This function has not been implemented yet.")

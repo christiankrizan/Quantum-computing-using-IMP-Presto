@@ -16,6 +16,10 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import bandsign
+from bias_calculator import \
+    sanitise_dc_bias_arguments, \
+    get_dc_dac_range_integer, \
+    change_dc_bias
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -100,19 +104,15 @@ def acquire_thermal_population_from_12_rabi_ro1(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
-    
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     ## Initial array declaration
     
@@ -391,21 +391,6 @@ def acquire_thermal_population_from_12_rabi_ro1(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Establish whether to include biasing in the exported file name.
-        try:
-            if num_biases > 1:
-                with_or_without_bias_string = "_sweep_bias"
-            else:
-                if coupler_bias_min != 0.0:
-                    with_or_without_bias_string = "_with_bias"
-                else:
-                    with_or_without_bias_string = ""
-        except NameError:
-            if coupler_dc_bias != 0.0:
-                with_or_without_bias_string = "_with_bias"
-            else:
-                with_or_without_bias_string = ""
-        
         # Data to be stored.
         hdf5_steps = [
             'control_amp_arr', "FS",
@@ -532,7 +517,7 @@ def acquire_thermal_population_from_12_rabi_ro1(
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = '12'+with_or_without_bias_string+'_ro1',
+            append_to_log_name_before_timestamp = '12' + with_or_without_bias_string + '_ro1',
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             

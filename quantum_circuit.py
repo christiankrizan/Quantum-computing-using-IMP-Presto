@@ -22,6 +22,10 @@ from phase_calculator import \
     get_legal_phase, \
     bandsign, \
     add_virtual_z
+from bias_calculator import \
+    sanitise_dc_bias_arguments, \
+    get_dc_dac_range_integer, \
+    change_dc_bias
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -116,18 +120,15 @@ def execute(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     ## Initial array declaration
     
@@ -922,18 +923,15 @@ def execute_DEMO(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     ## Initial array declaration
     

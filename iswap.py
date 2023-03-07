@@ -17,7 +17,10 @@ import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
 from phase_calculator import bandsign
-from bias_calculator import get_dc_dac_range_integer, change_dc_bias
+from bias_calculator import \
+    sanitise_dc_bias_arguments, \
+    get_dc_dac_range_integer, \
+    change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -111,18 +114,15 @@ def iswap_sweep_duration_and_detuning(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     # Sanitisation for whether the user has a
     # span engaged but only a single frequency.
@@ -689,18 +689,15 @@ def iswap_sweep_duration_and_detuning_state_probability(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     # Sanitisation for whether the user has a
     # span engaged but only a single frequency.
@@ -1329,18 +1326,15 @@ def iswap_sweep_duration_and_amplitude(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     ## Assure that the requested input state to prepare, is valid.
     assert ( (prepare_input_state == '10') or (prepare_input_state == '01') ),\
@@ -1907,18 +1901,15 @@ def iswap_sweep_amplitude_and_detuning(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     # Sanitisation for whether the user has a
     # span engaged but only a single frequency.
@@ -2472,18 +2463,15 @@ def iswap_cross_ramsey(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     ## Initial array declaration
     
@@ -3139,18 +3127,15 @@ def iswap_tune_local_accumulated_phase(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if ((coupler_dc_port == []) and (coupler_dc_bias != 0.0)):
-        print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-        coupler_dc_bias = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = None,
+        coupler_bias_max = None,
+        num_biases       = None,
+        coupler_dc_bias  = coupler_dc_bias
+    )
     
     # Adjust the phase _min and _max parameters.
     if phase_sweep_rad_min > (2*np.pi):
@@ -3760,5 +3745,5 @@ def tune_coupler_drive_phase_of_iswap():
             "vs. fidelity. So it's not necessarily so that the best fidelity comes "+\
             "from running the \"phase optimal\" values.")
     
-    assert 1 == 0, "Halted! Add arguments for qubit 2, in order to properly set an NCOs for the mixers driving the control ports. And, change to USB mixing."
+    assert 1 == 0, "Halted! Add arguments for qubit 2, in order to properly set an NCOs for the mixers driving the control ports. Make sure the LSB/USB mixing is not hard-coded anywhere."
     

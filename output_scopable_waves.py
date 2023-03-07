@@ -16,6 +16,10 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import bandsign
+from bias_calculator import \
+    sanitise_dc_bias_arguments, \
+    get_dc_dac_range_integer, \
+    change_dc_bias
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \

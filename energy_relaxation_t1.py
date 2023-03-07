@@ -16,7 +16,10 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import bandsign
-from bias_calculator import get_dc_dac_range_integer, change_dc_bias
+from bias_calculator import \
+    sanitise_dc_bias_arguments, \
+    get_dc_dac_range_integer, \
+    change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -97,30 +100,15 @@ def t1_sweep_coupler(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if num_biases < 1:
-        num_biases = 1
-        print("Note: num_biases was less than 1, and was thus set to 1.")
-        if (coupler_bias_min != 0.0) or (coupler_bias_max != 0.0):
-            print("Note: the coupler bias was thus set to 0.")
-            coupler_bias_min = 0.0
-            coupler_bias_max = 0.0
-    elif coupler_dc_port == []:
-        if num_biases != 1:
-            num_biases = 1
-            print("Note: num_biases was set to 1, since the coupler_port array was empty.")
-        if (coupler_bias_min != 0.0) or (coupler_bias_max != 0.0):
-            print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-            coupler_bias_min = 0.0
-            coupler_bias_max = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = coupler_bias_min,
+        coupler_bias_max = coupler_bias_max,
+        num_biases       = num_biases,
+        coupler_dc_bias  = None
+    )
     
     ## Initial array declaration
     
@@ -336,21 +324,6 @@ def t1_sweep_coupler(
         ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
         ###########################################
         
-        # Establish whether to include biasing in the exported file name.
-        try:
-            if num_biases > 1:
-                with_or_without_bias_string = "_sweep_bias"
-            else:
-                if coupler_bias_min != 0.0:
-                    with_or_without_bias_string = "_with_bias"
-                else:
-                    with_or_without_bias_string = ""
-        except NameError:
-            if coupler_dc_bias != 0.0:
-                with_or_without_bias_string = "_with_bias"
-            else:
-                with_or_without_bias_string = ""
-        
         hdf5_steps = [
             'delay_arr', "s",
             'coupler_amp_arr', "V",
@@ -550,30 +523,15 @@ def t1_sweep_coupler_multiplexed_ro0(
     
     ## Input sanitisation
     
-    # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
-        raise TypeError( \
-            "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
-    if num_biases < 1:
-        num_biases = 1
-        print("Note: num_biases was less than 1, and was thus set to 1.")
-        if (coupler_bias_min != 0.0) or (coupler_bias_max != 0.0):
-            print("Note: the coupler bias was thus set to 0.")
-            coupler_bias_min = 0.0
-            coupler_bias_max = 0.0
-    elif coupler_dc_port == []:
-        if num_biases != 1:
-            num_biases = 1
-            print("Note: num_biases was set to 1, since the coupler_port array was empty.")
-        if (coupler_bias_min != 0.0) or (coupler_bias_max != 0.0):
-            print("Note: the coupler bias was set to 0, since the coupler_port array was empty.")
-            coupler_bias_min = 0.0
-            coupler_bias_max = 0.0
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = coupler_bias_min,
+        coupler_bias_max = coupler_bias_max,
+        num_biases       = num_biases,
+        coupler_dc_bias  = None
+    )
     
     ## Initial array declaration
     
@@ -1024,7 +982,7 @@ def t1_sweep_coupler_multiplexed_ro0(
             
             save_complex_data = save_complex_data,
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = 'multiplexed_ro',
+            append_to_log_name_before_timestamp = 'multiplexed_ro' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
