@@ -30,7 +30,6 @@ from data_exporter import \
     get_dict_for_log_list, \
     save
 
-
 def iswap_sweep_duration_and_detuning(
     ip_address,
     ext_clk_present,
@@ -186,9 +185,8 @@ def iswap_sweep_duration_and_detuning(
         
         ''' Make the user-set time variables representable '''
         
-        # Generate an array for data storage. For all elements, round to the
-        # programmable logic clock period. Then, remove duplicates and update
-        # the num_time_steps parameter.
+        # For all elements, round to the programmable logic clock period.
+        # Then, remove duplicates and update the num_time_steps parameter.
         iswap_total_pulse_duration_arr = np.linspace( \
             coupler_ac_plateau_duration_iswap_min + 2 * coupler_ac_single_edge_time_iswap, \
             coupler_ac_plateau_duration_iswap_max + 2 * coupler_ac_single_edge_time_iswap, \
@@ -303,7 +301,7 @@ def iswap_sweep_duration_and_detuning(
             phases       = 0.0,
             phases_q     = bandsign(readout_freq_if_B),
         )
-
+        
         ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
         
         # Setup control_pulse_pi_01_A and _B pulse envelopes.
@@ -432,7 +430,6 @@ def iswap_sweep_duration_and_detuning(
                 T_begin, T, repetition_rate, repetition_counter,
             )
         
-        
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
         ################################
@@ -462,49 +459,49 @@ def iswap_sweep_duration_and_detuning(
         
         # Data to be stored.
         hdf5_steps = [
-            'iswap_total_pulse_duration_arr',"s",
+            'iswap_total_pulse_duration_arr', "s",
             'coupler_ac_pulse_iswap_freq_arr', "Hz",
         ]
         hdf5_singles = [
-            'readout_stimulus_port',"",
-            'readout_sampling_port',"",
-            'readout_duration',"s",
-            'readout_freq_A',"Hz",
-            'readout_amp_A',"FS",
-            'readout_freq_B',"Hz",
-            'readout_amp_B',"FS",
+            'readout_stimulus_port', "",
+            'readout_sampling_port', "",
+            'readout_duration', "s",
+            'readout_freq_A', "Hz",
+            'readout_amp_A', "FS",
+            'readout_freq_B', "Hz",
+            'readout_amp_B', "FS",
             
-            'sampling_duration',"s",
-            'readout_sampling_delay',"s",
-            'repetition_rate',"s",
+            'sampling_duration', "s",
+            'readout_sampling_delay', "s",
+            'repetition_rate', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
             
-            'control_port_A',"",
-            'control_amp_01_A',"FS",
-            'control_freq_01_A',"Hz",
-            'control_port_B,',"",
-            'control_amp_01_B',"FS",
-            'control_freq_01_B',"Hz",
-            'control_duration_01',"s",
+            'control_port_A', "",
+            'control_amp_01_A', "FS",
+            'control_freq_01_A', "Hz",
+            'control_port_B,', "",
+            'control_amp_01_B', "FS",
+            'control_freq_01_B', "Hz",
+            'control_duration_01', "s",
             
-            #'coupler_dc_port',"",
-            'coupler_dc_bias',"V",
-            'settling_time_of_bias_tee',"s",
+            #'coupler_dc_port', "",
+            'coupler_dc_bias', "V",
+            'settling_time_of_bias_tee', "s",
             
-            'coupler_ac_port',"",
-            'coupler_ac_amp_iswap',"FS",
-            'coupler_ac_freq_iswap_nco',"Hz",
-            'coupler_ac_freq_iswap_centre_if',"Hz",
-            'coupler_ac_freq_iswap_span',"Hz",
+            'coupler_ac_port', "",
+            'coupler_ac_amp_iswap', "FS",
+            'coupler_ac_freq_iswap_nco', "Hz",
+            'coupler_ac_freq_iswap_centre_if', "Hz",
+            'coupler_ac_freq_iswap_span', "Hz",
             
-            'num_freqs',"",
-            'num_averages',"",
-            'num_time_steps',"",
+            'num_freqs', "",
+            'num_averages', "",
+            'num_time_steps', "",
             
-            'coupler_ac_single_edge_time_iswap',"s",
-            'coupler_ac_plateau_duration_iswap_min',"s",
-            'coupler_ac_plateau_duration_iswap_max',"s",
+            'coupler_ac_single_edge_time_iswap', "s",
+            'coupler_ac_plateau_duration_iswap_min', "s",
+            'coupler_ac_plateau_duration_iswap_max', "s",
         ]
         hdf5_logs = []
         try:
@@ -756,9 +753,8 @@ def iswap_sweep_duration_and_detuning_state_probability(
         
         ''' Make the user-set time variables representable '''
         
-        # Generate an array for data storage. For all elements, round to the
-        # programmable logic clock period. Then, remove duplicates and update
-        # the num_time_steps parameter.
+        # For all elements, round to the programmable logic clock period.
+        # Then, remove duplicates and update the num_time_steps parameter.
         iswap_total_pulse_duration_arr = np.linspace( \
             coupler_ac_plateau_duration_iswap_min + 2 * coupler_ac_single_edge_time_iswap, \
             coupler_ac_plateau_duration_iswap_max + 2 * coupler_ac_single_edge_time_iswap, \
@@ -1092,49 +1088,49 @@ def iswap_sweep_duration_and_detuning_state_probability(
         
         # Data to be stored.
         hdf5_steps = [
-            'iswap_total_pulse_duration_arr',"s",
+            'iswap_total_pulse_duration_arr', "s",
             'coupler_ac_pulse_iswap_freq_arr', "Hz",
         ]
         hdf5_singles = [
-            'readout_stimulus_port',"",
-            'readout_sampling_port',"",
-            'readout_duration',"s",
-            'readout_freq_A',"Hz",
-            'readout_amp_A',"FS",
-            'readout_freq_B',"Hz",
-            'readout_amp_B',"FS",
+            'readout_stimulus_port', "",
+            'readout_sampling_port', "",
+            'readout_duration', "s",
+            'readout_freq_A', "Hz",
+            'readout_amp_A', "FS",
+            'readout_freq_B', "Hz",
+            'readout_amp_B', "FS",
             
-            'sampling_duration',"s",
-            'readout_sampling_delay',"s",
-            'repetition_delay',"s",
+            'sampling_duration', "s",
+            'readout_sampling_delay', "s",
+            'repetition_delay', "s",
             
-            'control_port_A',"",
-            'control_port_B,',"",
-            'control_amp_01_A',"FS",
-            'control_freq_01_A',"Hz",
-            'control_amp_01_B',"FS",
-            'control_freq_01_B',"Hz",
-            'control_duration_01',"s",
+            'control_port_A', "",
+            'control_port_B,', "",
+            'control_amp_01_A', "FS",
+            'control_freq_01_A', "Hz",
+            'control_amp_01_B', "FS",
+            'control_freq_01_B', "Hz",
+            'control_duration_01', "s",
             
             'control_freq_12_A', "Hz",
             'control_freq_12_B', "Hz",
             
-            #'coupler_dc_port',"",
-            'coupler_dc_bias',"FS",
-            'added_delay_for_bias_tee',"s",
+            #'coupler_dc_port', "",
+            'coupler_dc_bias', "FS",
+            'added_delay_for_bias_tee', "s",
             
-            'coupler_ac_port',"",
-            'coupler_ac_amp_iswap',"FS",
-            'coupler_ac_freq_iswap_nco',"Hz",
-            'coupler_ac_freq_iswap_centre',"Hz",
-            'coupler_ac_freq_iswap_span',"Hz",
+            'coupler_ac_port', "",
+            'coupler_ac_amp_iswap', "FS",
+            'coupler_ac_freq_iswap_nco', "Hz",
+            'coupler_ac_freq_iswap_centre', "Hz",
+            'coupler_ac_freq_iswap_span', "Hz",
             
-            'num_freqs',"",
-            'num_averages',"",
-            'num_time_steps',"",
-            'coupler_ac_single_edge_time_iswap',"s",
-            'coupler_ac_plateau_duration_iswap_min',"s",
-            'coupler_ac_plateau_duration_iswap_max',"s",
+            'num_freqs', "",
+            'num_averages', "",
+            'num_time_steps', "",
+            'coupler_ac_single_edge_time_iswap', "s",
+            'coupler_ac_plateau_duration_iswap_min', "s",
+            'coupler_ac_plateau_duration_iswap_max', "s",
         ]
         hdf5_logs = []
         try:
@@ -1403,9 +1399,8 @@ def iswap_sweep_duration_and_amplitude(
         
         ''' Make the user-set time variables representable '''
         
-        # Generate an array for data storage. For all elements, round to the
-        # programmable logic clock period. Then, remove duplicates and update
-        # the num_time_steps parameter.
+        # For all elements, round to the programmable logic clock period.
+        # Then, remove duplicates and update the num_time_steps parameter.
         iswap_total_pulse_duration_arr = np.linspace( \
             coupler_ac_plateau_duration_iswap_min + 2 * coupler_ac_single_edge_time_iswap, \
             coupler_ac_plateau_duration_iswap_max + 2 * coupler_ac_single_edge_time_iswap, \
@@ -1685,7 +1680,7 @@ def iswap_sweep_duration_and_amplitude(
             'readout_amp_A', "FS",
             'readout_freq_B', "Hz",
             'readout_amp_B', "FS",
-            'readout_freq_nco',"Hz",
+            'readout_freq_nco', "Hz",
             'readout_duration', "s",
             
             'sampling_duration', "s",
@@ -1711,11 +1706,11 @@ def iswap_sweep_duration_and_amplitude(
             'coupler_ac_amp_min', "FS",
             'coupler_ac_amp_max', "FS",
 
-            'num_averages',"",
-            'num_time_steps',"",
-            'coupler_ac_single_edge_time_iswap',"s",
-            'coupler_ac_plateau_duration_iswap_min',"s",
-            'coupler_ac_plateau_duration_iswap_max',"s",
+            'num_averages', "",
+            'num_time_steps', "",
+            'coupler_ac_single_edge_time_iswap', "s",
+            'coupler_ac_plateau_duration_iswap_min', "s",
+            'coupler_ac_plateau_duration_iswap_max', "s",
         ]
         hdf5_logs = []
         try:
@@ -2252,7 +2247,7 @@ def iswap_sweep_amplitude_and_detuning(
             'readout_amp_A', "FS",
             'readout_freq_B', "Hz",
             'readout_amp_B', "FS",
-            'readout_freq_nco',"Hz",
+            'readout_freq_nco', "Hz",
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
@@ -2903,7 +2898,7 @@ def iswap_cross_ramsey(
             'readout_amp_A', "FS",
             'readout_freq_B', "Hz",
             'readout_amp_B', "FS",
-            'readout_freq_nco',"Hz",
+            'readout_freq_nco', "Hz",
             'readout_duration', "s",
             
             'sampling_duration', "s",
@@ -3580,7 +3575,7 @@ def iswap_tune_local_accumulated_phase(
             'readout_amp_A', "FS",
             'readout_freq_B', "Hz",
             'readout_amp_B', "FS",
-            'readout_freq_nco',"Hz",
+            'readout_freq_nco', "Hz",
             'readout_duration', "s",
             
             'sampling_duration', "s",
