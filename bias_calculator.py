@@ -94,14 +94,14 @@ def sanitise_dc_bias_arguments(
     '''
     
     # Acquire legal values regarding the coupler port settings.
-    if type(coupler_dc_port) == int:
+    if not ((type(coupler_dc_port) == np.ndarray) or (type(coupler_dc_port) == list)):
         raise TypeError( \
             "Halted! The input argument coupler_dc_port must be provided "  + \
-            "as a list. Typecasting was not done for you, since some user " + \
-            "setups combine several ports together galvanically. Merely "   + \
-            "typecasting the input int to [int] risks damaging their "      + \
-            "setups. All items in the coupler_dc_port list will be treated "+ \
-            "as ports to be used for DC-biasing a coupler.")
+            "as a (numpy) list. Typecasting was not done for you, since "   + \
+            "some user setups combine several ports together galvanically. "+ \
+            "Typecasting something like an int to [int] risks damaging "    + \
+            "their setups. All items in the coupler_dc_port list will be "  + \
+            "treated as ports to be used for DC-biasing a coupler.")
     
     # Assert that the user is either requesting a DC bias sweep,
     # or setting a static DC bias. Not both.
