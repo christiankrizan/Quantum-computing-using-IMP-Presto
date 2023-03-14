@@ -27,7 +27,9 @@ from data_exporter import \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save
-from time_remaining_printer import show_user_time_remaining
+from time_calculator import \
+    check_if_integration_window_is_legal, \
+    show_user_time_remaining
 
 def discriminate_state_11(
     ip_address,
@@ -143,9 +145,13 @@ def discriminate_state_11(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -797,9 +803,13 @@ def discriminate_state_22(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         

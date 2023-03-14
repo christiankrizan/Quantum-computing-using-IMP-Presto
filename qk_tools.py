@@ -52,7 +52,7 @@
         whatever the fuck they want to.
         
         Indecorum is © Copyright Christian Križan 2021,
-        all rights reserved wherever possible, to the extant that the
+        all rights reserved wherever possible, to the extent that the
         licensing of Indecorum under CC-BY-NC-SA-4.0 is unhindered.
 '''
 

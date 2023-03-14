@@ -23,6 +23,9 @@ from bias_calculator import \
     get_dc_dac_range_integer, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
+from time_calculator import \
+    check_if_integration_window_is_legal,
+    show_user_time_remaining
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -34,7 +37,6 @@ from data_exporter import \
 from data_discriminator import \
     calculate_area_mean_perimeter_fidelity, \
     update_discriminator_settings_with_value
-from time_remaining_printer import show_user_time_remaining
 
 
 def optimise_integration_window_g_e_f(
@@ -1076,9 +1078,13 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         

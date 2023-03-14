@@ -20,6 +20,7 @@ from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
     change_dc_bias
+from time_calculator import check_if_integration_window_is_legal
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -170,10 +171,13 @@ def iswap_then_cz20_prep_10_state_probability(
         coupler_ac_single_edge_time_cz20 = int(round(coupler_ac_single_edge_time_cz20 / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_cz20 = int(round(coupler_ac_plateau_duration_cz20 / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
-        
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -852,10 +856,13 @@ def iswap_then_cz_prep_10_cross_Ramsey(
         coupler_ac_single_edge_time_cz20 = int(round(coupler_ac_single_edge_time_cz20 / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_cz20 = int(round(coupler_ac_plateau_duration_cz20 / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
-        
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -1584,10 +1591,13 @@ def synthetic_swap_prep_10_cross_Ramsey(
         coupler_ac_single_edge_time_cz20 = int(round(coupler_ac_single_edge_time_cz20 / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_cz20 = int(round(coupler_ac_plateau_duration_cz20 / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
-        
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         

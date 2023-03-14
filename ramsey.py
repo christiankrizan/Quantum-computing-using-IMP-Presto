@@ -21,6 +21,7 @@ from bias_calculator import \
     get_dc_dac_range_integer, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
+from time_calculator import check_if_integration_window_is_legal
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -159,9 +160,13 @@ def ramsey01_ro0(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         # Make all values in the delay_arr representatble.
         for jj in range(len(delay_arr)):
@@ -587,9 +592,13 @@ def ramsey01_ro0_DEPRECATED(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         # Make all values in the delay_arr representatble.
         for jj in range(len(delay_arr)):
@@ -1085,10 +1094,13 @@ def ramsey01_ro0_virtual_z(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
-        
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -2047,9 +2059,13 @@ def ramsey12_ro1(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         # Make all values in the delay_arr representatble.
         for jj in range(len(delay_arr)):
@@ -2517,9 +2533,13 @@ def ramsey01_echo_r0(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         # Make all values in the delay_arr representatble.
         for jj in range(len(delay_arr)):

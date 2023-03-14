@@ -22,6 +22,7 @@ from bias_calculator import \
     get_dc_dac_range_integer, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
+from time_calculator import check_if_integration_window_is_legal
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -179,9 +180,13 @@ def iswap_sweep_duration_and_detuning(
         coupler_ac_plateau_duration_iswap_min = int(round(coupler_ac_plateau_duration_iswap_min / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap_max = int(round(coupler_ac_plateau_duration_iswap_max / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Make the user-set time variables representable '''
         
@@ -747,9 +752,13 @@ def iswap_sweep_duration_and_detuning_state_probability(
         coupler_ac_plateau_duration_iswap_min = int(round(coupler_ac_plateau_duration_iswap_min / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap_max = int(round(coupler_ac_plateau_duration_iswap_max / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Make the user-set time variables representable '''
         
@@ -1393,9 +1402,13 @@ def iswap_sweep_duration_and_amplitude(
         coupler_ac_plateau_duration_iswap_min = int(round(coupler_ac_plateau_duration_iswap_min / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap_max = int(round(coupler_ac_plateau_duration_iswap_max / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Make the user-set time variables representable '''
         
@@ -1971,9 +1984,13 @@ def iswap_sweep_amplitude_and_detuning(
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap = int(round(coupler_ac_plateau_duration_iswap / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -2516,9 +2533,13 @@ def iswap_cross_ramsey(
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap = int(round(coupler_ac_plateau_duration_iswap / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -3192,9 +3213,13 @@ def iswap_tune_local_accumulated_phase(
         coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_iswap = int(round(coupler_ac_plateau_duration_iswap / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         

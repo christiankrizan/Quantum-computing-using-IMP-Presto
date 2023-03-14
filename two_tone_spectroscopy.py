@@ -22,6 +22,7 @@ from bias_calculator import \
     get_dc_dac_range_integer, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
+from time_calculator import check_if_integration_window_is_legal
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -65,6 +66,7 @@ def pulsed01_sweep_coupler(
     coupler_bias_max = +0.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
@@ -158,9 +160,13 @@ def pulsed01_sweep_coupler(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -453,6 +459,7 @@ def pulsed01_sweep_coupler(
             force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
         
     return string_arr_to_return
@@ -498,6 +505,7 @@ def pulsed01_sweep_coupler_multiplexed_ro(
     coupler_bias_max = +1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
@@ -586,9 +594,13 @@ def pulsed01_sweep_coupler_multiplexed_ro(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -1012,6 +1024,7 @@ def pulsed01_sweep_coupler_multiplexed_ro(
                 
                 log_browser_tag  = log_browser_tag,
                 log_browser_user = log_browser_user,
+                save_raw_time_data = save_raw_time_data,
             ))
 
     return string_arr_to_return
@@ -1145,9 +1158,13 @@ def pulsed01_sweep_power(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -1483,6 +1500,7 @@ def pulsed12_sweep_coupler(
     coupler_bias_max = +0.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
@@ -1576,9 +1594,13 @@ def pulsed12_sweep_coupler(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -1909,6 +1931,7 @@ def pulsed12_sweep_coupler(
             force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
         
     return string_arr_to_return

@@ -14,6 +14,8 @@ def check_if_integration_window_is_legal(
     integration_window_stop
     ):
     ''' Verify that the integration window falls within the scoped data.
+        And, that the integration window is longer than one strike of
+        the sample clock.
     '''
     # Based on the sample period, increase the integration window stop
     # if it is impossible to scope.

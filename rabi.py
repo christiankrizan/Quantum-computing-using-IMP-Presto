@@ -21,6 +21,7 @@ from bias_calculator import \
     get_dc_dac_range_integer, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
+from time_calculator import check_if_integration_window_is_legal
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -159,9 +160,13 @@ def amplitude_sweep_oscillation01_ro0(
         repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Setup mixers '''
         
@@ -446,6 +451,7 @@ def amplitude_sweep_oscillation01_ro0(
             force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -583,10 +589,14 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
-
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
+        
         ''' Setup mixers '''
         
         # Readout port, multiplexed, calculate an optimal NCO frequency.
@@ -1001,6 +1011,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
                 suppress_log_browser_export = suppress_log_browser_export,
                 log_browser_tag  = log_browser_tag,
                 log_browser_user = log_browser_user,
+                save_raw_time_data = save_raw_time_data,
             ))
     
     return string_arr_to_return
@@ -1045,6 +1056,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
     control_amp_01_B_min = -1.0,
     control_amp_01_B_max = +1.0,
     
+    save_raw_time_data = False,
     use_log_browser_database = True,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
@@ -1132,10 +1144,14 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         control_duration_01 = int(round(control_duration_01 / plo_clk_T)) * plo_clk_T
         added_delay_for_bias_tee = int(round(added_delay_for_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
-
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
+        
         ''' Setup mixers '''
         
         # Readout port, multiplexed, calculate an optimal NCO frequency.
@@ -1400,6 +1416,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
             hdf5_singles = [
                 'readout_stimulus_port', "",
                 'readout_sampling_port', "",
+                'readout_freq_nco', "Hz",
                 'readout_freq_A', "Hz",
                 'readout_amp_A', "FS",
                 'readout_freq_B', "Hz",
@@ -1519,6 +1536,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
                 suppress_log_browser_export = suppress_log_browser_export,
                 log_browser_tag  = log_browser_tag,
                 log_browser_user = log_browser_user,
+                save_raw_time_data = save_raw_time_data,
             ))
     
     return string_arr_to_return
@@ -1564,6 +1582,7 @@ def amplitude_sweep_oscillation12_ro0(
     coupler_bias_max = +0.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
@@ -1658,10 +1677,14 @@ def amplitude_sweep_oscillation12_ro0(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
-
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
+        
         ''' Setup mixers '''
         
         # Readout mixer
@@ -1983,6 +2006,7 @@ def amplitude_sweep_oscillation12_ro0(
             force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
@@ -2124,10 +2148,14 @@ def amplitude_sweep_oscillation12_ro1(
         control_duration_12 = int(round(control_duration_12 / plo_clk_T)) * plo_clk_T
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
-
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
+        
         ''' Setup mixers '''
         
         # Readout mixer
@@ -2447,6 +2475,7 @@ def amplitude_sweep_oscillation12_ro1(
             force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
         
     return string_arr_to_return
@@ -2582,9 +2611,13 @@ def duration_sweep_oscillation01_ro0(
         control_plateau_duration_01_min = int(round(control_plateau_duration_01_min / plo_clk_T)) * plo_clk_T
         control_plateau_duration_01_max = int(round(control_plateau_duration_01_max / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Make the user-set time variables representable '''
         
@@ -2943,6 +2976,7 @@ def duration_sweep_oscillation12_ro1(
     coupler_bias_max = 1.0,
     
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
@@ -3028,9 +3062,13 @@ def duration_sweep_oscillation12_ro1(
         control_plateau_duration_12_min = int(round(control_plateau_duration_12_min / plo_clk_T)) * plo_clk_T
         control_plateau_duration_12_max = int(round(control_plateau_duration_12_max / plo_clk_T)) * plo_clk_T
         
-        if (integration_window_stop - integration_window_start) < plo_clk_T:
-            integration_window_stop = integration_window_start + plo_clk_T
-            print("Warning: an impossible integration window was defined. The window stop was moved to "+str(integration_window_stop)+" s.")
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
         
         ''' Make the user-set time variables representable '''
         
