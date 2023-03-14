@@ -5,6 +5,40 @@
 #   https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/blob/master/LICENSE
 #############################################################################################
 
+import numpy as np
+
+def check_if_integration_window_is_legal(
+    sample_rate,
+    sampling_duration,
+    integration_window_start,
+    integration_window_stop
+    ):
+    ''' Verify that the integration window falls within the scoped data.
+    '''
+    # Based on the sample period, increase the integration window stop
+    # if it is impossible to scope.
+    if (integration_window_stop - integration_window_start) < (1/sample_rate):
+        integration_window_stop = integration_window_start + (1/sample_rate)
+        print("Warning: an impossible integration window was defined. " + \
+        "The window stop was moved to "+str(integration_window_stop)    + \
+        " seconds.")
+    
+    # Construct the expected resulting time trace (the time axis)
+    # and verify whether the sampling window fits.
+    time_vector = np.linspace( \
+        0.0, sampling_duration, int(sampling_duration * sample_rate))
+    assert integration_window_start >= time_vector[0], \
+        "Error! The requested integration window begins before the first " + \
+        "sample of the scoped data."
+    assert integration_window_stop  >= time_vector[-1], \
+        "Error! The requested integration window stops after the last " + \
+        "sample of the scoped data. The stop is at "                    + \
+        str(integration_window_stop)+" seconds, while the last sample " + \
+        "of the integration window is at "+str(time_vector[-1])+" seconds."
+    
+    # Return the possibly updated integration window stop.
+    return integration_window_stop
+
 def show_user_time_remaining(seconds):
     ''' Take some number of seconds remaining for some measurement
         to complete, and print the result in a human-legible form.
