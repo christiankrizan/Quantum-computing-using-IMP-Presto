@@ -7,10 +7,12 @@
 
 import numpy as np
 
-def calculate_nco(
-    dacmode,
+def get_safe_dac_nco_freq(
+    dac_mode,
     dac_fsample,
+    port_number,
     frequency_bands_list = [],
+    verbose = False,
     ):
     ''' Calculate the NCO frequency (LO) to use, based on input parameters,
         such as which bands must be held free of any Nyquist-Shannon
@@ -36,6 +38,19 @@ def calculate_nco(
         ... corresponds to "the bands 10 MHz to 30 MHz, 300 MHz to 800 MHz,
             and 4 GHz to 4.5 GHz, are all off-limits to the NCO frequency,
             as well as any reflections.
-        
     '''
+    
     raise NotImplementedError("Halted. This function is not yet completed.")
+    
+    ## TODO This function is very much not completed.
+    ##      The NCO is returned almost rather arbitrarily at the moment.
+    ##      However, deterministically.
+    
+    # Print?
+    if verbose:
+        print("Setting DAC NCO frequency on port "+str(port_number)+" to "+final_nco_freq+" Hz.")
+    
+    # Return.
+    return final_nco_freq
+    
+    
