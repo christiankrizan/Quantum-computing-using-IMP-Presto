@@ -239,20 +239,30 @@ def save(
         num_samples = 8*len(integration_indices)
         freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
         
-        # Get IF frequencies, so that we can pick out indices in the FFT array.
+        ## Treat zero-input resonator IF arguments.
+        ## Note that all IF entries are converted into lists.
+        
         # Did the user not send any IF information? Then assume IF = 0 Hz.
         # Did the user drive one resonator on resonance? Then set its IF to 0.
         if len(resonator_freq_if_arrays_to_fft) == 0:
-            print("No IF information provided to FFT. Assuming IF = 0 Hz.")
-            resonator_freq_if_arrays_to_fft.append(0)
+            print("Warning! No IF information provided to FFT. Assuming IF = 0 Hz.")
+            # Append entry corresponding to this resonator.
+            # Let's cast it to list already, since that would happen later
+            # if we don't.
+            resonator_freq_if_arrays_to_fft.append( [0] )
         else:
+            # The user has provided some kind of IF data.
             for pp in range(len(resonator_freq_if_arrays_to_fft)):
+                # Have the user supplied empty sweeps?
                 if resonator_freq_if_arrays_to_fft[pp] == []:
-                    print("No IF information provided to FFT at entry "+str(pp)+". Assuming IF = 0 Hz for this entry.")
-                    resonator_freq_if_arrays_to_fft[pp] = 0
+                    print("Warning! No IF sweep information provided to FFT at entry "+str(pp)+". Assuming IF = 0 Hz for this entry.")
+                    # Append entry corresponding to this resonator.
+                    # Let's cast it to list already, since that would happen later
+                    # if we don't.
+                    resonator_freq_if_arrays_to_fft[pp] = [0]
         
-        # Note! The user may have done a frequency sweep. In that case,
-        # _ro_freq_if will be an array
+        # Now, get the index on the freq_arr, that corresponds to the IFs
+        # used. Sweeps will become arrays of freq_arr indices.
         integration_indices_list = []
         for _ro_freq_if in resonator_freq_if_arrays_to_fft:
             if (not isinstance(_ro_freq_if, list)) and (not isinstance(_ro_freq_if, np.ndarray)):
@@ -260,9 +270,15 @@ def save(
             else:
                 _curr_item = _ro_freq_if   # _ro_freq_if is a list, we're good.
             # The user may have swept the frequency => many IFs.
+            ## Otherwise every entry in integration_indices_list,
+            ## will just be an array with a single value,
+            ## being that single IF.
             curr_array = []
             for if_point in _curr_item:
+                # Append the index of the freq_arr that best matches
+                # the sought-for IF frequency.
                 curr_array.append( np.argmin(np.abs(freq_arr - if_point)) )
+                print("Appended index: "+str(np.argmin(np.abs(freq_arr - if_point)))+", which is "+str(freq_arr[np.argmin(np.abs(freq_arr - if_point))])+" Hz. A diff by "+str(_ro_freq_if[0] - freq_arr[np.argmin(np.abs(freq_arr - if_point))])+" Hz.")
             integration_indices_list.append( curr_array )
         
         # Execute complex FFT. Every row of the resp_fft matrix,
@@ -601,6 +617,7 @@ def save(
         fetched_data_arr = fetched_data_arr,
         fetched_data_scale = fetched_data_scale,
         fetched_data_offset = fetched_data_offset,
+        resonator_freq_if_arrays_to_fft = resonator_freq_if_arrays_to_fft,
         
         timestamp = timestamp,
         log_browser_tag = log_browser_tag,
@@ -633,6 +650,7 @@ def export_processed_data_to_file(
     fetched_data_arr = [],
     log_browser_tag  = 'default',
     log_browser_user = 'default',
+    resonator_freq_if_arrays_to_fft = [],
     default_exported_log_file_name = 'default',
     append_to_log_name_before_timestamp = '',
     append_to_log_name_after_timestamp = '',
@@ -676,7 +694,7 @@ def export_processed_data_to_file(
                 add_user_string_to_the_filename_end = default_exported_log_file_name.replace('default','')
                 if add_user_string_to_the_filename_end[0] != '_':
                     add_user_string_to_the_filename_end = '_' + add_user_string_to_the_filename_end
-            elif default_exported_log_file_name.find('default') == 7: ## Where 7 == len('default'):
+            elif default_exported_log_file_name.find('default') >= 1:
                 # User added something to the beginning.
                 add_user_string_to_the_filename_beginning = default_exported_log_file_name.replace('default','')
                 if add_user_string_to_the_filename_beginning[-1] != '_':
@@ -883,6 +901,8 @@ def export_processed_data_to_file(
             h5f.create_dataset("time_vector",  data = time_vector)
         if (len(fetched_data_arr) != 0) and (save_raw_time_data):
             h5f.create_dataset("fetched_data_arr", data = fetched_data_arr)
+        if len(resonator_freq_if_arrays_to_fft) != 0:
+            h5f.create_dataset("resonator_freq_if_arrays_to_fft", data = resonator_freq_if_arrays_to_fft)
         h5f.create_dataset("processed_data", data = processed_data)
         h5f.create_dataset("User_set_scale_to_Y_axis",  data = fetched_data_scale)
         h5f.create_dataset("User_set_offset_to_Y_axis", data = fetched_data_offset)
@@ -901,6 +921,160 @@ def export_processed_data_to_file(
     # Return the .h5 save path to the calling function
     return save_path_h5py
 
+def export_raw_data_to_new_file(
+    path_to_saved_file_containing_raw_data,
+    use_log_browser_database,
+    save_raw_time_data,
+    ):
+    ''' Cracks open a saved datafile, containing raw data,
+        and exports the raw data into a new save file.
+        
+        Typically, this function can be used to test post-processing
+        features.
+    '''
+    # Does the provided file exist?
+    if not os.path.exists( path_to_saved_file_containing_raw_data ):
+        raise OSError("Error! The user-provided filepath does not exist.")
+    
+    # Attempt to open the user-provided file, and extract all raw data.
+    dict_containing_all_keys = {}
+    dict_containing_all_attributes = {}
+    resonator_freq_if_arrays_to_fft = []
+    inner_loop_size = 0
+    outer_loop_size = 0
+    save_complex_data = True
+    ext_keys = None
+    log_dict_list = None
+    with h5py.File(path_to_saved_file_containing_raw_data, 'r') as h5f:
+        
+        # Get all keys in the hdf5 file.
+        keys_in_file = h5f.keys()
+        for entry in keys_in_file:
+            if (entry == "First_key_that_was_swept") or (entry == "First_key_that_was_swept"):
+                dict_containing_all_keys.update({str(entry): (h5f[str(entry)][()]).decode("utf-8")})
+            else:
+                dict_containing_all_keys.update({str(entry): h5f[str(entry)][()]})
+        
+        # Get all attributes in the hdf5 file.
+        attributes_in_file = h5f.attrs.keys()
+        for entry in attributes_in_file:
+            # ext_keys and log_dict_list needs special treatment later.
+            if (entry != "ext_keys") and (entry != "log_dict_list"):
+                dict_containing_all_attributes.update({str(entry): h5f.attrs[str(entry)]})
+        
+        # Extract ext_keys and log_dict_list for using the Labber Log browser.
+        ext_keys = json.loads( h5f.attrs["ext_keys"] )
+        log_dict_list = json.loads( h5f.attrs["log_dict_list"] )
+        
+        # Does the file contain IF information for the resonators.
+        if 'resonator_freq_if_arrays_to_fft' in dict_containing_all_keys:
+            # There is IF information!
+            resonator_freq_if_arrays_to_fft = dict_containing_all_keys["resonator_freq_if_arrays_to_fft"]
+        else:
+            # There is no information on readout if in the file.
+            # The value(s) has to be calculated.
+            resonator_nco = dict_containing_all_attributes.get("readout_freq_nco")
+            
+            # Figure out how many resonators were present.
+            for item in dict_containing_all_attributes:
+                if  (item.startswith('readout_freq')) and \
+                    (not (item.startswith('readout_freq_nco'))) and \
+                    (not (item.startswith('readout_freq_span'))):
+                    # This item is a candidate. Span or not?
+                    # Check whether the end of that candidate, has the same
+                    # ending as key words like _centre and _span.
+                    # Example: readout_freq_A, and readout_freq_centre_A
+                    if item.startswith('readout_freq_centre'):
+                        # It's a span!
+                        
+                        ## Optimisation: assume that every _centre item,
+                        ## has a corresponding _span item.
+                        ## For instance, assume that there will always be
+                        ## a readout_freq_centre_B, and a readout_freq_span_B.
+                        
+                        # Get the particular suffix to the word (like "_A")
+                        # that identifies this frequency with some other span.
+                        item_suffix = item.replace('readout_freq_centre','')
+                        
+                        # Files that contain *only* the parameter
+                        # readout_freq_centre and readout_freq_span,
+                        # will be caught too, since the suffix is ""
+                        readout_freq_nco    = dict_containing_all_attributes['readout_freq_nco'+item_suffix]
+                        readout_freq_centre = dict_containing_all_attributes['readout_freq_centre'+item_suffix]
+                        readout_freq_span   = dict_containing_all_attributes['readout_freq_span'+item_suffix]
+                        num_freqs           = dict_containing_all_attributes['num_freqs']
+                        ## TODO, instead of assuming num_freqs, one could look
+                        ##       at the length of the readout array.
+                        
+                        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
+                        f_start = readout_freq_centre_if - readout_freq_span / 2
+                        f_stop  = readout_freq_centre_if + readout_freq_span / 2
+                        readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
+                        
+                        # Append the calculated readout frequency span.
+                        resonator_freq_if_arrays_to_fft.append( np.abs(readout_freq_if_arr) )
+                        
+                        del f_start, f_stop, readout_freq_if_arr
+                        del readout_freq_nco, readout_freq_centre
+                        del readout_freq_centre_if, item_suffix, num_freqs
+                        
+                    else:
+                        # It's not a span. Append a fixed-point readout IF.
+                        ## Is there a special entry for 'readout_freq_excited'?
+                        if 'readout_freq_excited' in dict_containing_all_attributes:
+                            readout_freq = dict_containing_all_attributes['readout_freq_excited']
+                            assert (not ('readout_freq' in dict_containing_all_attributes)), "Halted! Could not figure out which readout frequency to use when calculating IF frequencies of a data file that lacked readout IF information."
+                        else:
+                            readout_freq = dict_containing_all_attributes['readout_freq']
+                        
+                        readout_freq_nco = dict_containing_all_attributes['readout_freq_nco']
+                        readout_freq_if  = readout_freq_nco - readout_freq
+                        resonator_freq_if_arrays_to_fft.append( np.abs(readout_freq_if) )
+                        
+                        del readout_freq_nco, readout_freq_if, readout_freq
+            
+            assert resonator_freq_if_arrays_to_fft != [], "Halted! The file did not contain information about IF frequencies, and such information was not calculatable from what was found within the file."
+            print("The file did not contain information about IF frequencies used for the resonators. This value(s) was calculated to be: "+str(resonator_freq_if_arrays_to_fft))
+        
+        # Get the loop size parameters by looking at the processed data.
+        # The first index corresponds to the resonator. Let's assume that
+        # the resonators all have an equal-sized canvas.
+        shape_to_analyse = np.array(dict_containing_all_keys["processed_data"]).shape
+        outer_loop_size  = shape_to_analyse[1]
+        inner_loop_size  = shape_to_analyse[2]
+        del shape_to_analyse
+        
+        # Save complex data?
+        save_complex_data = log_dict_list[0]['complex']
+    
+    # Export extracted data to file.
+    save(
+        timestamp = get_timestamp_string(), # Timestamps are not saved. Get a new one.
+        ext_keys = ext_keys,
+        log_dict_list = log_dict_list,
+        
+        time_vector = dict_containing_all_keys["time_vector"],
+        fetched_data_arr = dict_containing_all_keys["fetched_data_arr"],
+        fetched_data_scale = dict_containing_all_keys["User_set_scale_to_Y_axis"],
+        fetched_data_offset = dict_containing_all_keys["User_set_offset_to_Y_axis"],
+        resonator_freq_if_arrays_to_fft = resonator_freq_if_arrays_to_fft,
+        integration_window_start = dict_containing_all_attributes["integration_window_start"],
+        integration_window_stop  = dict_containing_all_attributes["integration_window_stop"],
+        
+        filepath_of_calling_script = dict_containing_all_keys["filepath_of_calling_script"].decode('UTF-8'),
+        use_log_browser_database = use_log_browser_database,
+        
+        inner_loop_size = inner_loop_size,
+        outer_loop_size = outer_loop_size,
+        
+        save_complex_data = save_complex_data,
+        default_exported_log_file_name = 'ENTREPÔT' + 'default', # Append a prefix.
+        
+        ## TODO there are many more things that have not been
+        ##      added here yet.
+        ## TODO add support for state-discriminated measurements.
+    )
+    
 
 def convert_numpy_entries_in_ext_keys_to_list( ext_keys_to_convert ):
     ''' Takes the ext_keys dict, and converts all numpy
@@ -1030,7 +1204,7 @@ def stitch(
     # dictified later.
     ext_keys = []
     log_dict_list = []
-    
+    resonator_freq_if_arrays_to_fft = []
     
     # Treat every provided item in the list!
     for current_filepath_item_in_list in list_of_h5_files_to_stitch:
@@ -1115,7 +1289,7 @@ def stitch(
             # and file name for realising said file export.
             if filepath_of_calling_script == []:
                 try:
-                    filepath_of_calling_script = os.path.abspath((h5f["filepath_of_calling_script"][()]).decode('UTF-8'))
+                    filepath_of_calling_script = os.path.abspath((h5f["filepath_of_calling_script"][()]).decode('utf-8'))
                     # Are you currently working from a different
                     # computer than that which made this data?
                     if not os.path.exists(filepath_of_calling_script):
@@ -1207,6 +1381,19 @@ def stitch(
                 ext_keys = json.loads( h5f.attrs["ext_keys"] )
             if log_dict_list == []:
                 log_dict_list = json.loads( h5f.attrs["log_dict_list"] )
+            
+            
+            # Let's get information about what resonator IFs were used in the
+            # measurement.
+            # TODO This fetching needs to be looked at further.
+            #      What if the user is stitching together several files
+            #      using different readout IFs?
+            if resonator_freq_if_arrays_to_fft == []:
+                try:
+                    resonator_freq_if_arrays_to_fft = h5f["resonator_freq_if_arrays_to_fft"][()]
+                except KeyError:
+                    print("Warning! Could not extract readout resonator IF information from the supplied file. This parameter was set to \"[]\"")
+            
             
             ## TODO This part should likely be removed.
             """for item in h5f.keys():
@@ -1428,6 +1615,7 @@ def stitch(
         processed_data = processed_data,
         fetched_data_scale = running_scale,
         fetched_data_offset = running_offset,
+        resonator_freq_if_arrays_to_fft = resonator_freq_if_arrays_to_fft,
         
         timestamp = get_timestamp_string(),
         time_vector = running_vector_of_time,
