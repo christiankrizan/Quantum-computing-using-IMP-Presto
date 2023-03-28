@@ -7,6 +7,25 @@
 
 import numpy as np
 
+def cap_at_plus_or_minus_two_pi( value_bigger_or_smaller_than_two_pi ):
+    ''' Cap the input to a maximum of +2π rad.
+        Or, a minimum of -2π rad.
+    '''
+    # Check if bigger or smaller than 2 pi.
+    if value_bigger_or_smaller_than_two_pi > (2*np.pi):
+        print("Warning: a phase value was " + \
+            str(value_bigger_or_smaller_than_two_pi) + \
+            "larger than +6.283185... rad, and thus capped to +6.283185... rad.")
+        value_bigger_or_smaller_than_two_pi = (2*np.pi)
+    elif value_bigger_or_smaller_than_two_pi < -(2*np.pi):
+        print("Warning: a phase value was " + \
+            str(value_bigger_or_smaller_than_two_pi) + \
+            "smaller than -6.283185... rad, and thus capped to -6.283185... rad.")
+        value_bigger_or_smaller_than_two_pi = -(2*np.pi)
+    
+    # Return result.
+    return value_bigger_or_smaller_than_two_pi
+
 def get_legal_phase( value, available_phases_arr ):
     ''' Takes some array of phases deemed legal,
         and returns a value that is present in this array.
