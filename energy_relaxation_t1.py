@@ -119,7 +119,7 @@ def t1_sweep_coupler(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -547,7 +547,7 @@ def t1_sweep_coupler_multiplexed_ro0(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion

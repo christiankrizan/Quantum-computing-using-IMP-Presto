@@ -132,7 +132,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -756,7 +756,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -1442,7 +1442,7 @@ def cz20_sweep_duration_and_detuning_state_probability(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -2109,7 +2109,7 @@ def cz20_Vz_ramsey_conditional_on_A(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -2755,7 +2755,7 @@ def cz20_Vz_ramsey_conditional_on_A_state_probability(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -3400,7 +3400,7 @@ def cz20_tune_local_accumulated_phase(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -4037,7 +4037,7 @@ def cz20_tune_local_accumulated_phase_state_probability(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -4669,7 +4669,7 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -5314,7 +5314,7 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion

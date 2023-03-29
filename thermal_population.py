@@ -123,7 +123,7 @@ def acquire_thermal_population_from_12_rabi_ro1(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion

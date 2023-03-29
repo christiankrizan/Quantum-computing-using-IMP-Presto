@@ -123,7 +123,7 @@ def amplitude_sweep_oscillation01_ro0(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -552,7 +552,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -1107,7 +1107,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -1638,7 +1638,7 @@ def amplitude_sweep_oscillation12_ro0(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -2109,7 +2109,7 @@ def amplitude_sweep_oscillation12_ro1(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -2571,7 +2571,7 @@ def duration_sweep_oscillation01_ro0(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -3025,7 +3025,7 @@ def duration_sweep_oscillation12_ro1(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
