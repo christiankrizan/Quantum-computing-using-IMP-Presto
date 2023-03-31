@@ -54,6 +54,8 @@ def output_pulse_sweep_frequency(
     
     round_nco_freq_to_representable_number_to_avoid_phase_drift = False,
     
+    reset_dc_to_zero_when_finished = True
+    
     ):
     ''' Output a simple single waveform according to provided parameters.
     '''
@@ -199,7 +201,7 @@ def output_pulse_sweep_frequency(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
         
         # Get fake store data

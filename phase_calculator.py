@@ -38,7 +38,7 @@ def get_legal_phase( value, available_phases_arr ):
     
     # Return result.
     return available_phases_arr[index]
-    
+
 def bandsign( if_values, default_to_lsb = False ):
     ''' Return +pi/2 or -pi/2 depending on the sign of the input value.
         But, never return 0.
@@ -59,7 +59,7 @@ def bandsign( if_values, default_to_lsb = False ):
             return (np.sign(if_values)*np.pi/2) if (if_values != 0.0) else (-np.pi/2)
         else:
             return (np.sign(if_values)*np.pi/2) if (if_values != 0.0) else (+np.pi/2)
-    
+
 def add_virtual_z(
     at_time,
     current_phase,
@@ -77,7 +77,6 @@ def add_virtual_z(
     
     return current_phase
 
-
 def reset_phase_counter(
     at_time,
     port,
@@ -92,5 +91,3 @@ def reset_phase_counter(
     pulse_object.select_frequency(at_time, np.where(available_phases == current_phase)[0][0], port, group = group)
     
     return current_phase
-    
-    

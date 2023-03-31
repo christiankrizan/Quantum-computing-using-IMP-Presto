@@ -60,6 +60,8 @@ def find_f_ro0_sweep_coupler(
     
     skip_saving_control_data = False,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -276,7 +278,7 @@ def find_f_ro0_sweep_coupler(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -447,6 +449,8 @@ def find_f_ro0_sweep_power(
     num_amplitudes,
     readout_amp_min = -1.0,
     readout_amp_max = +1.0,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -652,7 +656,7 @@ def find_f_ro0_sweep_power(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -829,6 +833,8 @@ def find_f_ro1_sweep_coupler(
     coupler_bias_max = +0.0,
     
     skip_saving_control_data = False,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -1093,7 +1099,7 @@ def find_f_ro1_sweep_coupler(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -1283,6 +1289,8 @@ def find_f_ro1_sweep_power(
     num_amplitudes,
     readout_amp_min = -0.0,
     readout_amp_max = +1.0,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -1536,7 +1544,7 @@ def find_f_ro1_sweep_power(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -1725,6 +1733,8 @@ def find_f_ro2_sweep_coupler(
     coupler_bias_max = +0.0,
     
     skip_saving_control_data = False,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -2018,7 +2028,7 @@ def find_f_ro2_sweep_coupler(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -2215,6 +2225,8 @@ def find_f_ro2_sweep_power(
     num_amplitudes,
     readout_amp_min = -1.0,
     readout_amp_max = +1.0,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -2497,7 +2509,7 @@ def find_f_ro2_sweep_power(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.

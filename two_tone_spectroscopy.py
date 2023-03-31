@@ -65,6 +65,8 @@ def pulsed01_sweep_coupler(
     coupler_bias_min = -0.0,
     coupler_bias_max = +0.0,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -315,7 +317,7 @@ def pulsed01_sweep_coupler(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -503,6 +505,8 @@ def pulsed01_sweep_coupler_multiplexed_ro(
     num_biases,
     coupler_bias_min = -1.0,
     coupler_bias_max = +1.0,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -1063,6 +1067,8 @@ def pulsed01_sweep_power(
     control_amp_01_min = +0.0,
     control_amp_01_max = +1.0,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -1312,7 +1318,7 @@ def pulsed01_sweep_power(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -1498,6 +1504,8 @@ def pulsed12_sweep_coupler(
     num_biases,
     coupler_bias_min = -0.0,
     coupler_bias_max = +0.0,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -1781,7 +1789,7 @@ def pulsed12_sweep_coupler(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.

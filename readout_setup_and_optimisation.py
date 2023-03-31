@@ -24,7 +24,7 @@ from bias_calculator import \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
-    check_if_integration_window_is_legal,
+    check_if_integration_window_is_legal, \
     show_user_time_remaining
 from data_exporter import \
     ensure_all_keyed_elements_even, \
@@ -76,6 +76,8 @@ def optimise_integration_window_g_e_f(
     num_averages,
     num_shots_per_state,
     resonator_transmon_pair_id_number,
+    
+    reset_dc_to_zero_when_finished = True
     
     use_log_browser_database = True,
     suppress_log_browser_export_of_suboptimal_data = True,
@@ -478,6 +480,8 @@ def optimise_readout_frequency_g_e_f(
     resonator_transmon_pair_id_number,
     
     num_readout_freq_steps,
+    
+    reset_dc_to_zero_when_finished = True
     
     use_log_browser_database = True,
     suppress_log_browser_export_of_suboptimal_data = True,
@@ -991,6 +995,8 @@ def get_complex_data_for_readout_optimisation_g_e_f(
     num_shots_per_state,
     resonator_transmon_pair_id_number,
     
+    reset_dc_to_zero_when_finished = True
+    
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1039,7 +1045,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -1303,7 +1309,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -1498,6 +1504,8 @@ def get_time_traces_for_g_e_f(
     
     num_averages,
     
+    reset_dc_to_zero_when_finished = True
+    
     save_complex_data = True,
     use_log_browser_database = True,
     log_browser_tag  = 'default',
@@ -1540,7 +1548,7 @@ def get_time_traces_for_g_e_f(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
@@ -1737,7 +1745,7 @@ def get_time_traces_for_g_e_f(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -1921,7 +1929,7 @@ def get_wire_to_readout_delay(
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
-        force_reload =   True,
+        force_reload =   False,
         address      =   ip_address,
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion

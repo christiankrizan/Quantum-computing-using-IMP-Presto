@@ -378,6 +378,8 @@ def resonator_spectroscopy_ro0_over_iswap_duration(
     
     prepare_input_state = '10',
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -748,7 +750,7 @@ def resonator_spectroscopy_ro0_over_iswap_duration(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.

@@ -61,7 +61,10 @@ def find_drag_coefficient_lambda_over_anharmonicity(
     drag_coefficient_lambda_max = +1.0,
     drag_coefficient_lambda_step_size = 0.1,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
+    save_raw_time_data = False,
     use_log_browser_database = True,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
@@ -83,6 +86,8 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         connected SQUID coupler. The goal is to establish the DRAG coefficient
         lambda.
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     ## Initial array declaration
     
@@ -522,8 +527,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
             
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
         ))
     
     return string_arr_to_return
-    
-

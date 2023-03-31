@@ -82,6 +82,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
     num_averages,
     num_amplitudes,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -422,6 +424,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
                 repetition_delay \
             )
         
+        assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
+        
         # Define repetition counter for T.
         repetition_counter = 1
         
@@ -703,6 +707,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
     num_single_shots,
     resonator_ids,
     states_to_discriminate_between = ['20'],
+    
+    reset_dc_to_zero_when_finished = True,
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
@@ -1097,6 +1103,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
                 repetition_delay \
             )
         
+        assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
+        
         # Define repetition counter for T.
         repetition_counter = 1
         
@@ -1396,6 +1404,8 @@ def cz20_sweep_duration_and_detuning_state_probability(
     resonator_ids,
     states_to_discriminate_between = ['20'],
     
+    reset_dc_to_zero_when_finished = True,
+    
     use_log_browser_database = True,
     suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
@@ -1420,6 +1430,8 @@ def cz20_sweep_duration_and_detuning_state_probability(
         The readout is multiplexed between two pairwise-coupled transmons.
         The fetched result will be sent into a state discriminator.
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     ## Input sanitisation
     
@@ -2058,6 +2070,8 @@ def cz20_Vz_ramsey_conditional_on_A(
     phase_adjustment_after_cz20_B = 0.0,
     phase_adjustment_coupler_ac_cz20 = 0.0,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -2085,6 +2099,8 @@ def cz20_Vz_ramsey_conditional_on_A(
         Technique shown in Fig. 3 in:
         https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.062408
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     ## Input sanitisation
     
@@ -2732,6 +2748,8 @@ def cz20_Vz_ramsey_conditional_on_A_state_probability(
         https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.062408
     '''
     
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
+    
     ## Input sanitisation
     
     # DC bias argument sanitisation.
@@ -3348,6 +3366,8 @@ def cz20_tune_local_accumulated_phase(
     phase_sweep_rad_min = 0.0,
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -3372,6 +3392,8 @@ def cz20_tune_local_accumulated_phase(
         with a swept virtual sigle-qubit phase. The resulting plot yields the
         accumulated local phase for this qubit.
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     # Halt if illegal arguments
     if (control_amp_01_A != 0.0) and (control_amp_01_B != 0.0):
@@ -4010,6 +4032,8 @@ def cz20_tune_local_accumulated_phase_state_probability(
         The output is a state-discriminated plot.
     '''
     
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
+    
     # Halt if illegal arguments
     if (control_amp_01_A != 0.0) and (control_amp_01_B != 0.0):
         raise ValueError("Error! Tuning local qubit phases after executing a CZ gate requires a different input state than you have configured. Set one of your pi-pulse amplitudes to 0.")
@@ -4617,6 +4641,8 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
     num_freqs,
     num_averages,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -4641,6 +4667,8 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control(
         with a swept virtual sigle-qubit phase. The resulting plot yields the
         accumulated local phase for this qubit.
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     ## Input sanitisation
     
@@ -5286,6 +5314,8 @@ def cz20_tune_coupler_frequency_for_pi_phase_qb_B_is_control_state_probability(
         
         The fetched result will be sent into a state discriminator.
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     ## Input sanitisation
     

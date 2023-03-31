@@ -66,6 +66,8 @@ def acquire_thermal_population_from_12_rabi_ro1(
     control_amp_12_min = -1.0,
     control_amp_12_max = +1.0,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -102,6 +104,8 @@ def acquire_thermal_population_from_12_rabi_ro1(
         The method follows the measurement methodology as shown in figure 1
         of https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.114.240501
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     ## Input sanitisation
     

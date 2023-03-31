@@ -15,7 +15,10 @@ import time
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
-from phase_calculator import bandsign
+from phase_calculator import \
+    reset_phase_counter, \
+    add_virtual_z, \
+    bandsign
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
@@ -62,6 +65,8 @@ def ramsey01_ro0(
     num_averages,
     
     delay_arr,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -325,7 +330,7 @@ def ramsey01_ro0(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -505,6 +510,8 @@ def ramsey01_ro0_DEPRECATED(
     delay_arr,
     ##num_delays,
     ##dt_per_ramsey_iteration,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -978,9 +985,9 @@ def ramsey01_ro0_virtual_z(
     integration_window_stop,
     
     control_port,
-    control_amp_01,
     control_freq_nco,
-    control_freq_01, # Sweeping frequencies is not supported when sweeping Vz phase.
+    control_freq_01, # Sweeping frequencies is not yet supported when sweeping Vz phase.
+    control_amp_01,
     control_duration_01,
     
     coupler_dc_port,
@@ -991,11 +998,11 @@ def ramsey01_ro0_virtual_z(
     
     num_averages,
     
-    delay_arr,
-    
     num_phases,
     phase_sweep_rad_min = 0.0,
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -1021,11 +1028,6 @@ def ramsey01_ro0_virtual_z(
         resonator.
         
         ro0 designates that "the readout is done in state |0⟩."
-        
-        delay_arr is the entire array of all delays to be applied in the
-        experiment. Example: for a logarithmic sweep from 2 ns to 150 ns,
-        done in 313 points, you would (as an argument) write:
-            delay_arr = np.logspace( np.log10(2e-09), np.log10(150e-09), 313)
         
         repetition_rate is the time multiple at which every single
         measurement is repeated at. Example: a repetition rate of 300 µs
@@ -1178,14 +1180,12 @@ def ramsey01_ro0_virtual_z(
             group        = 0,
             frequencies  = np.full_like(phases_declared, np.abs(control_freq_if_01)),
             phases       = phases_declared,
-            phases_q     = phases_declared + bandsign(control_freq_if_01),
+            phases_q     = phases_declared + np.full_like(phases_declared, bandsign(control_freq_if_01))
         )
-        
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
-        
         
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
@@ -1213,7 +1213,7 @@ def ramsey01_ro0_virtual_z(
             
             # Here, there is no time awaited for.
             # Instead, apply a virtual-Z gate.
-            phase = add_virtual_z(T, phase, phase_adjustment_after_01_half + control_phase_arr[ii], control_port, 0, phases_declared, pls)
+            phase = add_virtual_z(T, phase, control_phase_arr[ii] - phase + phase_adjustment_after_01_half, control_port, 0, phases_declared, pls)
             
             # Apply the last pi_01_half pulse.
             pls.output_pulse(T, control_pulse_pi_01_half)
@@ -1243,7 +1243,7 @@ def ramsey01_ro0_virtual_z(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -1259,7 +1259,7 @@ def ramsey01_ro0_virtual_z(
         
         # Data to be stored.
         hdf5_steps = [
-            'control_phase_arr', "s",
+            'control_phase_arr', "rad",
         ]
         hdf5_singles = [
             'readout_stimulus_port', "",
@@ -1290,6 +1290,8 @@ def ramsey01_ro0_virtual_z(
             'num_phases', "",
             'phase_sweep_rad_min', "rad",
             'phase_sweep_rad_max', "rad",
+            
+            'phase_adjustment_after_01_half', "rad",
         ]
         hdf5_logs = []
         try:
@@ -1379,7 +1381,7 @@ def ramsey01_ro0_virtual_z(
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = '01_virtual-Z' + with_or_without_bias_string,
+            append_to_log_name_before_timestamp = '01_virtual_Z' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
@@ -1430,6 +1432,8 @@ def ramsey01_multiplexed_ro(
     
     num_delays,
     dt_per_ramsey_iteration,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -1766,6 +1770,8 @@ def ramsey01_multiplexed_ro(
             num_averages    =   num_averages,
             print_time      =   True,
         )
+        
+        assert 1 == 0, "Halted! Ensure that you are resetting to zero volts DC bias if the user so requests it."
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1960,6 +1966,8 @@ def ramsey12_ro1(
     num_averages,
     
     delay_arr,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -2254,7 +2262,7 @@ def ramsey12_ro1(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.
@@ -2437,6 +2445,8 @@ def ramsey01_echo_r0(
     num_averages,
     
     delay_arr,
+    
+    reset_dc_to_zero_when_finished = True,
     
     save_complex_data = True,
     save_raw_time_data = False,
@@ -2716,7 +2726,7 @@ def ramsey01_echo_r0(
         )
         
         # Reset the DC bias port(s).
-        if coupler_dc_port != []:
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
     
     # Declare path to whatever data will be saved.

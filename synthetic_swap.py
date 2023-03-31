@@ -114,6 +114,8 @@ def iswap_then_cz20_prep_10_state_probability(
         The output is a state discriminated value.
     '''
     
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
+    
     ## Input sanitisation
     
     # DC bias argument sanitisation.
@@ -771,6 +773,8 @@ def iswap_then_cz_prep_10_cross_Ramsey(
     phase_sweep_rad_min = 0.0,
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -793,6 +797,8 @@ def iswap_then_cz_prep_10_cross_Ramsey(
     ):
     ''' Prepare |10>, run a cross-Ramsey experiment.
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     ## Input sanitisation
     
@@ -1504,6 +1510,8 @@ def synthetic_swap_prep_10_cross_Ramsey(
     phase_sweep_rad_min = 0.0,
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
+    reset_dc_to_zero_when_finished = True,
+    
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
@@ -1528,6 +1536,8 @@ def synthetic_swap_prep_10_cross_Ramsey(
         The SWAP gate is made by running both the CZ and the iSWAP
         gates simultaneously.
     '''
+    
+    assert 1 == 0, "Halted! This function's DC biasing has not been modernised."
     
     ## Input sanitisation
     
