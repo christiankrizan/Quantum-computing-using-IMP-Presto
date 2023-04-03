@@ -18,6 +18,7 @@ from numpy import hanning as von_hann
 from phase_calculator import \
     reset_phase_counter, \
     add_virtual_z, \
+    track_phase, \
     bandsign
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
@@ -1210,14 +1211,16 @@ def ramsey01_ro0_virtual_z(
             # Apply the first pi_01_half pulse.
             pls.output_pulse(T, control_pulse_pi_01_half)
             T += control_duration_01
+            phase = track_phase(T - T_begin, control_freq_01, phase)
             
             # Here, there is no time awaited for.
             # Instead, apply a virtual-Z gate.
-            phase = add_virtual_z(T, phase, control_phase_arr[ii] - phase + phase_adjustment_after_01_half, control_port, 0, phases_declared, pls)
+            phase = add_virtual_z(T, phase, control_phase_arr[ii] + phase_adjustment_after_01_half, control_port, 0, phases_declared, pls)
             
             # Apply the last pi_01_half pulse.
             pls.output_pulse(T, control_pulse_pi_01_half)
             T += control_duration_01
+            ## phase = track_phase(T - T_begin, control_freq_01, phase)
             
             # Commence readout
             pls.reset_phase(T, readout_stimulus_port)

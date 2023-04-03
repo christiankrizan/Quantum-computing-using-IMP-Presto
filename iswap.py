@@ -20,6 +20,7 @@ from phase_calculator import \
     cap_at_plus_or_minus_two_pi, \
     reset_phase_counter, \
     add_virtual_z, \
+    track_phase, \
     bandsign
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
@@ -2800,28 +2801,38 @@ def iswap_tune_local_accumulated_phase(
             # Put the system into state |+0> or |0+> with pi01_half pulses.
             if prepare_input_state == '+0':
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
+                T += control_duration_01
+                phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
-            T += control_duration_01
+                T += control_duration_01
+                phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
             
             # Apply an iSWAP gate.
             pls.output_pulse(T, coupler_ac_pulse_iswap)
             T += coupler_ac_duration_iswap
+            ## phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
+            assert 1 == 0, "Track phase of coupler or not???"
             
             # Apply an iSWAP† gate.
             pls.output_pulse(T, coupler_ac_pulse_iswap_inverted)
             T += coupler_ac_duration_iswap
+            ## phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
+            assert 1 == 0, "Track phase of coupler or not???"
             
             # Put the system into state |10> or |01>, with local phase errors.
             if prepare_input_state == '+0':
                 # Set the phase for the final π/2 gate at this point.
                 phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A, control_port_A, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
+                T += control_duration_01
+                phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
                 # Set the phase for the final π/2 gate at this point.
                 phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B, control_port_B, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
-            T += control_duration_01
+                T += control_duration_01
+                phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
             
             # Commence multiplexed readout
             pls.reset_phase(T, readout_stimulus_port)

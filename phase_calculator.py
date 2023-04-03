@@ -91,3 +91,24 @@ def reset_phase_counter(
     pulse_object.select_frequency(at_time, np.where(available_phases == current_phase)[0][0], port, group = group)
     
     return current_phase
+
+def track_phase(
+    current_time,
+    frequency_of_cosinusoidal,
+    current_phase
+    ):
+    ''' Return ***the phase of*** a cosine wave, which at time zero,
+        has the same Y-axis value as a cosine wave
+        cos( 2*pi * frequency_of_cosinusoidal * current_time + current_phase)
+        
+        So:
+        cos( 2*pi * f * t + phi_orig ) = cos( 2*pi * f * (t=0) + phi_sought)
+        = arccos(cos( 2*pi * f * t + phi_orig )) = arccos(cos( 0 + phi_sought )
+        <=> phi_sought = 2*pi * f * t + phi_orig [modulo 2 pi something]
+        
+        As of writing I actually have no idea why there is a pi offset
+        from the value that is updated to. All I know is that if I
+        change phase [= track_phase(blabla)] into the value pi - phi_sought
+        then the phases match up as they should experimentally.
+    '''
+    return np.pi - np.arccos(np.cos( 2*np.pi * frequency_of_cosinusoidal * current_time + current_phase ))
