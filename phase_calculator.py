@@ -111,4 +111,5 @@ def track_phase(
         change phase [= track_phase(blabla)] into the value pi - phi_sought
         then the phases match up as they should experimentally.
     '''
-    return np.pi - np.arccos(np.cos( 2*np.pi * frequency_of_cosinusoidal * current_time + current_phase ))
+    #return np.pi - np.arccos(np.cos( 2*np.pi * frequency_of_cosinusoidal * current_time + current_phase ))
+    return (2*np.pi * frequency_of_cosinusoidal * current_time + current_phase) % np.pi

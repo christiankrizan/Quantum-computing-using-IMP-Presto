@@ -71,7 +71,7 @@ def iswap_sweep_duration_and_detuning(
     
     coupler_ac_port,
     coupler_ac_amp_iswap,
-    coupler_ac_freq_iswap_nco,
+    coupler_ac_freq_nco,
     coupler_ac_freq_iswap_centre,
     coupler_ac_freq_iswap_span,
     
@@ -236,7 +236,7 @@ def iswap_sweep_duration_and_detuning(
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
-            freq      = coupler_ac_freq_iswap_nco,
+            freq      = coupler_ac_freq_nco,
             out_ports = coupler_ac_port,
             tune      = True,
             sync      = True,
@@ -369,13 +369,13 @@ def iswap_sweep_duration_and_detuning(
         )
         
         # Setup the iSWAP pulse carrier, this tone will be swept in frequency.
-        coupler_ac_freq_iswap_centre_if = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap_centre  
+        coupler_ac_freq_iswap_centre_if = coupler_ac_freq_nco - coupler_ac_freq_iswap_centre  
         f_start = coupler_ac_freq_iswap_centre_if - coupler_ac_freq_iswap_span / 2
         f_stop  = coupler_ac_freq_iswap_centre_if + coupler_ac_freq_iswap_span / 2
         coupler_ac_freq_iswap_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the appropriate side band.
-        coupler_ac_pulse_iswap_freq_arr = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap_if_arr
+        coupler_ac_pulse_iswap_freq_arr = coupler_ac_freq_nco - coupler_ac_freq_iswap_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -503,7 +503,7 @@ def iswap_sweep_duration_and_detuning(
             
             'coupler_ac_port', "",
             'coupler_ac_amp_iswap', "FS",
-            'coupler_ac_freq_iswap_nco', "Hz",
+            'coupler_ac_freq_nco', "Hz",
             'coupler_ac_freq_iswap_centre_if', "Hz",
             'coupler_ac_freq_iswap_span', "Hz",
             
@@ -653,7 +653,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
     
     coupler_ac_port,
     coupler_ac_amp_iswap,
-    coupler_ac_freq_iswap_nco,
+    coupler_ac_freq_nco,
     coupler_ac_freq_iswap_centre,
     coupler_ac_freq_iswap_span,
     
@@ -822,7 +822,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
-            freq      = coupler_ac_freq_iswap_nco,
+            freq      = coupler_ac_freq_nco,
             out_ports = coupler_ac_port,
             tune      = True,
             sync      = (coupler_dc_port == []),
@@ -969,13 +969,13 @@ def iswap_sweep_duration_and_detuning_state_probability(
         )
         
         # Setup the iSWAP pulse carrier, this tone will be swept in frequency.
-        coupler_ac_freq_iswap_centre_if = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap_centre  
+        coupler_ac_freq_iswap_centre_if = coupler_ac_freq_nco - coupler_ac_freq_iswap_centre  
         f_start = coupler_ac_freq_iswap_centre_if - coupler_ac_freq_iswap_span / 2
         f_stop  = coupler_ac_freq_iswap_centre_if + coupler_ac_freq_iswap_span / 2
         coupler_ac_freq_iswap_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the appropriate side band.
-        coupler_ac_pulse_iswap_freq_arr = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap_if_arr
+        coupler_ac_pulse_iswap_freq_arr = coupler_ac_freq_nco - coupler_ac_freq_iswap_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -1141,7 +1141,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
             
             'coupler_ac_port', "",
             'coupler_ac_amp_iswap', "FS",
-            'coupler_ac_freq_iswap_nco', "Hz",
+            'coupler_ac_freq_nco', "Hz",
             'coupler_ac_freq_iswap_centre', "Hz",
             'coupler_ac_freq_iswap_span', "Hz",
             
@@ -1295,7 +1295,7 @@ def iswap_sweep_duration_and_amplitude(
     coupler_ac_single_edge_time_iswap,
     coupler_ac_plateau_duration_iswap_min,
     coupler_ac_plateau_duration_iswap_max,
-    coupler_ac_freq_iswap_nco,
+    coupler_ac_freq_nco,
     coupler_ac_freq_iswap,
     
     coupler_ac_amp_min,
@@ -1463,7 +1463,7 @@ def iswap_sweep_duration_and_amplitude(
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
-            freq      = coupler_ac_freq_iswap_nco,
+            freq      = coupler_ac_freq_nco,
             out_ports = coupler_ac_port,
             tune      = True,
             sync      = True,
@@ -1595,7 +1595,7 @@ def iswap_sweep_duration_and_amplitude(
         )
         
         # Setup the iSWAP pulse carrier.
-        coupler_ac_freq_if_iswap = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap
+        coupler_ac_freq_if_iswap = coupler_ac_freq_nco - coupler_ac_freq_iswap
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
@@ -1874,7 +1874,7 @@ def iswap_sweep_amplitude_and_detuning(
     coupler_ac_port,
     coupler_ac_single_edge_time_iswap,
     coupler_ac_plateau_duration_iswap,
-    coupler_ac_freq_iswap_nco,
+    coupler_ac_freq_nco,
     coupler_ac_freq_iswap_centre,
     coupler_ac_freq_iswap_span,
     
@@ -2031,7 +2031,7 @@ def iswap_sweep_amplitude_and_detuning(
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
-            freq      = coupler_ac_freq_iswap_nco,
+            freq      = coupler_ac_freq_nco,
             out_ports = coupler_ac_port,
             tune      = True,
             sync      = True,
@@ -2166,13 +2166,13 @@ def iswap_sweep_amplitude_and_detuning(
         )
         
         # Setup the iSWAP pulse carrier, this tone will be swept in frequency.
-        coupler_ac_freq_iswap_centre_if = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap_centre  
+        coupler_ac_freq_iswap_centre_if = coupler_ac_freq_nco - coupler_ac_freq_iswap_centre  
         f_start = coupler_ac_freq_iswap_centre_if - coupler_ac_freq_iswap_span / 2
         f_stop  = coupler_ac_freq_iswap_centre_if + coupler_ac_freq_iswap_span / 2
         coupler_ac_freq_iswap_if_arr = np.linspace(f_start, f_stop, num_freqs)
         
         # Use the appropriate side band.
-        coupler_ac_pulse_iswap_freq_arr = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap_if_arr
+        coupler_ac_pulse_iswap_freq_arr = coupler_ac_freq_nco - coupler_ac_freq_iswap_if_arr
         
         # Setup LUT
         pls.setup_freq_lut(
@@ -2299,7 +2299,7 @@ def iswap_sweep_amplitude_and_detuning(
             
             'coupler_ac_port', "",
             'coupler_ac_duration_iswap', "s",
-            'coupler_ac_freq_iswap_nco', "Hz",
+            'coupler_ac_freq_nco', "Hz",
             'coupler_ac_freq_iswap_centre', "Hz",
             'coupler_ac_freq_iswap_span', "Hz",
             
@@ -2445,7 +2445,7 @@ def iswap_tune_local_accumulated_phase(
     settling_time_of_bias_tee,
     
     coupler_ac_port,
-    coupler_ac_freq_iswap_nco,
+    coupler_ac_freq_nco,
     coupler_ac_freq_iswap,
     coupler_ac_amp_iswap,
     coupler_ac_single_edge_time_iswap,
@@ -2604,7 +2604,7 @@ def iswap_tune_local_accumulated_phase(
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
-            freq      = coupler_ac_freq_iswap_nco,
+            freq      = coupler_ac_freq_nco,
             out_ports = coupler_ac_port,
             tune      = True,
             sync      = True,
@@ -2756,7 +2756,7 @@ def iswap_tune_local_accumulated_phase(
         ## Setup the iSWAP pulse carrier.
         
         # Setup LUT
-        coupler_ac_freq_iswap_if = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap
+        coupler_ac_freq_iswap_if = coupler_ac_freq_nco - coupler_ac_freq_iswap
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
@@ -2812,13 +2812,13 @@ def iswap_tune_local_accumulated_phase(
             pls.output_pulse(T, coupler_ac_pulse_iswap)
             T += coupler_ac_duration_iswap
             ## phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
-            assert 1 == 0, "Track phase of coupler or not???"
+            ##assert 1 == 0, "Track phase of coupler or not???"
             
             # Apply an iSWAP† gate.
             pls.output_pulse(T, coupler_ac_pulse_iswap_inverted)
             T += coupler_ac_duration_iswap
             ## phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
-            assert 1 == 0, "Track phase of coupler or not???"
+            ##assert 1 == 0, "Track phase of coupler or not???"
             
             # Put the system into state |10> or |01>, with local phase errors.
             if prepare_input_state == '+0':
@@ -3056,7 +3056,7 @@ def iswap_tune_local_accumulated_phase_DEPRECATED(
     settling_time_of_bias_tee,
     
     coupler_ac_port,
-    coupler_ac_freq_iswap_nco,
+    coupler_ac_freq_nco,
     coupler_ac_freq_iswap,
     coupler_ac_amp_iswap,
     coupler_ac_single_edge_time_iswap,
@@ -3212,7 +3212,7 @@ def iswap_tune_local_accumulated_phase_DEPRECATED(
         )
         # Coupler port mixer
         pls.hardware.configure_mixer(
-            freq      = coupler_ac_freq_iswap_nco,
+            freq      = coupler_ac_freq_nco,
             out_ports = coupler_ac_port,
             tune      = True,
             sync      = True,
@@ -3401,7 +3401,7 @@ def iswap_tune_local_accumulated_phase_DEPRECATED(
         ## Setup the iSWAP pulse carrier.
         
         # Setup LUT
-        coupler_ac_freq_iswap_if = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap
+        coupler_ac_freq_iswap_if = coupler_ac_freq_nco - coupler_ac_freq_iswap
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
@@ -3685,7 +3685,7 @@ def iswap_tune_coupler_drive_phase(
     settling_time_of_bias_tee,
     
     coupler_ac_port,
-    coupler_ac_freq_iswap_nco,
+    coupler_ac_freq_nco,
     coupler_ac_freq_iswap,
     coupler_ac_amp_iswap,
     coupler_ac_single_edge_time_iswap,
@@ -3865,7 +3865,7 @@ def iswap_tune_coupler_drive_phase(
         )
         # Coupler port
         pls.hardware.configure_mixer(
-            freq      = coupler_ac_freq_iswap_nco,
+            freq      = coupler_ac_freq_nco,
             out_ports = coupler_ac_port,
             tune      = True,
             sync      = True,
@@ -4054,7 +4054,7 @@ def iswap_tune_coupler_drive_phase(
         ## Setup the iSWAP pulse carrier.
         
         # Setup LUT
-        coupler_ac_freq_iswap_if = coupler_ac_freq_iswap_nco - coupler_ac_freq_iswap
+        coupler_ac_freq_iswap_if = coupler_ac_freq_nco - coupler_ac_freq_iswap
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
@@ -4190,7 +4190,7 @@ def iswap_tune_coupler_drive_phase(
             'coupler_ac_port', "",
             'coupler_ac_amp_iswap', "FS",
             'coupler_ac_freq_iswap', "Hz",
-            'coupler_ac_freq_iswap_nco', "Hz",
+            'coupler_ac_freq_nco', "Hz",
             'coupler_ac_single_edge_time_iswap', "s",
             'coupler_ac_plateau_duration_iswap', "s",
             
