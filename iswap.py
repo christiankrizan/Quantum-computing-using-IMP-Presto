@@ -616,7 +616,6 @@ def iswap_sweep_duration_and_detuning(
     
     return string_arr_to_return
 
-
 def iswap_sweep_duration_and_detuning_state_probability(
     ip_address,
     ext_clk_present,
@@ -1256,7 +1255,6 @@ def iswap_sweep_duration_and_detuning_state_probability(
         ))
     
     return string_arr_to_return
- 
 
 def iswap_sweep_duration_and_amplitude(
     ip_address,
@@ -1836,7 +1834,6 @@ def iswap_sweep_duration_and_amplitude(
         ))
     
     return string_arr_to_return
-    
 
 def iswap_sweep_amplitude_and_detuning(
     ip_address,
@@ -2410,7 +2407,7 @@ def iswap_sweep_amplitude_and_detuning(
         ))
     
     return string_arr_to_return
-    
+
 def iswap_tune_local_accumulated_phase(
     ip_address,
     ext_clk_present,
@@ -2709,8 +2706,7 @@ def iswap_tune_local_accumulated_phase(
         )
         
         # Setup control_pulse_pi_01 carrier tones, considering that there are
-        # digital mixers. Two sets are used. One "normal" LUT for the "normal"
-        # pi_half-pulses. And, a phase-shifted LUT for the phase sweep.
+        # digital mixers.
         control_freq_if_01_A = control_freq_nco_A - control_freq_01_A
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -2815,13 +2811,15 @@ def iswap_tune_local_accumulated_phase(
             pls.output_pulse(T, coupler_ac_pulse_iswap)
             T += coupler_ac_duration_iswap
             ## phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
-            ##assert 1 == 0, "Track phase of coupler or not???"
+            ## TODO Track phase of coupler or not?
+            ## TODO Track phase of qubits or not?
             
             # Apply an iSWAP† gate.
             pls.output_pulse(T, coupler_ac_pulse_iswap_inverted)
             T += coupler_ac_duration_iswap
             ## phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
-            ##assert 1 == 0, "Track phase of coupler or not???"
+            ## TODO Track phase of coupler or not?
+            ## TODO Track phase of qubits or not?
             
             # Put the system into state |10> or |01>, with local phase errors.
             if prepare_input_state == '+0':
@@ -2886,11 +2884,11 @@ def iswap_tune_local_accumulated_phase(
         hdf5_singles = [
             'readout_stimulus_port', "",
             'readout_sampling_port', "",
+            'readout_freq_nco', "Hz",
             'readout_freq_A', "Hz",
             'readout_amp_A', "FS",
             'readout_freq_B', "Hz",
             'readout_amp_B', "FS",
-            'readout_freq_nco', "Hz",
             'readout_duration', "s",
             
             'sampling_duration', "s",
@@ -2900,11 +2898,13 @@ def iswap_tune_local_accumulated_phase(
             'integration_window_stop', "s",
             
             'control_port_A', "",
-            'control_amp_01_A', "FS",
+            'control_freq_nco_A', "Hz",
             'control_freq_01_A', "Hz",
+            'control_amp_01_A', "FS",
             'control_port_B', "",
-            'control_amp_01_B', "FS",
+            'control_freq_nco_B', "Hz",
             'control_freq_01_B', "Hz",
+            'control_amp_01_B', "FS",
             'control_duration_01', "s",
             
             #'coupler_dc_port', "",
@@ -2912,8 +2912,9 @@ def iswap_tune_local_accumulated_phase(
             'settling_time_of_bias_tee', "s",
             
             'coupler_ac_port', "",
-            'coupler_ac_amp_iswap', "FS",
+            'coupler_ac_freq_nco', "Hz",
             'coupler_ac_freq_iswap', "Hz",
+            'coupler_ac_amp_iswap', "FS",
             'coupler_ac_single_edge_time_iswap', "s",
             'coupler_ac_plateau_duration_iswap', "s",
             
@@ -3025,9 +3026,9 @@ def iswap_tune_local_accumulated_phase(
         ))
     
     return string_arr_to_return
-   
 
-def iswap_tune_coupler_drive_phase(
+
+def iswap_tune_coupler_drive_phase_DEPRECATED(
     ip_address,
     ext_clk_present,
     
@@ -3131,7 +3132,6 @@ def iswap_tune_coupler_drive_phase(
             "Aka. the coupler drive must always update to the difference-phase between "+\
             "the qubits. The Ganzhorn paper has the methods. After one has tuned the "+\
             "phases, one must also run iRB to optimise a phase offset "+\
-            "(added onto the coupler drive I think, check paper) "+\
             "vs. fidelity. So it's not necessarily so that the best fidelity comes "+\
             "from running the \"phase optimal\" values.")
     
