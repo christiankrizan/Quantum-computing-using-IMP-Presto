@@ -137,6 +137,11 @@ def iswap_sweep_duration_and_detuning(
         print("Note: single coupler frequency point requested, ignoring span parameter.")
         coupler_ac_freq_iswap_span = 0.0
     
+    ## Assure that the requested input state to prepare, is valid.
+    assert ( (prepare_input_state == '10') or (prepare_input_state == '01') ),\
+        "Error! Invalid request for input state to prepare. " + \
+        "Legal values are \'10\' and \'01\'"
+    
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
@@ -2517,10 +2522,17 @@ def iswap_tune_local_accumulated_phase(
     # Declare what phases are available
     phases_declared = np.linspace(0, 2*np.pi, 512)
     
+    ## Assure that the requested input state to prepare, is valid.
+    assert ( (prepare_input_state == '+0') or (prepare_input_state == '0+') ),\
+        "Error! Invalid request for input state to prepare. " + \
+        "Legal values are \'+0\' and \'0+\'"
+    
     ## Initial array declaration
     
     # Declare phase array for the last pi/2 to be swept
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
+    
+    HAERHAER HAER
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
