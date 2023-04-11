@@ -3786,8 +3786,6 @@ def cz20_cross_ramsey(
         multiple of 300 µs.
     '''
     
-    raise NotImplementedError("Halted! This function is not yet finished.")
-    
     ## Input sanitisation
     
     # DC bias argument sanitisation.
@@ -4324,3 +4322,102 @@ def cz20_cross_ramsey(
         ))
     
     return string_arr_to_return
+
+def cz20_tune_frequency_until_pi_phase(
+    ip_address,
+    ext_clk_present,
+    
+    readout_stimulus_port,
+    readout_sampling_port,
+    readout_freq_nco,
+    readout_freq_A,
+    readout_amp_A,
+    readout_freq_B,
+    readout_amp_B,
+    readout_duration,
+    
+    sampling_duration,
+    readout_sampling_delay,
+    repetition_rate,
+    integration_window_start,
+    integration_window_stop,
+    
+    control_port_A,
+    control_freq_nco_A,
+    control_freq_01_A,
+    control_amp_01_A,
+    control_port_B,
+    control_freq_nco_B,
+    control_freq_01_B,
+    control_amp_01_B,
+    control_duration_01,
+    
+    coupler_dc_port,
+    coupler_dc_bias,
+    settling_time_of_bias_tee,
+    
+    coupler_ac_port,
+    coupler_ac_freq_nco,
+    coupler_ac_freq_cz20_centre,
+    coupler_ac_freq_cz20_span,
+    coupler_ac_amp_cz20,
+    coupler_ac_single_edge_time_cz20,
+    coupler_ac_plateau_duration_cz20,
+    
+    num_freqs,
+    num_averages,
+    
+    num_phases,
+    phase_sweep_rad_min = 0.0,
+    phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
+    
+    reset_dc_to_zero_when_finished = True,
+    
+    save_complex_data = True,
+    save_raw_time_data = False,
+    use_log_browser_database = True,
+    suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
+    ):
+    ''' Tune the frequency of the CZ₂₀ gate until one qubit
+        can conditionally infer a π phase shift on another qubit.
+        
+        Given a frequency sweep:
+        - Tune the local accumulated phase of both qubits.
+        - Execute a cross-Ramsey measurement.
+        - Take the phase difference between the two qubits as a datapoint
+            in a plot showing CZ₂₀ gate frequency versus phase difference.
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
+    '''
+    raise NotImplementedError("Halted! This function is not yet completed.")
+    
+    # For [list of frequencies]:
+    #     > For [input state |+0> and |0+>]:
+    #          Run tune_local_accumulated_phase of CZ₂₀.
+    #          Fit the needed phase offset.
+    #     > Run cross-Ramsey.
+    #     > Perform cross-Ramsey fit to get the phase difference between the
+    #       two sinusoidals.
+    #     > Store the phase difference for the final plot.
+    # Make final plot: CZ₂₀ frequency on X-axis, Phase difference on Y-axis.
+    

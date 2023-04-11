@@ -2532,8 +2532,6 @@ def iswap_tune_local_accumulated_phase(
     # Declare phase array for the last pi/2 to be swept
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
     
-    HAERHAER HAER
-    
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
