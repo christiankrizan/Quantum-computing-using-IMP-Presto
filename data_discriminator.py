@@ -82,9 +82,13 @@ def calculate_readout_fidelity(
     
     ## Currently, only one readout resonator is accounted for. Likely a TODO.
     
-    # We will return a single value, corresponding to the average state
-    # readout fidelity.
+    # We will mainly return the readout fidelity.
     readout_fidelity = 0.0
+    
+    # However, we should also return the probability of measuring
+    # each state, given the other prepared states.
+    confusion_matrix = \
+        [[]] * (np.max(prepared_qubit_states) + 1) # +1 accounts for state |0>
     
     # (data_to_process[0])[0] contains every shot prepared in |0>
     # (data_to_process[0])[1] contains every shot prepared in |1>
@@ -119,32 +123,36 @@ def calculate_readout_fidelity(
     # function description above.
     sum_of_all_individual_readout_fidelities = 0.0
     number_of_fidelities_calculated = 0
+    
     for kk_all_prepared_states in range(len( discretised_results )):
         
         # What state was prepared?
         the_prepared_state = prepared_qubit_states[kk_all_prepared_states]
         
-        # Get P( n | n )
-        strikes = 0
-        try:
-            strikes = (np.bincount( discretised_results[kk_all_prepared_states] ))[the_prepared_state]
-        except IndexError:
-            # The bincount did not go as high as
-            # the highest prepared state in the system. So strikes = 0.
-            pass
+        ## Here, I've already taken into account that np.bincount
+        ## will be a vector that is *at most* as long as the highest
+        ## state that was binned into. If there was no |2> for instance,
+        ## then np.bincount will only return a len = 2 long vector.
+        ## However, all values above |2> in the bincount would have
+        ## been 0 anyways, since there were no counts for those N states.
+        ## Thus, just zero-padding the np.bincount vector, is a good solution.
         
-        ## Uncomment here to see the specific readout fidelity
-        ## for a particular prepared state.
-        ## print(str( strikes / len( discretised_results[0] ) ))
+        # Grab the count of all outcomes. Example: [423, 1, 5] means that
+        # for the prepared state "kk_all_prepared_states",
+        # 423 hits were |0>, 1 hit was |1>, and 5 hits was |2>.
+        binslice = np.bincount( discretised_results[kk_all_prepared_states] )
+        binslice = np.pad(binslice, (0, np.max(prepared_qubit_states)+1 - len(binslice)))
+        strikes  = binslice[the_prepared_state]
         
-        # Sum this value to the readout fidelity.
-        # We will divide the 
-        sum_of_all_individual_readout_fidelities += strikes / len( discretised_results[0] )
-        number_of_fidelities_calculated += 1
+        # Store the full probability of mesasuring in P( n | m ).
+        confusion_matrix[kk_all_prepared_states] = \
+            binslice / np.sum( binslice )
     
-    # Calculate readout fidelity and return.
-    readout_fidelity = sum_of_all_individual_readout_fidelities / number_of_fidelities_calculated
-    return readout_fidelity
+    # Return calculated readout fidelity. Also, the full P( n | m ) matrix.
+    #   Formula: P( n | n ) / no_states,
+    #   where n ∈ all states considered for readout.
+    readout_fidelity = np.trace(confusion_matrix) / len(np.diagonal(confusion_matrix))
+    return readout_fidelity, np.array(confusion_matrix)
 
 def update_discriminator_settings_with_value(
     path_to_data,
@@ -324,14 +332,15 @@ def discriminate(
     num_states_in_system = highest_state_in_system + 1
     
     return extracted_data, num_states_in_system
-       
+
 def calculate_area_mean_perimeter_fidelity(
     path_to_data,
     update_discriminator_settings_json = False,
     resonator_transmon_pair = None,
     ):
-    ''' Acquire the area and perimeter spanned by the readout states
-        for a given data file.
+    ''' Given a file containing readout state data, calculate
+        the area and perimeter spanned by the readout states,
+        as well as readout fidelities.
     '''
     
     # For all qubit states in the readout, gather spanned area, perimeter,
@@ -378,11 +387,12 @@ def calculate_area_mean_perimeter_fidelity(
     no_qubit_states = len(centre)
     
     # Calculate the readout fidelity from supplied data.
-    readout_fidelity = calculate_readout_fidelity(
-        data_to_process = processed_data,
-        state_centre_coordinates_list = centre,
-        prepared_qubit_states = prepared_qubit_states,
-    )
+    readout_fidelity, confusion_matrix = \
+        calculate_readout_fidelity(
+            data_to_process = processed_data,
+            state_centre_coordinates_list = centre,
+            prepared_qubit_states = prepared_qubit_states,
+        )
     
     # Check whether the program can find and area and a mean distance
     # between all states given the acquired data.
@@ -540,8 +550,10 @@ def calculate_area_mean_perimeter_fidelity(
         # Save calculated settings
         save_discriminator_settings(loaded_json_data)
     
-    return area_spanned_by_qubit_states, mean_distance_between_all_states, hamiltonian_path_perimeter, readout_fidelity
-    
+    return area_spanned_by_qubit_states, mean_distance_between_all_states, \
+        hamiltonian_path_perimeter, readout_fidelity, \
+        confusion_matrix
+
 def construct_state_from_quadrature_voltage(
     ):
     ''' Readout voltage quadratures can be used to reconstruct qubit states.
