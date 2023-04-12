@@ -949,15 +949,15 @@ def optimise_readout_frequency_g_e_f(
     
     # Confusion matrix entries. Keep in mind that we know that states
     # |g>, |e> and |f> are present due to the specific measurement that ran.
-    prob_meas0_prep0 = confusion_matrix[0][0]
-    prob_meas1_prep0 = confusion_matrix[0][1]
-    prob_meas2_prep0 = confusion_matrix[0][2]
-    prob_meas0_prep1 = confusion_matrix[1][0]
-    prob_meas1_prep1 = confusion_matrix[1][1]
-    prob_meas2_prep1 = confusion_matrix[1][2]
-    prob_meas0_prep2 = confusion_matrix[2][0]
-    prob_meas1_prep2 = confusion_matrix[2][1]
-    prob_meas2_prep2 = confusion_matrix[2][2]
+    prob_meas0_prep0 = final_confusion_matrix[0][0]
+    prob_meas1_prep0 = final_confusion_matrix[0][1]
+    prob_meas2_prep0 = final_confusion_matrix[0][2]
+    prob_meas0_prep1 = final_confusion_matrix[1][0]
+    prob_meas1_prep1 = final_confusion_matrix[1][1]
+    prob_meas2_prep1 = final_confusion_matrix[1][2]
+    prob_meas0_prep2 = final_confusion_matrix[2][0]
+    prob_meas1_prep2 = final_confusion_matrix[2][1]
+    prob_meas2_prep2 = final_confusion_matrix[2][2]
     
     # Data to be stored.
     hdf5_steps = [
