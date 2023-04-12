@@ -720,7 +720,11 @@ def optimise_readout_frequency_g_e_f(
         current_complex_dataset = "".join(current_complex_dataset)
         
         # Analyse the complex dataset.
-        area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity = \
+        area_spanned, \
+        mean_state_distance, \
+        hamiltonian_path_perimeter, \
+        readout_fidelity, \
+        confusion_matrix = \
             calculate_area_mean_perimeter_fidelity( \
                 path_to_data = os.path.abspath(current_complex_dataset)
             )
@@ -847,7 +851,7 @@ def optimise_readout_frequency_g_e_f(
         if (calc != 0.0):
             # Print "true" time remaining.
             show_user_time_remaining(calc)
-        
+    
     # We now have a dataset, showing resonator frequencies vs. area spanned
     # by the states, the mean distance between states in the complex plane,
     # and the Hamiltonian path perimeter.
@@ -886,6 +890,16 @@ def optimise_readout_frequency_g_e_f(
         optimal_choice_idx = biggest_fidelity_idx
     print("\nAfter weighing the metrics, entry " + list_of_current_complex_datasets[optimal_choice_idx,0]+" is hereby crowned as the optimal readout. (Scores: [Area, Inter-state distance, Perimeter] = "+str([weighted_area, weighted_mean_distance, weighted_perimeter, weighted_readout_fidelity])+")")
     
+    # We know the winner, get its confusion matrix.
+    ## Perhaps a TODO: the confusion matrix was acquired several times before.
+    ## An optimisation would be to somehow figure out a way where
+    ## This additional call to calculate_area_mean_perimeter_fidelity
+    ## is removed.
+    final_confusion_matrix = ( \
+            calculate_area_mean_perimeter_fidelity( \
+                list_of_current_complex_datasets[optimal_choice_idx,0]
+            ))[4]
+    
     # Get the optimal readout frequency for this resonator.
     with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
         optimal_readout_freq = h5f.attrs["readout_freq_of_swept_resonator"] ## TODO! Note that the get_complex_data_for_readout_optimisation_g_e_f is not generating a file with the full multiplexed readout. Only readout_freq_of_swept_resonator is swept in the measurement. This "semi-multiplexed" fact is a TODO.
@@ -913,7 +927,6 @@ def optimise_readout_frequency_g_e_f(
                 num_shots_per_state, \
                 num_shots_per_state  \
             )
-        
     
     # At this point, we may also update the discriminator settings JSON.
     update_discriminator_settings_with_value(
@@ -933,6 +946,18 @@ def optimise_readout_frequency_g_e_f(
     weighed_means = (list_of_current_complex_datasets[:,2]).astype(np.float64) * my_weight_given_to_mean_distance_between_all_states
     weighed_perimeters = (list_of_current_complex_datasets[:,3]).astype(np.float64) * my_weight_given_to_hamiltonian_path_perimeter
     weighed_fidelities = (list_of_current_complex_datasets[:,4]).astype(np.float64) * my_weight_given_to_readout_fidelity
+    
+    # Confusion matrix entries. Keep in mind that we know that states
+    # |g>, |e> and |f> are present due to the specific measurement that ran.
+    prob_meas0_prep0 = confusion_matrix[0][0]
+    prob_meas1_prep0 = confusion_matrix[0][1]
+    prob_meas2_prep0 = confusion_matrix[0][2]
+    prob_meas0_prep1 = confusion_matrix[1][0]
+    prob_meas1_prep1 = confusion_matrix[1][1]
+    prob_meas2_prep1 = confusion_matrix[1][2]
+    prob_meas0_prep2 = confusion_matrix[2][0]
+    prob_meas1_prep2 = confusion_matrix[2][1]
+    prob_meas2_prep2 = confusion_matrix[2][2]
     
     # Data to be stored.
     hdf5_steps = [
@@ -985,6 +1010,16 @@ def optimise_readout_frequency_g_e_f(
         'my_weight_given_to_mean_distance_between_all_states', "",
         'my_weight_given_to_hamiltonian_path_perimeter', "",
         'my_weight_given_to_readout_fidelity', "",
+        
+        'prob_meas0_prep0', "",
+        'prob_meas1_prep0', "",
+        'prob_meas2_prep0', "",
+        'prob_meas0_prep1', "",
+        'prob_meas1_prep1', "",
+        'prob_meas2_prep1', "",
+        'prob_meas0_prep2', "",
+        'prob_meas1_prep2', "",
+        'prob_meas2_prep2', "",
     ]
     hdf5_logs = [
         'fetched_data_arr', "FS",
