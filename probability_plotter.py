@@ -142,12 +142,16 @@ def plot_confusion_matrix(
     filepaths_to_plot,
     title = '',
     attempt_to_fix_string_input_argument = True,
+    figure_size_tuple = (15,12),
     maximum_state_to_attempt_to_plot = 10,
     ):
     ''' For some readout space datafile, extract the probabilities for reading
         out some state |N⟩ given that state |M⟩ was prepared.
         
         Put the confusion matrix data in a pretty plot.
+        
+        figure_size_tuple is a tuple, somehow defining the dimensions of the
+        output plot in yankeedoodleland units.
         
         maximum_state_to_attempt_to_plot = 10 denotes that the function
         will attempt to dig out states |0⟩ → |10⟩ from the data.
@@ -232,24 +236,27 @@ def plot_confusion_matrix(
         for item in y_axis:
             y_axis_str.append('Prepared |'+str(int(item))+'⟩')
         
+        # Set figure size
+        plt.figure(figsize = figure_size_tuple)
+        
         # Better to plot the x axis along the top.
         plt.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
         
         # Add numeric value to each box.
         for (j,i),label in np.ndenumerate(canvas):
             if float(label) <= 0.45:
-                plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white')
+                plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white', fontsize=35)
             else:
-                plt.text( i, j, label, ha='center', va='center', weight='bold')
+                plt.text( i, j, label, ha='center', va='center', weight='bold', fontsize=35)
         
         # Make pixel palette.
         plt.imshow(canvas, interpolation='nearest')
-        plt.xticks(x_axis, x_axis_str)
-        plt.yticks(y_axis, y_axis_str)
+        plt.xticks(x_axis, x_axis_str, fontsize = 21)
+        plt.yticks(y_axis, y_axis_str, fontsize = 21)
         if title == '':
-            plt.title("Confusion matrix")
+            plt.title("Confusion matrix", fontsize = 35, pad = 20)
         else:
-            plt.title(title)
+            plt.title(title, fontsize = 35, pad = 20)
         
         # Show plot!
         plt.show()
