@@ -51,7 +51,7 @@ def verify_supported_input_argument_to_fit(raw_data_or_path_to_data):
             the_user_provided_a_file = True
         else:
             # Just a string, dafuq?
-            raise TypeError("Error! The T1 fitter was provided with an input argument string, but this string is neither a folder nor a file.")
+            raise TypeError("Error! A fitting function was provided with an input argument string, but neither a folder nor a file could be found following that string.")
     elif (isinstance(raw_data_or_path_to_data, list)) or (type(raw_data_or_path_to_data) == np.ndarray): # Ok, did the user provide a list of things then?
         
         # Check if it's just raw data. Check the first resonator in that data.
@@ -111,7 +111,7 @@ def verify_supported_input_argument_to_fit(raw_data_or_path_to_data):
         the_user_provided_a_list_of_files    , \
         the_user_provided_a_list_of_raw_data ]
     assert sum(legible) == 1, \
-        "Error! The T1 fitter was provided with incomprehensible input. The "+\
+        "Error! The fitter was provided with incomprehensible input. The "   +\
         "input value(s) in raw_data_or_path_to_data, cannot uniquely be "    +\
         "identified to be *only* one of the following supported types: "     +\
         "folder; filepath; raw data array; a list of filepaths; a list of "  +\

@@ -40,7 +40,6 @@ from data_discriminator import \
 
 
 
-
 def get_complex_data_for_readout_optimisation_g_e_f(
     ip_address,
     ext_clk_present,
@@ -1145,6 +1144,7 @@ def optimise_integration_window_g_e_f(
     reset_dc_to_zero_when_finished = True,
     
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     suppress_log_browser_export_of_suboptimal_data = True,
     log_browser_tag  = 'default',
     log_browser_user = 'default',
@@ -1504,9 +1504,11 @@ def optimise_integration_window_g_e_f(
         append_to_log_name_before_timestamp = 'readout_integration_window',
         append_to_log_name_after_timestamp = '',
         use_log_browser_database = use_log_browser_database,
-        suppress_log_browser_export = False,
+        suppress_log_browser_export = suppress_log_browser_export,
     )
     
+    # Return.
+    return string_arr_to_return
 
 
 def get_time_traces_for_g_e_f(
