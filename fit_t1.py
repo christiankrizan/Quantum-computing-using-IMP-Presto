@@ -147,7 +147,7 @@ def fit_exponential_decay_t1(
         if the_user_provided_a_list_of_files:
             print("Performing T1 energy relaxation decay fitting on " + current_fit_item + "...")
         else:
-            print("Commencing T1 energy relaxation decay fitting of provided raw data...")
+            print("Commencing T1 energy relaxation decay fitting on the provided raw data...")
         
         # There may be multiple resonators involved (a multiplexed readout).
         # Grab every trace (as in, a bias sweep will have many traces),
@@ -182,7 +182,20 @@ def fit_exponential_decay_t1(
                     print("T1 from exponential decay fit of data: " + str(t1_time) + " ±" + str(fit_error/2))
                     
                     # Store fit and its plusminus error bar.
-                    (fitted_values[current_res_ii]).append((t1_time, fit_error/2))
+                    ## Warning: append will append to both resonators unless
+                    ## you are very darn careful at this step.
+                    previous_content_in_fitted_values = (fitted_values[current_res_ii]).copy()
+                    previous_content_in_fitted_values.append((t1_time, fit_error/2))
+                    fitted_values[current_res_ii] = previous_content_in_fitted_values.copy()
+                    del previous_content_in_fitted_values
+                    
+                    ## Here, I have preserved the previous code snippet that
+                    ## was patched with the .copy()-dance above.
+                    ## Writing just "(fitted_values[current_res_ii]).append("
+                    ## Seems to have been working this far. But I foresee
+                    ## user inputs that might break that code snippet.
+                    ## Case in point, multiplexed readouts.
+                    #(fitted_values[current_res_ii]).append((t1_time, fit_error/2))
                     
                     # Plot?
                     if plot_for_this_many_seconds != 0.0:
@@ -191,7 +204,7 @@ def fit_exponential_decay_t1(
                             t         = delay_arr_values,
                             T1        = optimal_vals_x[0],
                             y_excited = optimal_vals_x[1],
-                            y_ground  = optimal_vals_x[2],
+                            y_ground  = optimal_vals_x[2]
                         )
                         plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
                         plt.plot(delay_arr_values, fit_curve, color="#ef1620")
@@ -229,7 +242,7 @@ def fit_exponential_decay_t1(
         
         # Append!
         list_of_fitted_values.append( fitted_values )
-        
+    
     return list_of_fitted_values
 
 def exponential_decay(
