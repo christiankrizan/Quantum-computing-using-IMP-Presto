@@ -280,7 +280,10 @@ def fit_conditional_phase_offset(
     phase_when_on  = fit_result_list[1][0][resonator_index_with_sought_for_data][0][0]
     added_phase = phase_when_on - phase_when_off
     
-    return added_phase
+    # Also, get the absolute phase offset.
+    absolute_phase_offset = phase_when_off
+    
+    return added_phase, absolute_phase_offset
 
 def cosine_function(
     t,
