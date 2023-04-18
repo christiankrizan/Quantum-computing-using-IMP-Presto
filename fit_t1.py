@@ -20,7 +20,7 @@ def fit_exponential_decay_t1(
     plot_for_this_many_seconds = 0.0
     ):
     ''' From supplied data or datapath, fit the energy relaxation decay
-        to find out the exponent of which the energy decays.
+        to find out the exponent of which the energy decays, T₁.
         
         A failed fit (due to illegibly noisy input, for instance)
         will return a NaN ±NaN result.
@@ -145,9 +145,9 @@ def fit_exponential_decay_t1(
         
         # Report start!
         if the_user_provided_a_list_of_files:
-            print("Performing T1 energy relaxation decay fitting on " + current_fit_item + "...")
+            print("Performing T₁ energy relaxation decay fitting on " + current_fit_item + "...")
         else:
-            print("Commencing T1 energy relaxation decay fitting on the provided raw data...")
+            print("Commencing T₁ energy relaxation decay fitting on the provided raw data...")
         
         # There may be multiple resonators involved (a multiplexed readout).
         # Grab every trace (as in, a bias sweep will have many traces),
@@ -179,7 +179,7 @@ def fit_exponential_decay_t1(
                     fit_error = fit_err_x[0]
                     
                     # Print result.
-                    print("T1 from exponential decay fit of data: " + str(t1_time) + " ±" + str(fit_error/2))
+                    print("T₁ from exponential decay fit of data: " + str(t1_time) + " ±" + str(fit_error/2))
                     
                     # Store fit and its plusminus error bar.
                     ## Warning: append will append to both resonators unless
@@ -238,11 +238,13 @@ def fit_exponential_decay_t1(
                         print("T1 energy relaxation decay fit failure! Cannot fit the provided raw data.")
                     
                     # Store failed fit and its failed plusminus error bar.
+                    ## TODO this part here has probably not been protected against usage cases with multiplexed readouts.
                     (fitted_values[current_res_ii]).append((t1_time, fit_error/2))
         
         # Append!
         list_of_fitted_values.append( fitted_values )
     
+    # We're done.
     return list_of_fitted_values
 
 def exponential_decay(
