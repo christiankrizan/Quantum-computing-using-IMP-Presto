@@ -18,6 +18,7 @@ import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
 from phase_calculator import bandsign
+from time_calculator import get_timestamp_string
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
@@ -29,7 +30,6 @@ from time_calculator import \
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
-    get_timestamp_string, \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save, \
@@ -37,7 +37,7 @@ from data_exporter import \
 from data_discriminator import \
     calculate_area_mean_perimeter_fidelity, \
     update_discriminator_settings_with_value
-
+from connection_fault_handler import force_system_restart_over_ssh
 
 
 def get_complex_data_for_readout_optimisation_g_e_f(
@@ -588,6 +588,7 @@ def optimise_readout_frequency_g_e_f(
     num_readout_freq_steps,
     
     reset_dc_to_zero_when_finished = True,
+    force_device_reboot_on_connection_error = False,
     
     my_weight_given_to_area_spanned_by_qubit_states = 0.0,
     my_weight_given_to_mean_distance_between_all_states = 0.0,
@@ -672,49 +673,62 @@ def optimise_readout_frequency_g_e_f(
         tick = time.time()
         
         # Grab data.
-        current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
-            ip_address = ip_address,
-            ext_clk_present = ext_clk_present,
-            
-            readout_stimulus_port = readout_stimulus_port,
-            readout_sampling_port = readout_sampling_port,
-            readout_freq_nco = readout_freq_nco,
-            readout_freq_of_static_resonator = readout_freq_of_static_resonator,
-            readout_amp_of_static_resonator = readout_amp_of_static_resonator,
-            readout_freq_of_swept_resonator = curr_ro_freq, # Note: swept here!
-            readout_amp_of_swept_resonator = readout_amp_of_swept_resonator,
-            readout_duration = readout_duration,
-            
-            sampling_duration = sampling_duration,
-            readout_sampling_delay = readout_sampling_delay,
-            repetition_rate = repetition_rate,
-            integration_window_start = integration_window_start,
-            integration_window_stop = integration_window_stop,
-            
-            control_port = control_port,
-            control_freq_nco = control_freq_nco,
-            control_freq_01 = control_freq_01,
-            control_amp_01 = control_amp_01,
-            control_duration_01 = control_duration_01,
-            control_freq_12 = control_freq_12,
-            control_amp_12 = control_amp_12,
-            control_duration_12 = control_duration_12,
-            
-            coupler_dc_port = coupler_dc_port,
-            coupler_dc_bias = coupler_dc_bias,
-            settling_time_of_bias_tee = settling_time_of_bias_tee,
-            
-            num_averages = num_averages,
-            num_shots_per_state = num_shots_per_state,
-            resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
-            
-            reset_dc_to_zero_when_finished = reset_dc_to_zero_when_finished,
-            
-            use_log_browser_database = use_log_browser_database,
-            suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
-            axes = axes
-        )
-    
+        ## Perform this step within a connection handler loop,
+        ## to catch crashes.
+        success = False
+        tries = 0
+        while ((not success) and (tries <= 5)):
+            tries += 1
+            try:
+                current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
+                    ip_address = ip_address,
+                    ext_clk_present = ext_clk_present,
+                    
+                    readout_stimulus_port = readout_stimulus_port,
+                    readout_sampling_port = readout_sampling_port,
+                    readout_freq_nco = readout_freq_nco,
+                    readout_freq_of_static_resonator = readout_freq_of_static_resonator,
+                    readout_amp_of_static_resonator = readout_amp_of_static_resonator,
+                    readout_freq_of_swept_resonator = curr_ro_freq, # Note: swept here!
+                    readout_amp_of_swept_resonator = readout_amp_of_swept_resonator,
+                    readout_duration = readout_duration,
+                    
+                    sampling_duration = sampling_duration,
+                    readout_sampling_delay = readout_sampling_delay,
+                    repetition_rate = repetition_rate,
+                    integration_window_start = integration_window_start,
+                    integration_window_stop = integration_window_stop,
+                    
+                    control_port = control_port,
+                    control_freq_nco = control_freq_nco,
+                    control_freq_01 = control_freq_01,
+                    control_amp_01 = control_amp_01,
+                    control_duration_01 = control_duration_01,
+                    control_freq_12 = control_freq_12,
+                    control_amp_12 = control_amp_12,
+                    control_duration_12 = control_duration_12,
+                    
+                    coupler_dc_port = coupler_dc_port,
+                    coupler_dc_bias = coupler_dc_bias,
+                    settling_time_of_bias_tee = settling_time_of_bias_tee,
+                    
+                    num_averages = num_averages,
+                    num_shots_per_state = num_shots_per_state,
+                    resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
+                    
+                    reset_dc_to_zero_when_finished = reset_dc_to_zero_when_finished,
+                    
+                    use_log_browser_database = use_log_browser_database,
+                    suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
+                    axes = axes
+                )
+                
+                success = True # Done
+            except ConnectionRefusedError:
+                if force_device_reboot_on_connection_error:
+                    force_system_restart_over_ssh("129.16.115.184")
+        assert success, "Halted! Unrecoverable crash detected."
+        
         # current_complex_dataset will be a char array. Convert to string.
         current_complex_dataset = "".join(current_complex_dataset)
         

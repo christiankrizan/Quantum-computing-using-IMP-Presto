@@ -5,8 +5,9 @@
 #   https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/blob/master/LICENSE
 #############################################################################################
 
-from presto.utils import ssh_reboot
 from time import sleep
+from time_calculator import get_timestamp_string
+from presto.utils import ssh_reboot
 
 def force_system_restart_over_ssh(
     ip_address
@@ -22,6 +23,10 @@ def force_system_restart_over_ssh(
     # Ensure legal IP address
     assert isinstance(ip_address, str), "Error! Could not parse provided IP address string."
     
+    # Initiate remote reboot.
+    print(  "The Presto died at "+str(get_timestamp_string(pretty = True)) + \
+            ". Requiescat in frusta.\n\nRebooting...\n\n")
+    
     # Check that the user has the required fabric package
     fabric_import_successful = False
     try:
@@ -30,11 +35,9 @@ def force_system_restart_over_ssh(
     except ModuleNotFoundError:
         pass
     if not fabric_import_successful:
-        raise ModuleNotFoundError("Error! Could not find the package \"fabric\" - ensure that you have it installed.")
+        raise ModuleNotFoundError("Error! Could not find the required package \"fabric\" - ensure that you have it installed.")
     del fabric_import_successful
     
-    # Initiate remote reboot.
-    print("The Presto instrument is not responding. Initiating remote reboot...")
     try:
         ssh_reboot(ip_address)
     except UnexpectedExit:

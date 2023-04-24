@@ -75,7 +75,10 @@ def show_user_time_remaining(seconds):
         print(str(calc_w)+" week(s), "+str(calc_d)+" days, "+str(calc_h)+" hours, "+str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds.")
     print("##############################\n")
 
-def get_timestamp_string():
+def get_timestamp_string(pretty = False):
     ''' Return an appropriate timestamp string.
     '''
-    return (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
+    if (not pretty):
+        return (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
+    else:
+        return (datetime.now()).strftime("%d-%b-%Y (%H:%M:%S)")
