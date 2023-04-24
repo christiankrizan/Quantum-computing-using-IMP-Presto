@@ -663,9 +663,9 @@ def iswap_then_cz20_conditional_cross_ramsey(
             phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
             
             # Add the local phase correction following the iSWAP gate
-            phase_A = add_virtual_z(T, phase_A, phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
-            phase_B = add_virtual_z(T, phase_B, phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
-            phase_C = add_virtual_z(T, phase_C, phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
+            phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+            phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+            phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
             
             # Apply CZ₂₀ gate
             pls.output_pulse(T, coupler_ac_pulse_cz20)
@@ -675,9 +675,9 @@ def iswap_then_cz20_conditional_cross_ramsey(
             phase_C = track_phase(T - T_begin, coupler_ac_freq_cz20, phase_C)
             
             # Add the local phase correction following the CZ₂₀ gate
-            phase_A = add_virtual_z(T, phase_A, phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
-            phase_B = add_virtual_z(T, phase_B, phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
-            ##phase_C = add_virtual_z(T, phase_C, phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
+            phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+            phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+            ##phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
             
             # And, as art of making a SWAP gate that is legal for any input
             # state, we apply a final Hadamard gate on the qubit NOT initially
@@ -1353,8 +1353,8 @@ def synthetic_swap_prep_10_cross_Ramsey_DEPRECATED(
             output_ports    = coupler_ac_port,
             group           = 0,
             frequencies     = np.abs(coupler_ac_freq_if_iswap),
-            phases          = phase_adjustment_coupler_ac_iswap,
-            phases_q        = phase_adjustment_coupler_ac_iswap + bandsign(coupler_ac_freq_if_iswap),
+            phases          = -phase_adjustment_coupler_ac_iswap,
+            phases_q        = -phase_adjustment_coupler_ac_iswap + bandsign(coupler_ac_freq_if_iswap),
         )
         
         
@@ -1379,8 +1379,8 @@ def synthetic_swap_prep_10_cross_Ramsey_DEPRECATED(
             output_ports    = coupler_ac_port,
             group           = 1,
             frequencies     = np.abs(coupler_ac_freq_if_cz20),
-            phases          = phase_adjustment_coupler_ac_cz20,
-            phases_q        = phase_adjustment_coupler_ac_cz20 + bandsign(coupler_ac_freq_if_cz20),
+            phases          = -phase_adjustment_coupler_ac_cz20,
+            phases_q        = -phase_adjustment_coupler_ac_cz20 + bandsign(coupler_ac_freq_if_cz20),
         )
         
         

@@ -26,11 +26,12 @@ from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
     change_dc_bias
-from time_calculator import check_if_integration_window_is_legal
+from time_calculator import \
+    check_if_integration_window_is_legal, \
+    get_timestamp_string
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
-    get_timestamp_string, \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save
@@ -118,7 +119,7 @@ def execute(
     ''' Execute an arbitrary quantum circuit, of course within the limitations
         of the native gate set.
     '''
-    
+    raise NotImplementedError("Halted, not verified to work with changes.\n\n"+ str(quantum_circuit))
     ## Input sanitisation
     
     # DC bias argument sanitisation.

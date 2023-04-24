@@ -2835,13 +2835,13 @@ def iswap_tune_local_accumulated_phase(
             # Put the system into state |10> or |01>, with local phase errors.
             if prepare_input_state == '+0':
                 # Set the phase for the final π/2 gate at this point.
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A + phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
                 T += control_duration_01
                 phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
                 # Set the phase for the final π/2 gate at this point.
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B + phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
                 T += control_duration_01
                 phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)

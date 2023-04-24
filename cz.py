@@ -32,6 +32,7 @@ from time_calculator import \
     get_timestamp_string
 from data_exporter import \
     ensure_all_keyed_elements_even, \
+    export_processed_data_to_file, \
     stylise_axes, \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
@@ -2808,9 +2809,9 @@ def cz20_tune_local_accumulated_phase(
             # pulse played back, thus no real time duration spent.
             # Meaning in turn, no need to track some phase using track_phase.
             if prepare_input_state == '+0':
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A + phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
             else:
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B + phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
             
             # Apply CZ20† gate.
             pls.output_pulse(T, coupler_ac_pulse_cz20_inverted)
@@ -2828,13 +2829,13 @@ def cz20_tune_local_accumulated_phase(
             # Then, apply the final pi/2 gate on the adjusted qubit.
             if prepare_input_state == '+0':
                 # Set the phase for the final π/2 gate at this point.
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A + phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
                 T += control_duration_01
                 phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
                 # Set the phase for the final π/2 gate at this point.
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B + phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
                 T += control_duration_01
                 phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
@@ -3459,9 +3460,9 @@ def cz20_tune_local_accumulated_phase_state_probability(
             # pulse played back, thus no real time duration spent.
             # Meaning in turn, no need to track some phase using track_phase.
             if prepare_input_state == '+0':
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A + phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
             else:
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B + phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
             
             # Apply CZ20† gate.
             pls.output_pulse(T, coupler_ac_pulse_cz20_inverted)
@@ -3479,13 +3480,13 @@ def cz20_tune_local_accumulated_phase_state_probability(
             # Then, apply the final pi/2 gate on the adjusted qubit.
             if prepare_input_state == '+0':
                 # Set the phase for the final π/2 gate at this point.
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A + phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
                 T += control_duration_01
                 phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
                 # Set the phase for the final π/2 gate at this point.
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B + phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
                 T += control_duration_01
                 phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
@@ -4122,11 +4123,11 @@ def cz20_cross_ramsey(
             # but also make sure to sweep the phase of the qubit which
             # was originally prepared in |+>
             if prepare_input_state[-1] == '+':
-                phase_A = add_virtual_z(T, phase_A, phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
-                phase_B = add_virtual_z(T, phase_B, phase_adjustment_after_cz20_B + control_phase_arr[ii], control_port_B, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_cz20_B + control_phase_arr[ii], control_port_B, 0, phases_declared, pls)
             else:
-                phase_A = add_virtual_z(T, phase_A, phase_adjustment_after_cz20_A + control_phase_arr[ii], control_port_A, 0, phases_declared, pls)
-                phase_B = add_virtual_z(T, phase_B, phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_cz20_A + control_phase_arr[ii], control_port_A, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
             
             # Apply pi/2 gate on the qubit prepared in |+>
             if prepare_input_state[-1] == '+':
@@ -4374,6 +4375,7 @@ def cz20_tune_frequency_until_pi_phase(
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
     reset_dc_to_zero_when_finished = True,
+    force_device_reboot_on_connection_error = False,
     
     conditional_qubit_is = 'A',
     
@@ -4444,6 +4446,10 @@ def cz20_tune_frequency_until_pi_phase(
         print("Note: single control frequency point requested, ignoring span parameter.")
         coupler_ac_freq_cz20_span = 0
     
+    # Prepare variables for keeping track of what time to print out.
+    num_tick_tocks = 0
+    total_dur = 0
+    
     # Declare resonator frequency stepping array.
     cz20_freq_start = coupler_ac_freq_cz20_centre - coupler_ac_freq_cz20_span/2
     cz20_freq_stop  = coupler_ac_freq_cz20_centre + coupler_ac_freq_cz20_span/2
@@ -4470,6 +4476,9 @@ def cz20_tune_frequency_until_pi_phase(
     conditional_cross_ramsey_input_state_list = ['0+', '1+'] if (conditional_qubit_is == 'A') else ['+0', '+1']
     for current_cz20_frequency in cz20_freq_arr:
         
+        # Get a time estimate for printing "time remaining" to the user.
+        tick = time.time()
+        
         ## Execute a CZ₂₀ conditional cross-Ramsey for states |0+⟩ and |1+⟩!
         
         # First, we need to know the local accumulated phase correction
@@ -4478,90 +4487,93 @@ def cz20_tune_frequency_until_pi_phase(
         for use_this_input_state in ['+0','0+']:
             
             # Run a CZ₂₀ and get the local accumulated phase of both qubits.
-            """ TODO DEVMODE UNCOMMENT
-            untuned_cz20_results.append( \
-                cz20_tune_local_accumulated_phase(
-                    ip_address = ip_address,
-                    ext_clk_present = ext_clk_present,
+            ## Perform this step within a connection handler loop,
+            ## to catch crashes.
+            success = False
+            tries = 0
+            while ((not success) and (tries <= 5)):
+                tries += 1
+                try:
+                    cz_result = cz20_tune_local_accumulated_phase(
+                        ip_address = ip_address,
+                        ext_clk_present = ext_clk_present,
+                        
+                        readout_stimulus_port = readout_stimulus_port,
+                        readout_sampling_port = readout_sampling_port,
+                        readout_freq_nco = readout_freq_nco,
+                        readout_freq_A = readout_freq_A,
+                        readout_amp_A = readout_amp_A,
+                        readout_freq_B = readout_freq_B,
+                        readout_amp_B = readout_amp_B,
+                        readout_duration = readout_duration,
+                        
+                        sampling_duration = sampling_duration,
+                        readout_sampling_delay = readout_sampling_delay,
+                        repetition_rate = repetition_rate,
+                        integration_window_start = integration_window_start,
+                        integration_window_stop = integration_window_stop,
+                        
+                        control_port_A = control_port_A,
+                        control_freq_nco_A = control_freq_nco_A,
+                        control_freq_01_A = control_freq_01_A,
+                        control_amp_01_A = control_amp_01_A,
+                        control_port_B = control_port_B,
+                        control_freq_nco_B = control_freq_nco_B,
+                        control_freq_01_B = control_freq_01_B,
+                        control_amp_01_B = control_amp_01_B,
+                        control_duration_01 = control_duration_01,
+                        
+                        coupler_dc_port = coupler_dc_port,
+                        coupler_dc_bias = coupler_dc_bias,
+                        settling_time_of_bias_tee = settling_time_of_bias_tee,
+                        
+                        coupler_ac_port = coupler_ac_port,
+                        coupler_ac_freq_nco = coupler_ac_freq_nco,
+                        coupler_ac_freq_cz20 = current_cz20_frequency, ## Note!
+                        coupler_ac_amp_cz20 = coupler_ac_amp_cz20,
+                        coupler_ac_single_edge_time_cz20 = coupler_ac_single_edge_time_cz20,
+                        coupler_ac_plateau_duration_cz20 = coupler_ac_plateau_duration_cz20,
+                        
+                        num_averages = num_averages,
+                        
+                        num_phases = num_phases,
+                        phase_sweep_rad_min = phase_sweep_rad_min,
+                        phase_sweep_rad_max = phase_sweep_rad_max,
+                        
+                        phase_adjustment_after_cz20_A = 0.0, # At this point in time, the required local phase correction is unknown.
+                        phase_adjustment_after_cz20_B = 0.0, # At this point in time, the required local phase correction is unknown.
+                        
+                        prepare_input_state = use_this_input_state,
+                        
+                        reset_dc_to_zero_when_finished = reset_dc_to_zero_when_finished,
+                        
+                        save_complex_data = save_complex_data,
+                        save_raw_time_data = save_raw_time_data,
+                        use_log_browser_database = use_log_browser_database,
+                        suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
+                        default_exported_log_file_name = 'default',
+                        log_browser_tag  = 'default',
+                        log_browser_user = 'default',
+                        axes =  {
+                            "x_name":   'default',
+                            "x_scaler": 1.0,
+                            "x_unit":   'default',
+                            "y_name":   'default',
+                            "y_scaler": [1.0, 1.0],
+                            "y_offset": [0.0, 0.0],
+                            "y_unit":   'default',
+                            "z_name":   'default',
+                            "z_scaler": 1.0,
+                            "z_unit":   'default',
+                        }
+                    )
                     
-                    readout_stimulus_port = readout_stimulus_port,
-                    readout_sampling_port = readout_sampling_port,
-                    readout_freq_nco = readout_freq_nco,
-                    readout_freq_A = readout_freq_A,
-                    readout_amp_A = readout_amp_A,
-                    readout_freq_B = readout_freq_B,
-                    readout_amp_B = readout_amp_B,
-                    readout_duration = readout_duration,
-                    
-                    sampling_duration = sampling_duration,
-                    readout_sampling_delay = readout_sampling_delay,
-                    repetition_rate = repetition_rate,
-                    integration_window_start = integration_window_start,
-                    integration_window_stop = integration_window_stop,
-                    
-                    control_port_A = control_port_A,
-                    control_freq_nco_A = control_freq_nco_A,
-                    control_freq_01_A = control_freq_01_A,
-                    control_amp_01_A = control_amp_01_A,
-                    control_port_B = control_port_B,
-                    control_freq_nco_B = control_freq_nco_B,
-                    control_freq_01_B = control_freq_01_B,
-                    control_amp_01_B = control_amp_01_B,
-                    control_duration_01 = control_duration_01,
-                    
-                    coupler_dc_port = coupler_dc_port,
-                    coupler_dc_bias = coupler_dc_bias,
-                    settling_time_of_bias_tee = settling_time_of_bias_tee,
-                    
-                    coupler_ac_port = coupler_ac_port,
-                    coupler_ac_freq_nco = coupler_ac_freq_nco,
-                    coupler_ac_freq_cz20 = current_cz20_frequency, ## Note!
-                    coupler_ac_amp_cz20 = coupler_ac_amp_cz20,
-                    coupler_ac_single_edge_time_cz20 = coupler_ac_single_edge_time_cz20,
-                    coupler_ac_plateau_duration_cz20 = coupler_ac_plateau_duration_cz20,
-                    
-                    num_averages = num_averages,
-                    
-                    num_phases = num_phases,
-                    phase_sweep_rad_min = phase_sweep_rad_min,
-                    phase_sweep_rad_max = phase_sweep_rad_max,
-                    
-                    phase_adjustment_after_cz20_A = 0.0, # At this point in time, the required local phase correction is unknown.
-                    phase_adjustment_after_cz20_B = 0.0, # At this point in time, the required local phase correction is unknown.
-                    
-                    prepare_input_state = use_this_input_state,
-                    
-                    reset_dc_to_zero_when_finished = reset_dc_to_zero_when_finished,
-                    
-                    save_complex_data = save_complex_data,
-                    save_raw_time_data = save_raw_time_data,
-                    use_log_browser_database = use_log_browser_database,
-                    suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
-                    default_exported_log_file_name = 'default',
-                    log_browser_tag  = 'default',
-                    log_browser_user = 'default',
-                    axes =  {
-                        "x_name":   'default',
-                        "x_scaler": 1.0,
-                        "x_unit":   'default',
-                        "y_name":   'default',
-                        "y_scaler": [1.0, 1.0],
-                        "y_offset": [0.0, 0.0],
-                        "y_unit":   'default',
-                        "z_name":   'default',
-                        "z_scaler": 1.0,
-                        "z_unit":   'default',
-                    }
-                )
-            / TODO DEVMODE UNCOMMENT """
-            pass
-        
-        """ TODO devmode HAER """
-        untuned_cz20_results = [ \
-            r"C:\Bufo bufo\Indecorum\Data output folder\2023\04\Data_0410\cz_20_tune_local_accumulated_phase_10-Apr-2023_(18_11_06).h5", \
-            r"C:\Bufo bufo\Indecorum\Data output folder\2023\04\Data_0410\cz_20_tune_local_accumulated_phase_10-Apr-2023_(18_24_10).h5"
-        ]
-        """ / TODO devmode HAER """
+                    success = True # Done
+                except ConnectionRefusedError:
+                    if force_device_reboot_on_connection_error:
+                        force_system_restart_over_ssh("129.16.115.184")
+            assert success, "Halted! Unrecoverable crash detected."
+            untuned_cz20_results.append( cz_result[0] )
         
         # At this point, untuned_cz20_results contains the filepaths of
         # the two measurements that yield the required phase correction.
@@ -4572,7 +4584,7 @@ def cz20_tune_frequency_until_pi_phase(
             raw_data_or_path_to_data = untuned_cz20_results,
             control_phase_arr = [],
             i_renamed_the_control_phase_arr_to = '',
-            plot_for_this_many_seconds = 0.0,
+            plot_for_this_many_seconds = 0,
             verbose = False,
         )
         
@@ -4591,7 +4603,7 @@ def cz20_tune_frequency_until_pi_phase(
             curr_local_phase_correction_B
         del curr_local_phase_correction_A, curr_local_phase_correction_B
         
-        """# Delete the suboptimal files?
+        # Delete the suboptimal files?
         if suppress_log_browser_export_of_suboptimal_data:
             for file_to_remove in untuned_cz20_results:
                 # The recent data is irrelevant, remove it.
@@ -4607,7 +4619,6 @@ def cz20_tune_frequency_until_pi_phase(
                         time.sleep(0.2)
                 if (not success):
                     raise OSError("Error: could not delete data file "+str(os.path.abspath(untuned_cz20_results[ii]))+" after "+str(max_attempts)+" attempts. Halting.")
-        TODO HAER uncoment """
         
         # Clean up.
         del untuned_cz20_results
@@ -4620,87 +4631,96 @@ def cz20_tune_frequency_until_pi_phase(
             
             # Execute conditional cross-Ramsey, using the figured-out
             # local accumulated phase corrections.
-            """ TODO REMOVE devcomment
+            ## Perform this step within a connection handler loop,
+            ## to catch crashes.
+            success = False
+            tries = 0
+            while ((not success) and (tries <= 5)):
+                tries += 1
+                try:
+                    res_cz_cross_ramsey = cz20_cross_ramsey(
+                        ip_address = ip_address,
+                        ext_clk_present = ext_clk_present,
+                        
+                        readout_stimulus_port = readout_stimulus_port,
+                        readout_sampling_port = readout_sampling_port,
+                        readout_freq_nco = readout_freq_nco,
+                        readout_freq_A = readout_freq_A,
+                        readout_amp_A = readout_amp_A,
+                        readout_freq_B = readout_freq_B,
+                        readout_amp_B = readout_amp_B,
+                        readout_duration = readout_duration,
+                        
+                        sampling_duration = sampling_duration,
+                        readout_sampling_delay = readout_sampling_delay,
+                        repetition_rate = repetition_rate,
+                        integration_window_start = integration_window_start,
+                        integration_window_stop = integration_window_stop,
+                        
+                        control_port_A = control_port_A,
+                        control_freq_nco_A = control_freq_nco_A,
+                        control_freq_01_A = control_freq_01_A,
+                        control_amp_01_A = control_amp_01_A,
+                        control_port_B = control_port_B,
+                        control_freq_nco_B = control_freq_nco_B,
+                        control_freq_01_B = control_freq_01_B,
+                        control_amp_01_B = control_amp_01_B,
+                        control_duration_01 = control_duration_01,
+                        
+                        coupler_dc_port = coupler_dc_port,
+                        coupler_dc_bias = coupler_dc_bias,
+                        settling_time_of_bias_tee = settling_time_of_bias_tee,
+                        
+                        coupler_ac_port = coupler_ac_port,
+                        coupler_ac_freq_nco = coupler_ac_freq_nco,
+                        coupler_ac_freq_cz20 = current_cz20_frequency, ## Note!
+                        coupler_ac_amp_cz20 = coupler_ac_amp_cz20,
+                        coupler_ac_single_edge_time_cz20 = coupler_ac_single_edge_time_cz20,
+                        coupler_ac_plateau_duration_cz20 = coupler_ac_plateau_duration_cz20,
+                        
+                        num_averages = num_averages,
+                        
+                        num_phases = num_phases,
+                        phase_sweep_rad_min = phase_sweep_rad_min,
+                        phase_sweep_rad_max = phase_sweep_rad_max,
+                        
+                        phase_adjustment_after_cz20_A = local_accumulated_phase_correction[0], ## Note! This value is known now.
+                        phase_adjustment_after_cz20_B = local_accumulated_phase_correction[1], ## Note! This value is known now.
+                        
+                        prepare_input_state = use_this_input_state, ## Note!
+                        
+                        reset_dc_to_zero_when_finished = reset_dc_to_zero_when_finished,
+                        
+                        save_complex_data = save_complex_data,
+                        save_raw_time_data = save_raw_time_data,
+                        use_log_browser_database = use_log_browser_database,
+                        suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
+                        default_exported_log_file_name = 'default',
+                        log_browser_tag  = 'default',
+                        log_browser_user = 'default',
+                        axes =  {
+                            "x_name":   'default',
+                            "x_scaler": 1.0,
+                            "x_unit":   'default',
+                            "y_name":   'default',
+                            "y_scaler": [1.0, 1.0],
+                            "y_offset": [0.0, 0.0],
+                            "y_unit":   'default',
+                            "z_name":   'default',
+                            "z_scaler": 1.0,
+                            "z_unit":   'default',
+                        }
+                    )
+                    
+                    success = True # Done
+                except ConnectionRefusedError:
+                    if force_device_reboot_on_connection_error:
+                        force_system_restart_over_ssh("129.16.115.184")
+            assert success, "Halted! Unrecoverable crash detected."
+            
             tuned_conditional_cross_ramsey_results.append( \
-                cz20_cross_ramsey(
-                    ip_address = ip_address,
-                    ext_clk_present = ext_clk_present,
-                    
-                    readout_stimulus_port = readout_stimulus_port,
-                    readout_sampling_port = readout_sampling_port,
-                    readout_freq_nco = readout_freq_nco,
-                    readout_freq_A = readout_freq_A,
-                    readout_amp_A = readout_amp_A,
-                    readout_freq_B = readout_freq_B,
-                    readout_amp_B = readout_amp_B,
-                    readout_duration = readout_duration,
-                    
-                    sampling_duration = sampling_duration,
-                    readout_sampling_delay = readout_sampling_delay,
-                    repetition_rate = repetition_rate,
-                    integration_window_start = integration_window_start,
-                    integration_window_stop = integration_window_stop,
-                    
-                    control_port_A = control_port_A,
-                    control_freq_nco_A = control_freq_nco_A,
-                    control_freq_01_A = control_freq_01_A,
-                    control_amp_01_A = control_amp_01_A,
-                    control_port_B = control_port_B,
-                    control_freq_nco_B = control_freq_nco_B,
-                    control_freq_01_B = control_freq_01_B,
-                    control_amp_01_B = control_amp_01_B,
-                    control_duration_01 = control_duration_01,
-                    
-                    coupler_dc_port = coupler_dc_port,
-                    coupler_dc_bias = coupler_dc_bias,
-                    settling_time_of_bias_tee = settling_time_of_bias_tee,
-                    
-                    coupler_ac_port = coupler_ac_port,
-                    coupler_ac_freq_nco = coupler_ac_freq_nco,
-                    coupler_ac_freq_cz20 = current_cz20_frequency, ## Note!
-                    coupler_ac_amp_cz20 = coupler_ac_amp_cz20,
-                    coupler_ac_single_edge_time_cz20 = coupler_ac_single_edge_time_cz20,
-                    coupler_ac_plateau_duration_cz20 = coupler_ac_plateau_duration_cz20,
-                    
-                    num_averages = num_averages,
-                    
-                    num_phases = num_phases,
-                    phase_sweep_rad_min = phase_sweep_rad_min,
-                    phase_sweep_rad_max = phase_sweep_rad_max,
-                    
-                    phase_adjustment_after_cz20_A = local_accumulated_phase_correction[0], ## Note! This value is known now.
-                    phase_adjustment_after_cz20_B = local_accumulated_phase_correction[1], ## Note! This value is known now.
-                    
-                    prepare_input_state = use_this_input_state, ## Note!
-                    
-                    reset_dc_to_zero_when_finished = reset_dc_to_zero_when_finished,
-                    
-                    save_complex_data = save_complex_data,
-                    save_raw_time_data = save_raw_time_data,
-                    use_log_browser_database = use_log_browser_database,
-                    suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
-                    default_exported_log_file_name = 'default',
-                    log_browser_tag  = 'default',
-                    log_browser_user = 'default',
-                    axes =  {
-                        "x_name":   'default',
-                        "x_scaler": 1.0,
-                        "x_unit":   'default',
-                        "y_name":   'default',
-                        "y_scaler": [1.0, 1.0],
-                        "y_offset": [0.0, 0.0],
-                        "y_unit":   'default',
-                        "z_name":   'default',
-                        "z_scaler": 1.0,
-                        "z_unit":   'default',
-                    }
-                )
-            )"""
-        # TODO HAER DEBUG
-        tuned_conditional_cross_ramsey_results = [ \
-            r"C:\Bufo bufo\Indecorum\Data output folder\2023\04\Data_0413\cz_conditional_cross_Ramsey_13-Apr-2023_(13_01_23).h5", \
-            r"C:\Bufo bufo\Indecorum\Data output folder\2023\04\Data_0413\cz_conditional_cross_Ramsey_13-Apr-2023_(13_26_13).h5"
-        ]
+                res_cz_cross_ramsey[0]
+            )
         
         ## We may not yet clear out local_accumulated_phase_correction.
         ## DO NOT del local_accumulated_phase_correction
@@ -4721,7 +4741,6 @@ def cz20_tune_frequency_until_pi_phase(
             verbose = False,
         )
         
-        """# Delete the suboptimal files?
         for file_to_delete in tuned_conditional_cross_ramsey_results:
             if suppress_log_browser_export_of_suboptimal_data:
                 # The recent data is irrelevant, remove it.
@@ -4737,7 +4756,7 @@ def cz20_tune_frequency_until_pi_phase(
                         time.sleep(0.2)
                 if (not success):
                     raise OSError("Error: could not delete data file "+str(os.path.abspath( file_to_delete ))+" after "+str(max_attempts)+" attempts. Halting.")
-        TODO HAER uncoment"""
+        
         # current_added_phase_by_cz20 contains how much phase was added
         # by the current CZ₂₀ at this frequency. Append value to list.
         cz20_added_phase_arr.append( current_added_phase_by_cz20 )
@@ -4750,6 +4769,16 @@ def cz20_tune_frequency_until_pi_phase(
             optimal_phase_adjustment_after_cz20_B = local_accumulated_phase_correction[1]
             added_phase_of_optimal_cz20_gate = current_added_phase_by_cz20
             absolute_phase_offset_from_cz20_gate = current_absolute_phase_offset_from_cz20_gate
+        
+        # Tock the clock, and show the user the time remaining.
+        tock = time.time() # Get a time estimate.
+        num_tick_tocks += 1
+        total_dur += (tock - tick)
+        average_duration_per_point = total_dur / num_tick_tocks
+        calc = (len(cz20_freq_arr)-num_tick_tocks)*average_duration_per_point
+        if (calc != 0.0):
+            # Print "true" time remaining.
+            show_user_time_remaining(calc)
     
     # At this point, we've finished building our arrays and are ready
     # to send them off into a final plot.
@@ -4867,15 +4896,13 @@ def cz20_tune_frequency_until_pi_phase(
             axes = axes
         ))
     
-    print("TODO check that processed_data = [cz20_added_phase_arr] is legal.")
-    
     # Export the non-complex data (in a Log Browser compatible format).
-    export_processed_data_to_file(
+    string_arr_to_return = export_processed_data_to_file(
         filepath_of_calling_script = os.path.realpath(__file__),
         ext_keys = ext_keys,
         log_dict_list = log_dict_list,
         
-        processed_data = [cz20_added_phase_arr],
+        processed_data = [np.array([cz20_added_phase_arr])],
         fetched_data_scale = axes['y_scaler'],
         fetched_data_offset = axes['y_offset'],
         
