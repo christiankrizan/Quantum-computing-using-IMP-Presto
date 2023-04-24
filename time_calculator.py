@@ -32,11 +32,11 @@ def check_if_integration_window_is_legal(
     assert integration_window_start >= time_vector[0], \
         "Error! The requested integration window begins before the first " + \
         "sample of the scoped data."
-    assert integration_window_stop  >= time_vector[-1], \
+    assert integration_window_stop  <= time_vector[-1], \
         "Error! The requested integration window stops after the last " + \
-        "sample of the scoped data. The stop is at "                    + \
+        "sample of the scoped data. The integration window stop is at " + \
         str(integration_window_stop)+" seconds, while the last sample " + \
-        "of the integration window is at "+str(time_vector[-1])+" seconds."
+        "of the scoped data is at "+str(time_vector[-1])+" seconds."
     
     # Return the possibly updated integration window stop.
     return integration_window_stop
