@@ -13,7 +13,6 @@ import json
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
-from datetime import datetime
 
 def initiate_discriminator_settings_file(
     initial_resonator_qubit_pair = 0

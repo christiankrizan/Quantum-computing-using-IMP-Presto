@@ -15,7 +15,6 @@ import time
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
-from time_calculator import get_timestamp_string
 from phase_calculator import \
     cap_at_plus_or_minus_two_pi, \
     reset_phase_counter, \
@@ -29,7 +28,8 @@ from bias_calculator import \
 from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
     check_if_integration_window_is_legal,\
-    show_user_time_remaining
+    show_user_time_remaining, \
+    get_timestamp_string
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \

@@ -15,12 +15,12 @@ import time
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
-from datetime import datetime
-from time_calculator import check_if_integration_window_is_legal
+from time_calculator import \
+    check_if_integration_window_is_legal, \
+    get_timestamp_string
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
-    get_timestamp_string, \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save

@@ -18,7 +18,6 @@ import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
 from phase_calculator import bandsign
-from time_calculator import get_timestamp_string
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
@@ -26,7 +25,8 @@ from bias_calculator import \
 from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
     check_if_integration_window_is_legal, \
-    show_user_time_remaining
+    show_user_time_remaining, \
+    get_timestamp_string
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
@@ -945,7 +945,7 @@ def optimise_readout_frequency_g_e_f(
     update_discriminator_settings_with_value(
         path_to_data = os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0])
     )
-    area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity = calculate_area_mean_perimeter_fidelity(
+    area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity, confusion_matrix = calculate_area_mean_perimeter_fidelity(
         path_to_data = os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]),
         update_discriminator_settings_json = True
     )

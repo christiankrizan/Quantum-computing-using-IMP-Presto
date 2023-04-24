@@ -25,11 +25,12 @@ from bias_calculator import \
     get_dc_dac_range_integer, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
-from time_calculator import check_if_integration_window_is_legal
+from time_calculator import \
+    check_if_integration_window_is_legal,
+    get_timestamp_string
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
-    get_timestamp_string, \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save

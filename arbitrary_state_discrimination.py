@@ -23,13 +23,13 @@ from bias_calculator import \
 from data_exporter import \
     ensure_all_keyed_elements_even, \
     stylise_axes, \
-    get_timestamp_string, \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save
 from time_calculator import \
     check_if_integration_window_is_legal, \
-    show_user_time_remaining
+    show_user_time_remaining, \
+    get_timestamp_string
 
 def discriminate_state_11(
     ip_address,
