@@ -6,6 +6,7 @@
 #############################################################################################
 
 import numpy as np
+from datetime import datetime
 
 def check_if_integration_window_is_legal(
     sample_rate,
@@ -73,3 +74,8 @@ def show_user_time_remaining(seconds):
         calc_s =  calc -(calc_w * 604800) -(calc_d * 86400) -(calc_h * 3600) -(calc_m * 60)
         print(str(calc_w)+" week(s), "+str(calc_d)+" days, "+str(calc_h)+" hours, "+str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds.")
     print("##############################\n")
+
+def get_timestamp_string():
+    ''' Return an appropriate timestamp string.
+    '''
+    return (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
