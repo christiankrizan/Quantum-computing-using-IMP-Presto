@@ -3084,10 +3084,12 @@ def iswap_tune_coupler_drive_phase(
     phase_sweep_rad_min = 0.0,
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
-    phase_adjustment_after_iswap_A = 0.0,
-    phase_adjustment_after_iswap_B = 0.0,
+    phase_adjustment_after_iswap_A  = 0.0,
+    phase_adjustment_after_iswap_B  = 0.0,
     phase_adjustment_before_iswap_C = 0.0,
-    phase_adjustment_after_iswap_C = 0.0,
+    phase_adjustment_after_iswap_C  = 0.0,
+    
+    analyse_iswap_phase_using_this_qubit = 'A',
     
     reset_dc_to_zero_when_finished = True,
     
@@ -3135,19 +3137,12 @@ def iswap_tune_coupler_drive_phase(
         
         Ideally, the π/2 pulses are in fact X gates. The referred-to
         phase-shifted π/2-pulse, is in fact a Y pulse.
+        
+        analyse_iswap_phase_using_this_qubit defines which qubit will
+        be moved to the Bloch sphere equator at the end of the experiment.
+        The expected outcome is that this qubit, will have a small oscillation
+        about the magnitude level defining 50 % population.
     '''
-    
-    """assert 1 == 0, ("The missing pieces: https://www.nature.com/articles/s41928-020-00498-1 " +\
-            "and Ganzhorn PR Research 2 033447 (2020). The idea is to tune the iSWAP's "+\
-            "individual qubit phases. Like a Ramsey in a way. With, and without "+\
-            "iSWAP _tensor_ iSWAP-dagger. Where, iSWAP-dagger is an iSWAP 180degrees "+\
-            "out of phase. Same as \"minusing\" the amplitude, aka. -A. BUT: "+\
-            "every iSWAP must execute with the iSWAP coupler drive being (phi1 - phi2) degrees. "+\
-            "Aka. the coupler drive must always update to the difference-phase between "+\
-            "the qubits. The Ganzhorn paper has the methods. After one has tuned the "+\
-            "phases, one must also run iRB to optimise a phase offset "+\
-            "vs. fidelity. So it's not necessarily so that the best fidelity comes "+\
-            "from running the \"phase optimal\" values.")"""
     
     ## Input sanitisation
     
@@ -3451,41 +3446,45 @@ def iswap_tune_coupler_drive_phase(
             phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
             
             # Apply virtual-Z to the coupler drive, a priori.
-            phase_C = add_virtual_z(T, phase_C, control_phase_arr[ii] -phase_adjustment_before_iswap_C, coupler_ac_port, 0, phases_declared, pls)
+            phase_C = add_virtual_z(T, phase_C, coupler_phase_arr[ii] -phase_adjustment_before_iswap_C, coupler_ac_port, 0, phases_declared, pls)
             
-            # Apply coupler drive phase-swept iSWAP gate.
+            # Apply coupler drive phase-swept iSWAP gate. Also, track phases!
             pls.output_pulse(T, coupler_ac_pulse_iswap)
             T += coupler_ac_duration_iswap
-            
-            # Track phases!
             phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
             phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
             
             # Adjust the local frames of the qubits,
             # as well as the coupler drive.
-            phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
-            phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+            ## Here, we must also add the virtual-Z for the final
+            ## "Y" gate, that will take one qubit to a different place
+            ## than the other one.
+            if analyse_iswap_phase_using_this_qubit == 'A':
+                # Add +π/2 rad to qubit A.
+                phase_A = add_virtual_z(T, phase_A, +np.pi/2 -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+            else:
+                # Add +π/2 rad to qubit B.
+                phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, +np.pi/2 -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
             phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, 0, phases_declared, pls)
             
-            raise NotImplementedError("Halted! Not implemented yet.")
-            
-            # Apply virtual-Z-swept pi/2 gate on either j|0+> or j|+0>.
-            # Remember: cross-Ramsey, so shift the other qubit back to |1>
-            if prepare_input_state == '+0':
-                pls.output_pulse(T, control_pulse_pi_01_half_Vz_B)
-            else:
-                pls.output_pulse(T, control_pulse_pi_01_half_Vz_A)
+            # Apply final round of π/2 gates.
+            pls.output_pulse(T, control_pulse_pi_01_half_A)
+            pls.output_pulse(T, control_pulse_pi_01_half_B)
             T += control_duration_01
+            
+            ## # Track phases!
+            ## phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
+            ## phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
+            ## phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
             
             # Commence multiplexed readout
             pls.reset_phase(T, readout_stimulus_port)
             pls.output_pulse(T, [readout_pulse_A, readout_pulse_B])
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
-            
-            # Move to the next phase in the sweep.
-            pls.next_frequency(T, [control_port_A, control_port_B], group = 1)
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -3521,7 +3520,7 @@ def iswap_tune_coupler_drive_phase(
         
         # Data to be stored.
         hdf5_steps = [
-            'control_phase_arr', "rad",
+            'coupler_phase_arr', "rad",
         ]
         hdf5_singles = [
             'readout_stimulus_port', "",
@@ -3554,9 +3553,9 @@ def iswap_tune_coupler_drive_phase(
             'settling_time_of_bias_tee', "s",
             
             'coupler_ac_port', "",
+            'coupler_ac_freq_nco', "Hz",
             'coupler_ac_amp_iswap', "FS",
             'coupler_ac_freq_iswap', "Hz",
-            'coupler_ac_freq_nco', "Hz",
             'coupler_ac_single_edge_time_iswap', "s",
             'coupler_ac_plateau_duration_iswap', "s",
             
@@ -3565,6 +3564,11 @@ def iswap_tune_coupler_drive_phase(
             'num_phases', "",
             'phase_sweep_rad_min', "rad",
             'phase_sweep_rad_max', "rad",
+            
+            'phase_adjustment_after_iswap_A', "rad",
+            'phase_adjustment_after_iswap_B', "rad",
+            'phase_adjustment_before_iswap_C', "rad",
+            'phase_adjustment_after_iswap_C', "rad",
         ]
         hdf5_logs = []
         try:

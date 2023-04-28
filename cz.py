@@ -2788,7 +2788,6 @@ def cz20_tune_local_accumulated_phase(
             pls.reset_phase(T, [control_port_A, control_port_B, coupler_ac_port])
             phase_A = reset_phase_counter(T, control_port_A, 0, phases_declared, pls)
             phase_B = reset_phase_counter(T, control_port_B, 0, phases_declared, pls)
-            ## TODO track phase on the coupler AC port?
             
             # Put the system into state |+0> or |0+> with pi01_half pulses.
             if prepare_input_state == '+0':
@@ -2823,9 +2822,6 @@ def cz20_tune_local_accumulated_phase(
             # Apply CZ20† gate.
             pls.output_pulse(T, coupler_ac_pulse_cz20_inverted)
             T += coupler_ac_duration_cz20
-            ## phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
-            ## TODO Track phase of coupler or not?
-            ## TODO Track phase of qubits or not? Here, I am tracking that phase.
             if prepare_input_state == '+0':
                 phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
@@ -4601,8 +4597,14 @@ def cz20_tune_frequency_until_pi_phase(
         ## And:  val in (val, errorbar) of res=1 of Z=0 of file list entry 1.
         ##     local_accum....[file_entry = 0][res = 0][z = 0][0 = val]
         ##     local_accum....[file_entry = 1][res = 1][z = 0][0 = val]
-        curr_local_phase_correction_A = local_accumulated_phase_correction[0][0][0][0]
-        curr_local_phase_correction_B = local_accumulated_phase_correction[1][1][0][0]
+        
+        # WITH ONE VERY IMPORTANT DETAIL: THE FIT RETURNS THE PHASE OFFSET
+        # FOR THE COSINUSOID, WHEREAS WE ARE LOOKING FOR THE PHASE THAT
+        # WE ADDED TO THE VIRTUAL-Z GATE. WHICH IS FIT / 2!
+        # ... due to the experiment design where we got that phase value.
+        
+        curr_local_phase_correction_A = local_accumulated_phase_correction[0][0][0][0] / 2
+        curr_local_phase_correction_B = local_accumulated_phase_correction[1][1][0][0] / 2
         
         # Remake the local_accumulated_phase_correction object.
         local_accumulated_phase_correction = \
