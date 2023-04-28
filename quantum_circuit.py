@@ -598,6 +598,7 @@ def execute(
                     pls.output_pulse(T, coupler_ac_pulse_iswap)
                     phase_A = add_virtual_z(T, phase_A, phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
                     phase_B = add_virtual_z(T, phase_B, phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+                    raise NotImplementedError("Halted! The phase correction done before and after the iSWAP gate is incomplete.")
                     # TODO How does one phase-adjust the coupler tone? Not done yet.
                 
                 elif operation_code[0] == 'cz':

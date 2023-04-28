@@ -1216,7 +1216,7 @@ def ramsey01_ro0_virtual_z(
             
             # Here, there is no time awaited for.
             # Instead, apply a virtual-Z gate.
-            phase = add_virtual_z(T, phase, control_phase_arr[ii] + phase_adjustment_after_01_half, control_port, 0, phases_declared, pls)
+            phase = add_virtual_z(T, phase, control_phase_arr[ii] -phase_adjustment_after_01_half, control_port, 0, phases_declared, pls)
             
             # Apply the last pi_01_half pulse.
             pls.output_pulse(T, control_pulse_pi_01_half)

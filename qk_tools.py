@@ -65,17 +65,74 @@ from qiskit_experiments.library import StandardRB
 #from qiskit.providers.fake_provider import FakeParis
 
 def generate_rb_sequence(
-    num_random_quantum_circuits_to_generate_for_one_sequence_length,
-    list_of_num_clifford_gates_per_x_axis_tick = [],
-    native_gate_set = [],
-    qubit_indices = [], # Syntax is [0] for qubit 0 for instance.
+    num_random_quantum_circuits_per_tick,
+    list_of_num_clifford_gates_per_x_axis_tick,
+    native_gate_set,
+    qubit_indices,
     randomisation_seed = None,
     optimisation_level = 0,
-    sample_cliffords_independently_for_all_lengths = False
+    sample_cliffords_independently_for_all_lengths = True
     ):
+    ''' Using Qiskit, generate a Randomised benchmarking experiment.
+        
+        num_random_quantum_circuits_per_tick:
+            Each x-axis tick defines the length of a randomised
+            benchmarking sequence. This argument defines how many
+            samples will be taken at a certain x-tick.
+            
+            Example: 3
+        
+        list_of_num_clifford_gates_per_x_axis_tick:
+            This argument is the x-axis. Every point defines
+            the length of the RB sequences run at that tick.
+        
+            Example: [1,5,10]
+        
+        native_gate_set:
+            List of strings, defining the gates present in this QPU
+            backend's native gate set.
+            
+            Example: ['x','sz','rz','cz']
+            
+            Example of supported input strings:
+                'cx', 'iswap', 'id', 'rz', 'h', 's', 'sx', 'sxdg', 'x', 'y', 'z', 'kraus', 'qerror_loc', 'quantum_channel', 'roerror', 'save_amplitudes', 'save_amplitudes_sq', 'save_clifford',
+                'save_density_matrix', 'save_expval', 'save_expval_var', 'save_matrix_product_state', 'save_probabilities', 'save_probabilities_dict', 'save_stabilizer', 'save_state', 'save_statevector',
+                'save_statevector_dict', 'save_superop', 'save_unitary', 'set_density_matrix', 'set_matrix_product_state', 'set_stabilizer', 'set_statevector', 'set_superop', 'set_unitary', 'snapshot', 'superop',
+        
+        qubit_indices:
+            List defining the indexes of the qubits used in the run.
+            
+            Example: [0]    or    [0,1]
+        
+        randomisation_seed:
+            Set specific seed for the RB sequence randomiser.
+            
+            Example: 313
+        
+        optimisation_level:
+            Enable quantum circuit optimisation in Qiskit when generating gates.
+            
+            Legal input values: 0, 1, 2, 3
+            ... each defining a heightened level of optimisation.
+        
+        sample_cliffords_independently_for_all_lengths:
+            Sets whether the Cliffords are independently sampled
+            for all x-axis ticks.
+            
+            2023-04-20:
+            https://support.minitab.com/es-mx/minitab/21/help-and-how-to/statistics/basic-statistics/supporting-topics/tests-of-means/what-are-independent-samples/
+            "Independent samples are samples that are selected randomly so that
+            its observations do not depend on the values other observations."
+    '''
     
-    # User input filtering.
+    # How many qubits are there?
+    try:
+        num_qubits = len(qubit_indices)
+    except:
+        raise ValueError("Error! Could not determine the number of qubits in the system. The provided argument was: "+str(qubit_indices))
     assert len(qubit_indices) > 0, "Error! Bad argument provided to the RB sequence generator for the qubit indices list. The provided argument was: "+str(qubit_indices)
+    
+    # User argument sanitisation.
     assert len(native_gate_set) > 0, "Error! Bad argument provided to the RB sequence generator for the native gate set. The provided argument was: "+str(native_gate_set)
     if optimisation_level > 3:
         print("Warning! The optimisation level for the Qiskit randomised banchmarking routines was changed from "+str(optimisation_level)+" to 3, which is the highest possible optimisation flag.")
@@ -89,68 +146,21 @@ def generate_rb_sequence(
         np.unique( np.sort(list_of_num_clifford_gates_per_x_axis_tick) )
     assert (len(list_of_num_clifford_gates_per_x_axis_tick) > 0), "Error! The Randomised Benchmarking routine was tasked to generate an RB sequence that was 0 long. The full list of tasked RB sequences was:\n"+str(list_of_num_clifford_gates_per_x_axis_tick)
     
-    # How many qubits are there?
-    try:
-        num_qubits = len(qubit_indices)
-    except:
-        raise ValueError("Error! Could not determine the number of qubits in the system. The provided argument was: "+str(qubit_indices))
-    
     # Generate RB experiment.
     rb_experiment = StandardRB(
         qubits = qubit_indices,
         lengths = list_of_num_clifford_gates_per_x_axis_tick,
-        num_samples = num_random_quantum_circuits_to_generate_for_one_sequence_length,
+        num_samples = num_random_quantum_circuits_per_tick,
         seed = randomisation_seed,
         full_sampling = sample_cliffords_independently_for_all_lengths
     )
     
     # Transpile the circuit to our native gate set.
     transpiled_schema = transpile(
-        circuits = rb_experiment.circuits(),#[0],
+        circuits = rb_experiment.circuits(),
         basis_gates = native_gate_set,
         optimization_level = optimisation_level
     )
-    
-    ''' Examples of some legal "basis gates" for Qiskit
-    'cx',
-    'iswap',
-    'id',
-    'rz',
-    'h',
-    's',
-    'sx',
-    'sxdg',
-    'x',
-    'y',
-    'z',
-    'kraus',
-    'qerror_loc',
-    'quantum_channel',
-    'roerror',
-    'save_amplitudes',
-    'save_amplitudes_sq',
-    'save_clifford',
-    'save_density_matrix',
-    'save_expval',
-    'save_expval_var',
-    'save_matrix_product_state',
-    'save_probabilities',
-    'save_probabilities_dict',
-    'save_stabilizer',
-    'save_state',
-    'save_statevector',
-    'save_statevector_dict',
-    'save_superop',
-    'save_unitary',
-    'set_density_matrix',
-    'set_matrix_product_state',
-    'set_stabilizer',
-    'set_statevector',
-    'set_superop',
-    'set_unitary',
-    'snapshot',
-    'superop',
-    '''
     
     # Return transpiled result.
     return transpiled_schema
@@ -160,7 +170,7 @@ def indecorum_parse(
     gate_durations,
     qubit_indices
     ):
-    ''' Routine that parses a qk schema into a sequence compatible with
+    ''' Routine that parses a Qiskit schema into a sequence compatible with
         Indecorum.
         
         Syntax of gate durations is:

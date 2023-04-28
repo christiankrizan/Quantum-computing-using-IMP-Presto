@@ -2835,13 +2835,13 @@ def iswap_tune_local_accumulated_phase(
             # Put the system into state |10> or |01>, with local phase errors.
             if prepare_input_state == '+0':
                 # Set the phase for the final π/2 gate at this point.
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
                 T += control_duration_01
                 phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
                 # Set the phase for the final π/2 gate at this point.
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
                 T += control_duration_01
                 phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
@@ -3038,8 +3038,7 @@ def iswap_tune_local_accumulated_phase(
     
     return string_arr_to_return
 
-
-def iswap_tune_coupler_drive_phase_DEPRECATED(
+def iswap_tune_coupler_drive_phase(
     ip_address,
     ext_clk_present,
     
@@ -3085,7 +3084,10 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
     phase_sweep_rad_min = 0.0,
     phase_sweep_rad_max = 6.2831853071795864769252867665590057683943387987502116419498891846,
     
-    prepare_input_state = '+0',
+    phase_adjustment_after_iswap_A = 0.0,
+    phase_adjustment_after_iswap_B = 0.0,
+    phase_adjustment_before_iswap_C = 0.0,
+    phase_adjustment_after_iswap_C = 0.0,
     
     reset_dc_to_zero_when_finished = True,
     
@@ -3124,17 +3126,18 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
         Method: perform a cross-Ramsey experiment between two qubits,
         using an iSWAP gate to transfer population from qubit A to B.
         
-        > The input state would either be |+0⟩ or |0+⟩.
+        > The input state is |++⟩.
         > Then, an iSWAP is applied onto the connecting tunable coupler.
           For every new datapoint, the phase of the coupler's drive is swept
           to a different number (in radians).
-        > Finally, a π/2 pulse is applied onto the qubit which was originally
-          prepared in |0⟩.
-        The expected final result would be Rabi-like oscillations.
+        > Finally, one qubit gets a normal π/2-pulse whereas the other
+          qubit gets a phase-shifted π/2-pulse.
         
+        Ideally, the π/2 pulses are in fact X gates. The referred-to
+        phase-shifted π/2-pulse, is in fact a Y pulse.
     '''
     
-    assert 1 == 0, ("The missing pieces: https://www.nature.com/articles/s41928-020-00498-1 " +\
+    """assert 1 == 0, ("The missing pieces: https://www.nature.com/articles/s41928-020-00498-1 " +\
             "and Ganzhorn PR Research 2 033447 (2020). The idea is to tune the iSWAP's "+\
             "individual qubit phases. Like a Ramsey in a way. With, and without "+\
             "iSWAP _tensor_ iSWAP-dagger. Where, iSWAP-dagger is an iSWAP 180degrees "+\
@@ -3144,16 +3147,21 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
             "the qubits. The Ganzhorn paper has the methods. After one has tuned the "+\
             "phases, one must also run iRB to optimise a phase offset "+\
             "vs. fidelity. So it's not necessarily so that the best fidelity comes "+\
-            "from running the \"phase optimal\" values.")
-    
-    assert 1 == 0, "Halted! Process not implemented correctly. See papers!"
-    
-    ## Assure that the requested input state to prepare, is valid.
-    assert ( (prepare_input_state == '+0') or (prepare_input_state == '0+') ),\
-        "Error! Invalid request for input state to prepare. " + \
-        "Legal values are \'+0\' and \'0+\'"
+            "from running the \"phase optimal\" values.")"""
     
     ## Input sanitisation
+    
+    # Already here at the beginning, we may calculate a rough placeholder
+    # for the necessary post-iSWAP frame correction on the coupler drive.
+    # If, the local accumulated phase is known for both qubit A and qubit B.
+    if ((phase_adjustment_after_iswap_C == 0.0) and \
+        (phase_adjustment_after_iswap_A != 0.0) and \
+        (phase_adjustment_after_iswap_B != 0.0)):
+        # The phase adjustment on the coupler drive is unknown,
+        # but the local accumulated phase of qubit A and qubit B are known.
+        # Thus, calculate an estimate of the coupler drive phase adjustment.
+        phase_adjustment_after_iswap_C = phase_adjustment_after_iswap_B - phase_adjustment_after_iswap_A
+        print("Note: no coupler drive phase adjustment was provided, but both qubits' local accumulated phases were provided. An estimate of the coupler drive phase adjustment was set: "+str(phase_adjustment_after_iswap_C)+" rad.")
     
     # DC bias argument sanitisation.
     coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
@@ -3165,10 +3173,20 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
         coupler_dc_bias  = coupler_dc_bias
     )
     
+    # Adjust the phase _min and _max parameters.
+    phase_sweep_rad_min = cap_at_plus_or_minus_two_pi( phase_sweep_rad_min )
+    phase_sweep_rad_max = cap_at_plus_or_minus_two_pi( phase_sweep_rad_max )
+    
+    ## The input state is already known to be |++⟩, there is no need
+    ## to monitor the user-requested input state at this time.
+    
     ## Initial array declaration
     
-    # Declare phase array for the last pi/2 to be swept
-    control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
+    # Declare what phases are available
+    phases_declared = np.linspace(0, 2*np.pi, 512)
+    
+    # Declare array for the coupler phase that is swept
+    coupler_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -3282,29 +3300,12 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
             group           = 0,
             scales          = control_amp_01_B,
         )
-        ''' Same thing for the Vz-swept gates '''
-        pls.setup_scale_lut(
-            output_ports    = control_port_A,
-            group           = 1,
-            scales          = control_amp_01_A,
-        )
-        pls.setup_scale_lut(
-            output_ports    = control_port_B,
-            group           = 1,
-            scales          = control_amp_01_B,
-        )
         # Coupler port amplitudes
         pls.setup_scale_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
             scales          = coupler_ac_amp_iswap,
         )
-        '''pls.setup_scale_lut(
-            output_ports    = coupler_ac_port,
-            group           = 1,
-            scales          = coupler_ac_amp_iswap,
-        ) TODO Why is this here? HAER'''
-        
         
         ### Setup readout pulses ###
         
@@ -3345,7 +3346,7 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
             phases_q     = bandsign(readout_freq_if_B),
         )
         
-        ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B ###
+        ### Setup pulses "control_pulse_pi_01_A" and "control_pulse_pi_01_B" ###
         
         # Setup control_pulse_pi_01_A and _B pulse envelopes.
         control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template.
@@ -3357,13 +3358,6 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
             template_q  = control_envelope_01/2, # Halved!
             envelope    = True,
         )
-        control_pulse_pi_01_half_Vz_A = pls.setup_template(
-            output_port = control_port_A,
-            group       = 1,
-            template    = control_envelope_01/2, # Halved!
-            template_q  = control_envelope_01/2, # Halved!
-            envelope    = True,
-        )
         control_pulse_pi_01_half_B = pls.setup_template(
             output_port = control_port_B,
             group       = 0,
@@ -3371,44 +3365,24 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
             template_q  = control_envelope_01/2, # Halved!
             envelope    = True,
         )
-        control_pulse_pi_01_half_Vz_B = pls.setup_template(
-            output_port = control_port_B,
-            group       = 1,
-            template    = control_envelope_01/2, # Halved!
-            template_q  = control_envelope_01/2, # Halved!
-            envelope    = True,
-        )
         
-        # Setup control pulse carrier tones, considering that there is a digital mixer
+        # Setup control_pulse_pi_01 carrier tones, considering that there are
+        # digital mixers.
         control_freq_if_01_A = control_freq_nco_A - control_freq_01_A
-        pls.setup_freq_lut(
-            output_ports = control_port_A,
-            group        = 0,
-            frequencies  = np.abs(control_freq_if_01_A),
-            phases       = 0.0,
-            phases_q     = bandsign(control_freq_if_01_A),
-        )
-        pls.setup_freq_lut(
-            output_ports = control_port_A,
-            group        = 1,
-            frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_A)),
-            phases       = control_phase_arr,
-            phases_q     = control_phase_arr + bandsign(control_freq_if_01_A),
-        )
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
-            output_ports = control_port_B,
+            output_ports = control_port_A,
             group        = 0,
-            frequencies  = np.abs(control_freq_if_01_B),
-            phases       = 0.0,
-            phases_q     = bandsign(control_freq_if_01_B),
+            frequencies  = np.full_like(phases_declared, np.abs(control_freq_if_01_A)),
+            phases       = phases_declared,
+            phases_q     = phases_declared + np.full_like(phases_declared, bandsign(control_freq_if_01_A))
         )
         pls.setup_freq_lut(
             output_ports = control_port_B,
-            group        = 1,
-            frequencies  = np.full_like(control_phase_arr, np.abs(control_freq_if_01_B)),
-            phases       = control_phase_arr,
-            phases_q     = control_phase_arr + bandsign(control_freq_if_01_B),
+            group        = 0,
+            frequencies  = np.full_like(phases_declared, np.abs(control_freq_if_01_B)),
+            phases       = phases_declared,
+            phases_q     = phases_declared + np.full_like(phases_declared, bandsign(control_freq_if_01_B))
         )
         
         
@@ -3427,16 +3401,6 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
             rise_time   = coupler_ac_single_edge_time_iswap,
             fall_time   = coupler_ac_single_edge_time_iswap
         )
-        '''coupler_ac_pulse_iswap_inverted = pls.setup_long_drive(
-            output_port = coupler_ac_port,
-            group       = 1,
-            duration    = coupler_ac_duration_iswap,
-            amplitude   = 1.0,
-            amplitude_q = 1.0,
-            rise_time   = coupler_ac_single_edge_time_iswap,
-            fall_time   = coupler_ac_single_edge_time_iswap
-        ) TODO Why is this here? HAER '''
-        
         
         ## Setup the iSWAP pulse carrier.
         
@@ -3445,17 +3409,10 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
         pls.setup_freq_lut(
             output_ports    = coupler_ac_port,
             group           = 0,
-            frequencies     = np.abs(coupler_ac_freq_iswap_if),
-            phases          = 0.0,
-            phases_q        = bandsign(coupler_ac_freq_iswap_if),
+            frequencies     = np.full_like(phases_declared, np.abs(coupler_ac_freq_iswap_if)),
+            phases          = phases_declared,
+            phases_q        = phases_declared + np.full_like(phases_declared, bandsign(coupler_ac_freq_iswap_if))
         )
-        '''pls.setup_freq_lut(
-            output_ports    = coupler_ac_port,
-            group           = 1,
-            frequencies     = np.abs(coupler_ac_freq_iswap_if),
-            phases          = np.pi, # 180 degree inversion
-            phases_q        = np.pi + bandsign(coupler_ac_freq_iswap_if), # 180 degree inversion
-        ) TODO Why is this here? HAER'''
         
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
@@ -3471,7 +3428,7 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
         # Define repetition counter for T.
         repetition_counter = 1
         
-        # For every phase value of the final pi-half gate:
+        # For every phase value of the coupler drive:
         for ii in range(num_phases):
             
             # Get a time reference, used for gauging the iteration length.
@@ -3479,17 +3436,39 @@ def iswap_tune_coupler_drive_phase_DEPRECATED(
             
             # Reset phases
             pls.reset_phase(T, [control_port_A, control_port_B, coupler_ac_port])
+            phase_A = reset_phase_counter(T, control_port_A, 0, phases_declared, pls)
+            phase_B = reset_phase_counter(T, control_port_B, 0, phases_declared, pls)
+            phase_C = reset_phase_counter(T, coupler_ac_port, 0, phases_declared, pls)
             
-            # Put the system into state |+0> or |0+> with pi01_half pulses.
-            if prepare_input_state == '+0':
-                pls.output_pulse(T, control_pulse_pi_01_half_A)
-            else:
-                pls.output_pulse(T, control_pulse_pi_01_half_B)
+            # Put the system into state |++> using pi01_half pulses.
+            pls.output_pulse(T, control_pulse_pi_01_half_A)
+            pls.output_pulse(T, control_pulse_pi_01_half_B)
             T += control_duration_01
             
-            # Apply iSWAP gate.
+            # Track phases!
+            phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
+            phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
+            phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
+            
+            # Apply virtual-Z to the coupler drive, a priori.
+            phase_C = add_virtual_z(T, phase_C, control_phase_arr[ii] -phase_adjustment_before_iswap_C, coupler_ac_port, 0, phases_declared, pls)
+            
+            # Apply coupler drive phase-swept iSWAP gate.
             pls.output_pulse(T, coupler_ac_pulse_iswap)
             T += coupler_ac_duration_iswap
+            
+            # Track phases!
+            phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
+            phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
+            phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
+            
+            # Adjust the local frames of the qubits,
+            # as well as the coupler drive.
+            phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+            phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
+            phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, 0, phases_declared, pls)
+            
+            raise NotImplementedError("Halted! Not implemented yet.")
             
             # Apply virtual-Z-swept pi/2 gate on either j|0+> or j|+0>.
             # Remember: cross-Ramsey, so shift the other qubit back to |1>

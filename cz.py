@@ -121,6 +121,10 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         multiple of 300 µs.
     '''
     
+    # The user provides the full gate time for the CZ₂₀ gate.
+    # Here, we cut that time in 2, for the measurement ahead.
+    coupler_ac_plateau_duration_cz20 = ((coupler_ac_plateau_duration_cz20 + 2*coupler_ac_single_edge_time_cz20) / 2) - (2*coupler_ac_single_edge_time_cz20)
+    
     ## Input sanitisation
     
     # DC bias argument sanitisation.
@@ -693,6 +697,10 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         
         The fetched result will be sent into a state discriminator.
     '''
+    
+    # The user provides the full gate time for the CZ₂₀ gate.
+    # Here, we cut that time in 2, for the measurement ahead.
+    coupler_ac_plateau_duration_cz20 = ((coupler_ac_plateau_duration_cz20 + 2*coupler_ac_single_edge_time_cz20) / 2) - (2*coupler_ac_single_edge_time_cz20)
     
     ## Input sanitisation
     
@@ -2737,7 +2745,6 @@ def cz20_tune_local_accumulated_phase(
             fall_time   = coupler_ac_single_edge_time_cz20,
         )
         
-        
         ## Setup the CZ20 pulse carrier.
         
         # Setup LUT
@@ -2809,9 +2816,9 @@ def cz20_tune_local_accumulated_phase(
             # pulse played back, thus no real time duration spent.
             # Meaning in turn, no need to track some phase using track_phase.
             if prepare_input_state == '+0':
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] -phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
             else:
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] -phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
             
             # Apply CZ20† gate.
             pls.output_pulse(T, coupler_ac_pulse_cz20_inverted)
@@ -2829,13 +2836,13 @@ def cz20_tune_local_accumulated_phase(
             # Then, apply the final pi/2 gate on the adjusted qubit.
             if prepare_input_state == '+0':
                 # Set the phase for the final π/2 gate at this point.
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] -phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
                 T += control_duration_01
                 phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
                 # Set the phase for the final π/2 gate at this point.
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] -phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
                 T += control_duration_01
                 phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
@@ -3460,9 +3467,9 @@ def cz20_tune_local_accumulated_phase_state_probability(
             # pulse played back, thus no real time duration spent.
             # Meaning in turn, no need to track some phase using track_phase.
             if prepare_input_state == '+0':
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] -phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
             else:
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] -phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
             
             # Apply CZ20† gate.
             pls.output_pulse(T, coupler_ac_pulse_cz20_inverted)
@@ -3480,13 +3487,13 @@ def cz20_tune_local_accumulated_phase_state_probability(
             # Then, apply the final pi/2 gate on the adjusted qubit.
             if prepare_input_state == '+0':
                 # Set the phase for the final π/2 gate at this point.
-                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] - phase_A - phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] -phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
                 T += control_duration_01
                 phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             else:
                 # Set the phase for the final π/2 gate at this point.
-                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] - phase_B - phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] -phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
                 T += control_duration_01
                 phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
@@ -3685,7 +3692,7 @@ def cz20_tune_local_accumulated_phase_state_probability(
     
     return string_arr_to_return
 
-def cz20_cross_ramsey(
+def cz20_conditional_cross_ramsey(
     ip_address,
     ext_clk_present,
     
@@ -4638,7 +4645,7 @@ def cz20_tune_frequency_until_pi_phase(
             while ((not success) and (tries <= 5)):
                 tries += 1
                 try:
-                    res_cz_cross_ramsey = cz20_cross_ramsey(
+                    res_cz_cross_ramsey = cz20_conditional_cross_ramsey(
                         ip_address = ip_address,
                         ext_clk_present = ext_clk_present,
                         
@@ -4763,7 +4770,7 @@ def cz20_tune_frequency_until_pi_phase(
         
         # At this point, we may update our tracking variables whether
         # the value was the currently best one.
-        if (current_added_phase_by_cz20 - np.pi) < added_phase_of_optimal_cz20_gate:
+        if np.abs(current_added_phase_by_cz20 - np.pi) < added_phase_of_optimal_cz20_gate:
             optimal_cz20_frequency = current_cz20_frequency
             optimal_phase_adjustment_after_cz20_A = local_accumulated_phase_correction[0]
             optimal_phase_adjustment_after_cz20_B = local_accumulated_phase_correction[1]
@@ -4788,7 +4795,7 @@ def cz20_tune_frequency_until_pi_phase(
     
     # Data to be stored.
     hdf5_steps = [
-        'cz20_freq_arr', "",
+        'cz20_freq_arr', "Hz",
     ]
     hdf5_singles = [
         'optimal_cz20_frequency', "Hz",

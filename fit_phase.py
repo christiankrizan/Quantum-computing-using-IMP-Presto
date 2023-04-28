@@ -83,7 +83,12 @@ def fit_phase_offset(
                 extracted_data = h5f["processed_data"][()]
                 
                 if i_renamed_the_control_phase_arr_to == '':
-                    control_phase_arr_values = h5f[ "control_phase_arr" ][()]
+                    try:
+                        control_phase_arr_values = h5f[ "control_phase_arr" ][()]
+                    except KeyError:
+                        if verbose:
+                            print("Control phase array not found. But, coupler phase array found.")
+                        control_phase_arr_values = h5f[ "coupler_phase_arr" ][()]
                 else:
                     control_phase_arr_values = h5f[i_renamed_the_control_phase_arr_to][()]
         

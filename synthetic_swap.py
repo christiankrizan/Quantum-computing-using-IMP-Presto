@@ -663,6 +663,7 @@ def iswap_then_cz20_conditional_cross_ramsey(
             phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
             
             # Add the local phase correction following the iSWAP gate
+            raise NotImplementedError("Halted! No coupler phase adjustment before iSWAP.")
             phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
             phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
             phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
