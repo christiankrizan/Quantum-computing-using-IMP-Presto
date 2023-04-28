@@ -909,9 +909,9 @@ def optimise_readout_frequency_g_e_f(
     ## This additional call to calculate_area_mean_perimeter_fidelity
     ## is removed.
     final_confusion_matrix = ( \
-            calculate_area_mean_perimeter_fidelity( \
-                list_of_current_complex_datasets[optimal_choice_idx,0]
-            ))[4]
+        calculate_area_mean_perimeter_fidelity( \
+            list_of_current_complex_datasets[optimal_choice_idx,0]
+        ))[4]
     
     # Get the optimal readout frequency for this resonator.
     with h5py.File(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]), 'r') as h5f:
@@ -959,6 +959,21 @@ def optimise_readout_frequency_g_e_f(
     weighed_means = (list_of_current_complex_datasets[:,2]).astype(np.float64) * my_weight_given_to_mean_distance_between_all_states
     weighed_perimeters = (list_of_current_complex_datasets[:,3]).astype(np.float64) * my_weight_given_to_hamiltonian_path_perimeter
     weighed_fidelities = (list_of_current_complex_datasets[:,4]).astype(np.float64) * my_weight_given_to_readout_fidelity
+    
+    # We are done with the winning file, we may now delete it.
+    # The acquired data was not better at all. Discard it.
+    attempt = 0
+    max_attempts = 5
+    success = False
+    while (attempt < max_attempts) and (not success):
+        try:
+            os.remove(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]))
+            success = True
+        except FileNotFoundError:
+            attempt += 1
+            time.sleep(0.2)
+    if (not success):
+        raise OSError("Error: could not delete data file "+str(os.path.abspath(list_of_current_complex_datasets[optimal_choice_idx,0]))+" after "+str(max_attempts)+" attempts. Halting.")
     
     # Confusion matrix entries. Keep in mind that we know that states
     # |g>, |e> and |f> are present due to the specific measurement that ran.
