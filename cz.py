@@ -2517,6 +2517,7 @@ def cz20_tune_local_accumulated_phase(
     # Declare phase array to sweep, and make it legal.
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
     control_phase_arr = legalise_phase_array( control_phase_arr, phases_declared )
+    num_phases = len(control_phase_arr)
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -3164,6 +3165,7 @@ def cz20_tune_local_accumulated_phase_state_probability(
     # Declare phase array to sweep, and make it legal.
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
     control_phase_arr = legalise_phase_array( control_phase_arr, phases_declared )
+    num_phases = len(control_phase_arr)
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -3824,6 +3826,7 @@ def cz20_conditional_cross_ramsey(
     # Declare phase array to sweep, and make it legal.
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
     control_phase_arr = legalise_phase_array( control_phase_arr, phases_declared )
+    num_phases = len(control_phase_arr)
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
