@@ -26,15 +26,25 @@ def cap_at_plus_or_minus_two_pi( value_bigger_or_smaller_than_two_pi ):
     # Return result.
     return value_bigger_or_smaller_than_two_pi
 
-def legalise_phase_array( array_to_legalise, available_phases_arr ):
+def legalise_phase_array(
+    array_to_legalise,
+    available_phases_arr,
+    remove_duplicates_and_order_array = True,
+    ):
     ''' Takes array of angles in units of radians.
         Then, uses get_legal_phase to get legal values for all entries.
     '''
+    # Make all values legal.
     legal_array = np.zeros( len(array_to_legalise) )
     for ii in range(len(array_to_legalise)):
         val = get_legal_phase( array_to_legalise[ii], available_phases_arr )
         legal_array[ii] = val
     
+    # Remove duplicates and order array?
+    if remove_duplicates_and_order_array:
+        legal_array = np.unique(legal_array)
+    
+    # Return!
     return legal_array
 
 def get_legal_phase( value, available_phases_arr ):
