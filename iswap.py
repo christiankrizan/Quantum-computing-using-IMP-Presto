@@ -18,6 +18,7 @@ from numpy import hanning as von_hann
 from datetime import datetime
 from phase_calculator import \
     cap_at_plus_or_minus_two_pi, \
+    legalise_phase_array, \
     reset_phase_counter, \
     add_virtual_z, \
     track_phase, \
@@ -2520,9 +2521,6 @@ def iswap_tune_local_accumulated_phase(
     phase_sweep_rad_min = cap_at_plus_or_minus_two_pi( phase_sweep_rad_min )
     phase_sweep_rad_max = cap_at_plus_or_minus_two_pi( phase_sweep_rad_max )
     
-    # Declare what phases are available
-    phases_declared = np.linspace(0, 2*np.pi, 512)
-    
     ## Assure that the requested input state to prepare, is valid.
     assert ( (prepare_input_state == '+0') or (prepare_input_state == '0+') ),\
         "Error! Invalid request for input state to prepare. " + \
@@ -2530,8 +2528,12 @@ def iswap_tune_local_accumulated_phase(
     
     ## Initial array declaration
     
-    # Declare phase array for the last pi/2 to be swept
+    # Declare what phases are available
+    phases_declared = np.linspace(0, 2*np.pi, 512)
+    
+    # Declare phase array to sweep, and make it legal.
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
+    control_phase_arr = legalise_phase_array( control_phase_arr, phases_declared )
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")

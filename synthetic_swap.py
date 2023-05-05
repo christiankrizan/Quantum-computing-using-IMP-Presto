@@ -207,8 +207,9 @@ def iswap_then_cz20_conditional_cross_ramsey(
     # Declare what phases are available
     phases_declared = np.linspace(0, 2*np.pi, 512)
     
-    # Declare phase array for the last pi/2 to be swept
+    # Declare phase array to sweep, and make it legal.
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
+    control_phase_arr = legalise_phase_array( control_phase_arr, phases_declared )
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -1049,8 +1050,12 @@ def synthetic_swap_prep_10_cross_Ramsey_DEPRECATED(
     
     ## Initial array declaration
     
-    # Declare phase array for the last pi/2 to be swept
+    # Declare what phases are available
+    phases_declared = np.linspace(0, 2*np.pi, 512)
+    
+    # Declare phase array to sweep, and make it legal.
     control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
+    control_phase_arr = legalise_phase_array( control_phase_arr, phases_declared )
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")

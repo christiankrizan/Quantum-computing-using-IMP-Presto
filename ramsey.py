@@ -16,6 +16,7 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import \
+    legalise_phase_array, \
     reset_phase_counter, \
     add_virtual_z, \
     track_phase, \
@@ -1051,11 +1052,12 @@ def ramsey01_ro0_virtual_z(
         coupler_dc_bias  = coupler_dc_bias
     )
     
-    # Declare phase array to sweep.
-    control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
-    
     # Declare what phases are available
     phases_declared = np.linspace(0, 2*np.pi, 512)
+    
+    # Declare phase array to sweep, and make it legal.
+    control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
+    control_phase_arr = legalise_phase_array( control_phase_arr, phases_declared )
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")

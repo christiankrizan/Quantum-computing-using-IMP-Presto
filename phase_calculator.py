@@ -26,6 +26,17 @@ def cap_at_plus_or_minus_two_pi( value_bigger_or_smaller_than_two_pi ):
     # Return result.
     return value_bigger_or_smaller_than_two_pi
 
+def legalise_phase_array( array_to_legalise, available_phases_arr ):
+    ''' Takes array of angles in units of radians.
+        Then, uses get_legal_phase to get legal values for all entries.
+    '''
+    legal_array = np.zeros( len(array_to_legalise) )
+    for ii in range(len(array_to_legalise)):
+        val = get_legal_phase( array_to_legalise[ii], available_phases_arr )
+        legal_array[ii] = val
+    
+    return legal_array
+
 def get_legal_phase( value, available_phases_arr ):
     ''' Takes some array of phases deemed legal,
         and returns a value that is present in this array.
@@ -100,17 +111,8 @@ def track_phase(
     ''' Return ***the phase of*** a cosine wave, which at time zero,
         has the same Y-axis value as a cosine wave
         cos( 2*pi * frequency_of_cosinusoidal * current_time + current_phase)
-        
-        So:
-        cos( 2*pi * f * t + phi_orig ) = cos( 2*pi * f * (t=0) + phi_sought)
-        = arccos(cos( 2*pi * f * t + phi_orig )) = arccos(cos( 0 + phi_sought )
-        <=> phi_sought = 2*pi * f * t + phi_orig [modulo 2 pi something]
-        
-        As of writing I actually have no idea why there is a pi offset
-        from the value that is updated to. All I know is that if I
-        change phase [= track_phase(blabla)] into the value pi - phi_sought
-        then the phases match up as they should experimentally.
     '''
     #return np.pi - np.arccos(np.cos( 2*np.pi * frequency_of_cosinusoidal * current_time + current_phase ))
     #return (2*np.pi * frequency_of_cosinusoidal * current_time + current_phase) % np.pi
-    return (2*np.pi * frequency_of_cosinusoidal * current_time) % (2*np.pi) + current_phase
+    ##return (2*np.pi * frequency_of_cosinusoidal * current_time) % (2*np.pi) + current_phase
+    return (2*np.pi * frequency_of_cosinusoidal * current_time + np.pi) % (2*np.pi) + current_phase
