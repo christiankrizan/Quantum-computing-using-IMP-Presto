@@ -1138,6 +1138,7 @@ def optimise_integration_window_g_e_f(
     
     readout_stimulus_port,
     readout_sampling_port,
+    readout_freq_nco,
     readout_freq,
     readout_amp,
     readout_duration,
@@ -1149,28 +1150,34 @@ def optimise_integration_window_g_e_f(
     integation_window_start_min,
     integation_window_start_max,
     num_integration_window_start_steps,
-    
     integation_window_stop_min,
     integation_window_stop_max,
     num_integration_window_stop_steps,
     
     control_port,
-    control_amp_01,
+    control_freq_nco,
     control_freq_01,
+    control_amp_01,
     control_duration_01,
-    control_amp_12,
     control_freq_12,
+    control_amp_12,
     control_duration_12,
     
     coupler_dc_port,
     coupler_dc_bias,
-    added_delay_for_bias_tee,
+    settling_time_of_bias_tee,
     
     num_averages,
     num_shots_per_state,
     resonator_transmon_pair_id_number,
     
     reset_dc_to_zero_when_finished = True,
+    force_device_reboot_on_connection_error = False,
+    
+    my_weight_given_to_area_spanned_by_qubit_states = 0.0,
+    my_weight_given_to_mean_distance_between_all_states = 0.0,
+    my_weight_given_to_hamiltonian_path_perimeter = 0.0,
+    my_weight_given_to_readout_fidelity = 1.0,
     
     use_log_browser_database = True,
     suppress_log_browser_export = False,
@@ -1189,11 +1196,6 @@ def optimise_integration_window_g_e_f(
         "z_scaler": 1.0,
         "z_unit":   'default',
         },
-    
-    my_weight_given_to_area_spanned_by_qubit_states = 0.0,
-    my_weight_given_to_mean_distance_between_all_states = 0.0,
-    my_weight_given_to_hamiltonian_path_perimeter = 0.0,
-    my_weight_given_to_readout_fidelity = 1.0
     ):
     ''' Perform complex domain readout using swept integration window
         start and stop times. This function will generate one complex-plane
@@ -1207,6 +1209,13 @@ def optimise_integration_window_g_e_f(
         Score is either the area, perimeter, or mean distance between states
         from the readout using integration start and -stop times for that
         pixel.
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     assert 1 == 0, "Halted! This entire file does not support default_exported_log_file_name, because as of writing this assertion message -- it was unknown whether appending default_exported_log_file_name to various calls in this file would break something. Let's go through this file and see where default_exported_log_file_name should be added."
