@@ -41,7 +41,9 @@ def legalise_phase_array(
         legal_value = get_legal_phase( original_value, available_phases_arr )
         # Is the original value outside of the [0,2π) interval?
         # Then put it back into its original interval, as a legal 2π-multiple.
-        if original_value >= (+2*np.pi):
+        ## Edge condition: all negative cases where the original_value
+        ## is a multiple of 2π need to be handled separately.
+        if (original_value >= (+2*np.pi)) or ((original_value % (2*np.pi)) == 0.0):
             legal_value += int(original_value / (2*np.pi)) * (2*np.pi)
         elif original_value < (0.0):
             legal_value += (int(original_value / (2*np.pi)) - 1) * (2*np.pi)
