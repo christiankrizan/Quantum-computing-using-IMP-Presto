@@ -16,7 +16,6 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from phase_calculator import \
-    cap_at_plus_or_minus_two_pi, \
     legalise_phase_array, \
     reset_phase_counter, \
     add_virtual_z, \
@@ -2500,10 +2499,6 @@ def cz20_tune_local_accumulated_phase(
         coupler_dc_bias  = coupler_dc_bias
     )
     
-    # Adjust the phase _min and _max parameters.
-    phase_sweep_rad_min = cap_at_plus_or_minus_two_pi( phase_sweep_rad_min )
-    phase_sweep_rad_max = cap_at_plus_or_minus_two_pi( phase_sweep_rad_max )
-    
     ## Assure that the requested input state to prepare, is valid.
     assert ( (prepare_input_state == '+0') or (prepare_input_state == '0+') ),\
         "Error! Invalid request for input state to prepare. " + \
@@ -3147,10 +3142,6 @@ def cz20_tune_local_accumulated_phase_state_probability(
         num_biases       = None,
         coupler_dc_bias  = coupler_dc_bias
     )
-    
-    # Adjust the phase _min and _max parameters.
-    phase_sweep_rad_min = cap_at_plus_or_minus_two_pi( phase_sweep_rad_min )
-    phase_sweep_rad_max = cap_at_plus_or_minus_two_pi( phase_sweep_rad_max )
     
     ## Assure that the requested input state to prepare, is valid.
     assert ( (prepare_input_state == '+0') or (prepare_input_state == '0+') ),\

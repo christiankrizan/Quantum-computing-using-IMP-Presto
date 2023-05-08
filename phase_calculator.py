@@ -37,8 +37,16 @@ def legalise_phase_array(
     # Make all values legal.
     legal_array = np.zeros( len(array_to_legalise) )
     for ii in range(len(array_to_legalise)):
-        val = get_legal_phase( array_to_legalise[ii], available_phases_arr )
-        legal_array[ii] = val
+        original_value = array_to_legalise[ii]
+        legal_value = get_legal_phase( original_value, available_phases_arr )
+        # Is the original value outside of the [0,2π) interval?
+        # Then put it back into its original interval, as a legal 2π-multiple.
+        if original_value >= (+2*np.pi):
+            legal_value += int(original_value / (2*np.pi)) * (2*np.pi)
+        elif original_value < (0.0):
+            legal_value += (int(original_value / (2*np.pi)) - 1) * (2*np.pi)
+        # We're done with this legalised value.
+        legal_array[ii] = legal_value
     
     # Remove duplicates and order array?
     if remove_duplicates_and_order_array:
@@ -124,5 +132,5 @@ def track_phase(
     '''
     #return np.pi - np.arccos(np.cos( 2*np.pi * frequency_of_cosinusoidal * current_time + current_phase ))
     #return (2*np.pi * frequency_of_cosinusoidal * current_time + current_phase) % np.pi
-    ##return (2*np.pi * frequency_of_cosinusoidal * current_time) % (2*np.pi) + current_phase
+    #return (2*np.pi * frequency_of_cosinusoidal * current_time) % (2*np.pi) + current_phase
     return (2*np.pi * frequency_of_cosinusoidal * current_time + np.pi) % (2*np.pi) + current_phase

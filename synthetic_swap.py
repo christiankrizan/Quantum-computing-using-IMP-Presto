@@ -16,10 +16,17 @@ import shutil
 import numpy as np
 from numpy import hanning as von_hann
 from datetime import datetime
+from phase_calculator import \
+    legalise_phase_array, \
+    reset_phase_counter, \
+    add_virtual_z, \
+    track_phase, \
+    bandsign
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
     change_dc_bias
+from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
     check_if_integration_window_is_legal, \
     get_timestamp_string
@@ -40,6 +47,7 @@ def iswap_then_cz20_conditional_cross_ramsey(
     
     readout_stimulus_port,
     readout_sampling_port,
+    readout_freq_nco,
     readout_freq_A,
     readout_amp_A,
     readout_freq_B,
@@ -88,8 +96,10 @@ def iswap_then_cz20_conditional_cross_ramsey(
     phase_adjustment_after_cz20_A = 0.0,
     phase_adjustment_after_cz20_B = 0.0,
     phase_adjustment_after_cz20_C = 0.0,
+    
     phase_adjustment_after_iswap_A = 0.0,
     phase_adjustment_after_iswap_B = 0.0,
+    phase_adjustment_before_iswap_C = 0.0,
     phase_adjustment_after_iswap_C = 0.0,
     
     prepare_input_state = '0+',
@@ -124,21 +134,35 @@ def iswap_then_cz20_conditional_cross_ramsey(
                 
                 =
                 
-                ----- --o-- --H-- --o-- --H-- --o-- -----
-                        |           |           |        
-                --H-- --o-- --H-- --o-- --H-- --o-- --H--
+                --o-- --X-- --o--
+                  |     |     |  
+                --X-- --o-- --X--
+                
+                =
+                
+                --o-- --X-- ----- --o-- -----
+                  |     |           |        
+                --X-- --o-- --H-- --o-- --H--
+                
+                =
+                
+                --H-- --S†- -|X|- ----- ----- --o-- -----
+                              |                 |        
+                --S†- ----- -|X|- --H-- --H-- --o-- --H--
                 
                 =
                 
                 --H-- --S†- -|X|- --o-- -----
                               |     |        
                 --S†- ----- -|X|- --o-- --H--
+                
         
         ... where:
-        →  S† = S-dagger
-        →  H  = Hadamard
-        → |X| = iSWAP
-        →  o  = CZ₂₀
+        →  S†     = S-dagger
+        →  H      = Hadamard
+        → |X|-|X| = iSWAP
+        →  o---o  = CZ₂₀
+        →  o---X  = CNOT
         
         ... thus, also perform the needed single-qubit gates every
         time a SWAP gate is requested.
@@ -658,14 +682,16 @@ def iswap_then_cz20_conditional_cross_ramsey(
                 # The S†-gate is instantaneous, no need to track phases.
             
             # Apply iSWAP gate
+            ## Adjust coupler phase before iSWAP gate
+            phase_C = add_virtual_z(T, phase_C, -phase_adjustment_before_iswap_C, coupler_ac_port, None, phases_declared, pls)
+            ## Play iSWAP gate
             pls.output_pulse(T, coupler_ac_pulse_iswap)
             T += coupler_ac_duration_iswap
+            ## Track phases
             phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
             phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
-            
-            # Add the local phase correction following the iSWAP gate
-            raise NotImplementedError("Halted! No coupler phase adjustment before iSWAP.")
+            ## Add the local phase correction following the iSWAP gate
             phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
             phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
             phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
@@ -678,9 +704,18 @@ def iswap_then_cz20_conditional_cross_ramsey(
             phase_C = track_phase(T - T_begin, coupler_ac_freq_cz20, phase_C)
             
             # Add the local phase correction following the CZ₂₀ gate
-            phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
-            phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
-            ##phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
+            ## At this point, we may just as well apply the extra swept
+            ## phase that gives us the cross-Ramsey like behaviour.
+            ## We have swapped the qubit initially prepared in |+⟩ to the
+            ## other qubit, thus this other qubit is what we're sweeping φ of.
+            if prepare_input_state[-1] == '+':
+                phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] -phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                ##phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
+            else:
+                phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_cz20_A, control_port_A, 0, phases_declared, pls)
+                phase_B = add_virtual_z(T, phase_B, control_phase_arr[ii] -phase_adjustment_after_cz20_B, control_port_B, 0, phases_declared, pls)
+                ##phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
             
             # And, as art of making a SWAP gate that is legal for any input
             # state, we apply a final Hadamard gate on the qubit NOT initially
@@ -844,6 +879,7 @@ def iswap_then_cz20_conditional_cross_ramsey(
             'phase_adjustment_after_cz20_C', "rad",
             'phase_adjustment_after_iswap_A', "rad",
             'phase_adjustment_after_iswap_B', "rad",
+            'phase_adjustment_before_iswap_C', "rad",
             'phase_adjustment_after_iswap_C', "rad",
         ]
         hdf5_logs = []
