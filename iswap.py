@@ -3774,7 +3774,7 @@ def iswap_conditional_cross_ramsey(
     phase_adjustment_before_iswap_C = 0.0,
     phase_adjustment_after_iswap_C  = 0.0,
     
-    analyse_iswap_phase_using_this_qubit = 'A',
+    prepare_input_state = '0+',
     
     reset_dc_to_zero_when_finished = True,
     
@@ -3843,8 +3843,14 @@ def iswap_conditional_cross_ramsey(
         coupler_dc_bias  = coupler_dc_bias
     )
     
-    ## The input state is already known to be |++⟩, there is no need
-    ## to monitor the user-requested input state at this time.
+    ## Assure that the requested input state to prepare, is valid.
+    assert ( \
+        (prepare_input_state == '0+') or \
+        (prepare_input_state == '+0') or \
+        (prepare_input_state == '1+') or \
+        (prepare_input_state == '+1') ),\
+        "Error! Invalid request for input state to prepare. " + \
+        "Legal values are \'0+\', \'+0\', \'1+\' and \'+1\'"
     
     ## Initial array declaration
     
@@ -3852,9 +3858,9 @@ def iswap_conditional_cross_ramsey(
     phases_declared = np.linspace(0, 2*np.pi, 512)
     
     # Declare array for the coupler phase that is swept, and make it legal.
-    coupler_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
-    coupler_phase_arr = legalise_phase_array( coupler_phase_arr, phases_declared )
-    num_phases = len(coupler_phase_arr)
+    control_phase_arr = np.linspace(phase_sweep_rad_min, phase_sweep_rad_max, num_phases)
+    control_phase_arr = legalise_phase_array( control_phase_arr, phases_declared )
+    num_phases = len(control_phase_arr)
     
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
@@ -4122,10 +4128,34 @@ def iswap_conditional_cross_ramsey(
             phase_B = reset_phase_counter(T, control_port_B, 0, phases_declared, pls)
             phase_C = reset_phase_counter(T, coupler_ac_port, 0, phases_declared, pls)
             
-            # Put the system into state |++> using pi01_half pulses.
-            pls.output_pulse(T, [control_pulse_pi_01_half_A, control_pulse_pi_01_half_B])
-            ##pls.output_pulse(T, [control_pulse_pi_01_B])
-            T += control_duration_01
+            # Prepare the sought-for input state.
+            # There are four options: |0+>, |+0>, |1+>, |+1>
+            if prepare_input_state[-1] == '+':
+                
+                # Qubit B is initially prepared in the mixed state.
+                pls.output_pulse(T, control_pulse_pi_01_half_B)
+                
+                # Is the conditional qubit supposed to be on?
+                if prepare_input_state[0] == '1':
+                    # It is supposed to be on!
+                    pls.output_pulse(T, control_pulse_pi_01_A)
+                
+                # Go to the next quantum circuit moment.
+                T += control_duration_01
+                
+            else:
+                
+                # Qubit B is NOT initially prepared in the mixed state,
+                # meaning that qubit A is prepared in the mixed state.
+                pls.output_pulse(T, control_pulse_pi_01_half_A)
+                
+                # Is the conditional qubit supposed to be on?
+                if prepare_input_state[1] == '1':
+                    # It is supposed to be on!
+                    pls.output_pulse(T, control_pulse_pi_01_B)
+                
+                # Go to the next quantum circuit moment.
+                T += control_duration_01
             
             # Track phases!
             phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
@@ -4133,35 +4163,31 @@ def iswap_conditional_cross_ramsey(
             phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
             
             # Apply virtual-Z to the coupler drive, a priori.
-            phase_C = add_virtual_z(T, phase_C, coupler_phase_arr[ii] -phase_adjustment_before_iswap_C, coupler_ac_port, 0, phases_declared, pls)
+            phase_C = add_virtual_z(T, phase_C, -phase_adjustment_before_iswap_C, coupler_ac_port, 0, phases_declared, pls)
             
-            # Apply coupler drive phase-swept iSWAP gate. Also, track phases!
+            # Apply iSWAP, track phases.
             pls.output_pulse(T, coupler_ac_pulse_iswap)
             T += coupler_ac_duration_iswap
             phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
             phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
             phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
             
-            # Adjust the local frames of the qubits,
-            # as well as the coupler drive.
-            ## Here, we must also add the virtual-Z for the final
-            ## "Y" gate, that will take one qubit to a different place
-            ## than the other one.
-            if analyse_iswap_phase_using_this_qubit == 'A':
-                # Add +π/2 rad to qubit A.
-                phase_A = add_virtual_z(T, phase_A, +np.pi/2 -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
+            # Add the local phase correction following the iSWAP gate,
+            # but also make sure to sweep the phase of the qubit which
+            # was *not* originally prepared in |+>
+            if prepare_input_state[-1] == '+':
+                phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A + control_phase_arr[ii], control_port_A, 0, phases_declared, pls)
                 phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
             else:
-                # Add +π/2 rad to qubit B.
                 phase_A = add_virtual_z(T, phase_A, -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
-                phase_B = add_virtual_z(T, phase_B, +np.pi/2 -phase_adjustment_after_iswap_B, control_port_B, 0, phases_declared, pls)
-            print("TODO: Phase correction after iSWAP disabled for now.")
-            '''phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, 0, phases_declared, pls)'''
+                phase_B = add_virtual_z(T, phase_B, -phase_adjustment_after_iswap_B + control_phase_arr[ii], control_port_B, 0, phases_declared, pls)
+            phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, 0, phases_declared, pls)
             
-            # Apply final round of π/2 gates.
-            # One is +π/2 rad out-of-phase with the other one.
-            pls.output_pulse(T, control_pulse_pi_01_half_A)
-            pls.output_pulse(T, control_pulse_pi_01_half_B)
+            # Apply pi/2 gate on the qubit *not* prepared in |+>
+            if prepare_input_state[-1] == '+':
+                pls.output_pulse(T, control_pulse_pi_01_half_A)
+            else:
+                pls.output_pulse(T, control_pulse_pi_01_half_B)
             T += control_duration_01
             
             ## # Track phases!
@@ -4209,7 +4235,7 @@ def iswap_conditional_cross_ramsey(
         
         # Data to be stored.
         hdf5_steps = [
-            'coupler_phase_arr', "rad",
+            'control_phase_arr', "rad",
         ]
         hdf5_singles = [
             'readout_stimulus_port', "",
