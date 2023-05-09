@@ -36,10 +36,8 @@ from data_exporter import \
     get_dict_for_step_list, \
     get_dict_for_log_list, \
     save
-from single_qubit_gates import \
-    hadamard_gate, \
-    s_dagger_gate
-
+from hadamard import hadamard_gate
+from s import s_dagger_gate
 
 def iswap_then_cz20_conditional_cross_ramsey(
     ip_address,
