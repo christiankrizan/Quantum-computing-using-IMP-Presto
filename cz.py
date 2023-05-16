@@ -3432,6 +3432,7 @@ def cz20_tune_local_accumulated_phase_state_probability(
             phase_A = reset_phase_counter(T, control_port_A, 0, phases_declared, pls)
             phase_B = reset_phase_counter(T, control_port_B, 0, phases_declared, pls)
             ## TODO track phase on the coupler AC port?
+            raise NotImplementedError("TODO This function should be modified to include phase tracking on the coupler port too.")
             
             # Put the system into state |+0> or |0+> with pi01_half pulses.
             if prepare_input_state == '+0':

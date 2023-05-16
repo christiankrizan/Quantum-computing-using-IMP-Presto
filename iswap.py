@@ -2465,6 +2465,7 @@ def iswap_tune_local_accumulated_phase(
     phase_adjustment_after_iswap_C = 0.0,
     
     prepare_input_state = '+0',
+    analyse_iswap_phase_using_this_qubit = 'A',
     
     reset_dc_to_zero_when_finished = True,
     
@@ -2503,6 +2504,9 @@ def iswap_tune_local_accumulated_phase(
         The input state is prepared to |+0⟩ (or |0+⟩).
         Then, run an iSWAP, followed by an iSWAP†.
         Finally, put |+0⟩ (or |0+⟩) back to |10⟩ (or |01⟩), readout in Z.
+        
+        analyse_iswap_phase_using_this_qubit dictates which qubit will have
+        its final π/2-pulse's phase swept in the last quantum circuit moment.
     '''
     
     ## Input sanitisation
@@ -2530,9 +2534,19 @@ def iswap_tune_local_accumulated_phase(
     )
     
     ## Assure that the requested input state to prepare, is valid.
-    assert ( (prepare_input_state == '+0') or (prepare_input_state == '0+') ),\
+    assert ( \
+        (prepare_input_state == '0+') or \
+        (prepare_input_state == '+0') or \
+        (prepare_input_state == '++') or \
+        (prepare_input_state == '1+') or \
+        (prepare_input_state == '+1') ),\
         "Error! Invalid request for input state to prepare. " + \
-        "Legal values are \'+0\' and \'0+\'"
+        "Legal values are \'0+\', \'+0\', \'++\', \'1+\' and \'+1\'"
+    assert ( \
+        (analyse_iswap_phase_using_this_qubit == 'A') or \
+        (analyse_iswap_phase_using_this_qubit == 'B') ),\
+        "Error! Invalid qubit selected for analysis. " + \
+        "Legal values are \'A\' and \'B\'"
     
     ## Initial array declaration
     
@@ -2712,11 +2726,25 @@ def iswap_tune_local_accumulated_phase(
         # Setup control_pulse_pi_01_A and _B pulse envelopes.
         control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template.
         control_envelope_01 = sin2(control_ns_01)
+        control_pulse_pi_01_A = pls.setup_template(
+            output_port = control_port_A,
+            group       = 0,
+            template    = control_envelope_01,
+            template_q  = control_envelope_01,
+            envelope    = True,
+        )
         control_pulse_pi_01_half_A = pls.setup_template(
             output_port = control_port_A,
             group       = 0,
             template    = control_envelope_01/2, # Halved!
             template_q  = control_envelope_01/2, # Halved!
+            envelope    = True,
+        )
+        control_pulse_pi_01_B = pls.setup_template(
+            output_port = control_port_B,
+            group       = 0,
+            template    = control_envelope_01,
+            template_q  = control_envelope_01,
             envelope    = True,
         )
         control_pulse_pi_01_half_B = pls.setup_template(
@@ -2835,13 +2863,16 @@ def iswap_tune_local_accumulated_phase(
             phase_B = reset_phase_counter(T, control_port_B, 0, phases_declared, pls)
             phase_C = reset_phase_counter(T, coupler_ac_port, 0, phases_declared, pls)
             
-            # Put the system into state |+0> or |0+> with pi01_half pulses.
-            if prepare_input_state == '+0':
+            # Put the system in its sought-for input state.
+            if prepare_input_state[0] == '+':
                 pls.output_pulse(T, control_pulse_pi_01_half_A)
-                T += control_duration_01
-            else:
+            elif prepare_input_state[0] == '1':
+                pls.output_pulse(T, control_pulse_pi_01_A)
+            if prepare_input_state[1] == '+':
                 pls.output_pulse(T, control_pulse_pi_01_half_B)
-                T += control_duration_01
+            elif prepare_input_state[1] == '1':
+                pls.output_pulse(T, control_pulse_pi_01_B)
+            T += control_duration_01
             
             # Track phases!
             phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
@@ -2851,7 +2882,7 @@ def iswap_tune_local_accumulated_phase(
             # Apply an iSWAP gate. Adjust the phase of the coupler drive too.
             pls.output_pulse(T, coupler_ac_pulse_iswap)
             T += coupler_ac_duration_iswap
-            ##phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
+            phase_C = add_virtual_z(T, phase_C, -phase_adjustment_after_iswap_C, coupler_ac_port, None, phases_declared, pls)
             
             # Track phases!
             phase_A = track_phase(T - T_begin, control_freq_01_A, phase_A)
@@ -2868,8 +2899,9 @@ def iswap_tune_local_accumulated_phase(
             phase_B = track_phase(T - T_begin, control_freq_01_B, phase_B)
             phase_C = track_phase(T - T_begin, coupler_ac_freq_iswap, phase_C)
             
-            # Put the system into state |10> or |01>, with local phase errors.
-            if prepare_input_state == '+0':
+            # Sweep the phase of some qubit, in order
+            # to get a Ramsey-like sequence.
+            if analyse_iswap_phase_using_this_qubit == 'A':
                 # Set the phase for the final π/2 gate at this point.
                 phase_A = add_virtual_z(T, phase_A, control_phase_arr[ii] -phase_adjustment_after_iswap_A, control_port_A, 0, phases_declared, pls)
                 pls.output_pulse(T, control_pulse_pi_01_half_A)

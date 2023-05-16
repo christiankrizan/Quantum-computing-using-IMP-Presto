@@ -51,7 +51,7 @@
         stupid legal fluke thinking they get a carte blanche to do
         whatever the fuck they want to.
         
-        Indecorum is © Copyright Christian Križan 2021,
+        Indecorum is © Copyright Christian Križan 2021, 2022, 2023,
         all rights reserved wherever possible, to the extent that the
         licensing of Indecorum under CC-BY-NC-SA-4.0 is unhindered.
 '''

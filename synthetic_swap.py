@@ -282,8 +282,8 @@ def iswap_then_cz20_conditional_cross_ramsey(
         settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
         coupler_ac_single_edge_time_cz20 = int(round(coupler_ac_single_edge_time_cz20 / plo_clk_T)) * plo_clk_T
         coupler_ac_plateau_duration_cz20 = int(round(coupler_ac_plateau_duration_cz20 / plo_clk_T)) * plo_clk_T
-        coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_cz20 / plo_clk_T)) * plo_clk_T
-        coupler_ac_plateau_duration_iswap = int(round(coupler_ac_plateau_duration_cz20 / plo_clk_T)) * plo_clk_T
+        coupler_ac_single_edge_time_iswap = int(round(coupler_ac_single_edge_time_iswap / plo_clk_T)) * plo_clk_T
+        coupler_ac_plateau_duration_iswap = int(round(coupler_ac_plateau_duration_iswap / plo_clk_T)) * plo_clk_T
         
         # Check whether the integration window is legal.
         integration_window_stop = check_if_integration_window_is_legal(
