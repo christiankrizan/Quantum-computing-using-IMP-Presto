@@ -88,21 +88,39 @@ def acquire_thermal_population_from_12_rabi_ro1(
         "z_unit":   'default',
         }
     ):
-    ''' Note: the cited method calls for reading out in state |1⟩
+    ''' This method follows the measurement methodology from
+        https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.114.240501
         
-        Prepare |0⟩, then perform a |1⟩ → |2⟩ Rabi oscillation.
-        Then prepare |1⟩, and do the same oscillation.
-        The ratio between the 
+        Note: the cited method explicitly calls for reading out in state |1⟩
         
-        Perform a Rabi oscillation experiment between states |1⟩ and |2⟩.
-        The energy is found by sweeping the amplitude, instead of
-        sweeping the pulse duration. While sweeping, a bias voltage
-        can be applied onto a connected coupler.
+        Start out in |0⟩, move to |1⟩, and perform a |1⟩ → |2⟩ Rabi oscillation.
+        The amplitude of the Rabi oscillation, is henceforth known as A_ref.
+        
+        Then, start out in |0⟩, but skip the |0⟩ → |1⟩ transition step.
+        Instead, instantly drive the |1⟩ → |2⟩ Rabi oscillation using the
+        thermal population available, in the state you'd normally denote |0⟩.
+        The amplitude of the |1⟩ → |2⟩ Rabi oscillation in this scenario,
+        we denote as A_sig.
+        
+        When reading out in some arbitrary magnitude:
+        A_ref = scaler * P_g   (because P_g → |1⟩ before the Rabi_12)
+        A_sig = scaler * P_e
+        ... and since P_g + P_e = 1 nominally, then A_ref + A_sig = scaler.
+        ... thus, P_e = A_sig / scaler = A_sig / (A_sig + A_ref)
+        
+        Meaning:
+        - Perform Rabi_12 → A_ref
+        - Perform Rabi_12 without prepping |1⟩ properly → A_sig
+        - P_thermal = A_sig / (A_sig + A_ref)
         
         ro1 designates that "the readout is done in state |1⟩."
         
-        The method follows the measurement methodology as shown in figure 1
-        of https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.114.240501
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
     '''
     
     ## Input sanitisation
@@ -302,7 +320,7 @@ def acquire_thermal_population_from_12_rabi_ro1(
                 
                 # Prepare for pulses on the control port. Prepare |1⟩ or not?
                 pls.reset_phase(T, control_port)
-                if prepare_excited_or_not == 1:
+                if prepare_excited_or_not == 0:
                     pls.output_pulse(T, control_pulse_pi_01)
                 
                 # Add delay for pulse, regardless of
