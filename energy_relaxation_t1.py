@@ -274,11 +274,6 @@ def t1_01_sweep_coupler(
         # but to make a nested for loop, and setting the repeat argument to 1.
         for ii in range(len(coupler_amp_arr)):
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # For every delay to step through:
             for jj in range(len(delay_arr)):
                 
@@ -299,7 +294,14 @@ def t1_01_sweep_coupler(
                 pls.store(T + readout_sampling_delay) # Sampling window
                 T += readout_duration
                 
-                ## The swept DC bias is iterated in the outer for-loop.
+                # Is this the last inner loop iteration?
+                if jj == len(delay_arr)-1:
+                    # It is, step the coupler bias to the next bias point?
+                    if (coupler_dc_port != []) and (ii != len(coupler_amp_arr)-1):
+                        # For all points that is not the last iteration,
+                        # step the DC bias to the next point.
+                        T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                        T += settling_time_of_bias_tee
                 
                 # Get T that aligns with the repetition rate.
                 T, repetition_counter = get_repetition_rate_T(
@@ -1280,11 +1282,6 @@ def t1_12_sweep_coupler_ro1(
         # but to make a nested for loop, and setting the repeat argument to 1.
         for ii in range(len(coupler_amp_arr)):
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # For every delay to step through:
             for jj in range(len(delay_arr)):
                 
@@ -1310,7 +1307,14 @@ def t1_12_sweep_coupler_ro1(
                 pls.store(T + readout_sampling_delay) # Sampling window
                 T += readout_duration
                 
-                ## The swept DC bias is iterated in the outer for-loop.
+                # Is this the last inner loop iteration?
+                if jj == len(delay_arr)-1:
+                    # It is, step the coupler bias to the next bias point?
+                    if (coupler_dc_port != []) and (ii != len(coupler_amp_arr)-1):
+                        # For all points that is not the last iteration,
+                        # step the DC bias to the next point.
+                        T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                        T += settling_time_of_bias_tee
                 
                 # Get T that aligns with the repetition rate.
                 T, repetition_counter = get_repetition_rate_T(

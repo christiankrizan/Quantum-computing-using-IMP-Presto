@@ -244,11 +244,6 @@ def find_f_ro0_sweep_coupler(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # Commence readout, swept in frequency.
             pls.reset_phase(T, readout_stimulus_port)
             pls.output_pulse(T, readout_pulse)
@@ -260,6 +255,12 @@ def find_f_ro0_sweep_coupler(
                 # Increment the swept frequency.
                 pls.next_frequency(T, readout_stimulus_port)
                 T += 20e-9 # Add some time for changing the frequency.
+            
+            elif coupler_dc_port != []:
+                # For all points that is not the last iteration,
+                # step the DC bias to the next point.
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -1060,11 +1061,6 @@ def find_f_ro1_sweep_coupler(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # Put the system into state |1>
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
@@ -1081,6 +1077,12 @@ def find_f_ro1_sweep_coupler(
                 # Increment the swept frequency.
                 pls.next_frequency(T, readout_stimulus_port)
                 T += 20e-9 # Add some time for changing the frequency.
+            
+            elif coupler_dc_port != []:
+                # For all points that is not the last iteration,
+                # step the DC bias to the next point.
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -1984,11 +1986,6 @@ def find_f_ro2_sweep_coupler(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # Put the system into state |1>
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
@@ -2010,6 +2007,12 @@ def find_f_ro2_sweep_coupler(
                 # Increment the swept frequency.
                 pls.next_frequency(T, readout_stimulus_port)
                 T += 20e-9 # Add some time for changing the frequency.
+            
+            elif coupler_dc_port != []:
+                # For all points that is not the last iteration,
+                # step the DC bias to the next point.
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(

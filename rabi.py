@@ -268,11 +268,6 @@ def amplitude_sweep_oscillation01_ro0(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # Output the pi_01-pulse to be characterised.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
@@ -289,6 +284,12 @@ def amplitude_sweep_oscillation01_ro0(
                 # Increment the swept amplitude.
                 pls.next_scale(T, control_port)
                 T += 20e-9 # Add some time for changing the amplitude.
+            
+            elif coupler_dc_port != []:
+                # For all points that is not the last iteration,
+                # step the DC bias to the next point.
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -1812,11 +1813,6 @@ def amplitude_sweep_oscillation12_ro0(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # Put the qubit in the excited state.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
@@ -1842,6 +1838,12 @@ def amplitude_sweep_oscillation12_ro0(
                 # Increment the swept amplitude.
                 pls.next_scale(T, control_port, group = 1)
                 T += 20e-9 # Add some time for changing the amplitude.
+            
+            elif coupler_dc_port != []:
+                # For all points that is not the last iteration,
+                # step the DC bias to the next point.
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -2287,11 +2289,6 @@ def amplitude_sweep_oscillation12_ro1(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # Put the qubit in the excited state.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
@@ -2312,6 +2309,12 @@ def amplitude_sweep_oscillation12_ro1(
                 # Increment the swept amplitude.
                 pls.next_scale(T, control_port, group = 1)
                 T += 20e-9 # Add some time for changing the amplitude.
+            
+            elif coupler_dc_port != []:
+                # For all points that is not the last iteration,
+                # step the DC bias to the next point.
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -2753,11 +2756,6 @@ def duration_sweep_oscillation01_ro0(
                 # Get a time reference, used for gauging the iteration length.
                 T_begin = T
                 
-                # Apply the coupler voltage bias.
-                if coupler_dc_port != []:
-                    T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                    T += settling_time_of_bias_tee
-                
                 # Redefine the pi_01 pulse's total duration,
                 # resulting in stepping said duration in time.
                 control_duration_01 = control_pulse_01_total_duration_arr[jj]
@@ -2774,7 +2772,14 @@ def duration_sweep_oscillation01_ro0(
                 pls.store(T + readout_sampling_delay) # Sampling window
                 T += readout_duration
                 
-                ## The swept DC bias is iterated in the outer for-loop.
+                # Is this the last inner loop iteration?
+                if jj == len(control_pulse_01_total_duration_arr)-1:
+                    # It is, step the coupler bias to the next bias point?
+                    if (coupler_dc_port != []) and (ii != len(coupler_amp_arr)-1):
+                        # For all points that is not the last iteration,
+                        # step the DC bias to the next point.
+                        T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                        T += settling_time_of_bias_tee
                 
                 # Get T that aligns with the repetition rate.
                 T, repetition_counter = get_repetition_rate_T(

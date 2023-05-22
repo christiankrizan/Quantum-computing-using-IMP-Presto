@@ -277,11 +277,6 @@ def pulsed01_sweep_coupler(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # Apply the frequency-swept pi_01 pulse.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
@@ -298,6 +293,12 @@ def pulsed01_sweep_coupler(
                 # Increment the swept frequency.
                 pls.next_frequency(T, control_port)
                 T += 20e-9 # Add some time for changing the frequency.
+            
+            elif coupler_dc_port != []:
+                # For all points that is not the last iteration,
+                # step the DC bias to the next point.
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -533,6 +534,8 @@ def pulsed01_sweep_coupler_multiplexed_ro(
         The readout happens multiplexed, both qubits are stimulated by this
         function.
     '''
+    
+    raise NotImplementedError("Halted! This function has not been modernised in terms of its DC biasing.")
     
     ## Input sanitisation
     
@@ -829,6 +832,8 @@ def pulsed01_sweep_coupler_multiplexed_ro(
             
             # Move to next scanned frequency
             pls.next_frequency(T, [control_port_A, control_port_B])
+            
+            raise NotImplementedError("Halted! The current modern praxis is to put the DC biasing shift at the very end of each iteration.")
             
             # Await a new repetition, after which a new coupler DC bias tone
             # will be added - and a new frequency set for the readout tone.
@@ -1745,11 +1750,6 @@ def pulsed12_sweep_coupler(
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Apply the coupler voltage bias.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
             # Put the qubit in the excited state.
             pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_01)
@@ -1770,6 +1770,12 @@ def pulsed12_sweep_coupler(
                 # Increment the swept frequency.
                 pls.next_frequency(T, control_port, group = 1)
                 T += 20e-9 # Add some time for changing the frequency.
+            
+            elif coupler_dc_port != []:
+                # For all points that is not the last iteration,
+                # step the DC bias to the next point.
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
