@@ -43,7 +43,7 @@ def acquire_thermal_population_from_12_rabi_ro1(
     
     sampling_duration,    
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     integration_window_start,
     integration_window_stop,
     
@@ -383,19 +383,17 @@ def acquire_thermal_population_from_12_rabi_ro1(
             'readout_freq_excited', "Hz",
             'readout_amp', "FS",
             'readout_duration', "s",
-            'sampling_duration', "s",
             
+            'sampling_duration', "s",
             'readout_sampling_delay', "s",
             'repetition_rate', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
             
             'control_port', "",
-            'coupler_dc_bias', "FS",
             'control_freq_nco', "Hz",
-            
-            'control_amp_01', "FS",
             'control_freq_01', "Hz",
+            'control_amp_01', "FS",
             'control_duration_01', "s",
             
             'control_freq_12', "Hz",
