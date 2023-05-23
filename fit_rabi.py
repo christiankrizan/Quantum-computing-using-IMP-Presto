@@ -140,13 +140,16 @@ def fit_amplitude(
                 ##    y = current_trace_to_fit
                 ##)
                 
-                # Grab fitted values.
+                # Grab fitted values and print results.
                 one_rabi_cycle_period = optimal_vals_x[3]
                 fit_error = fit_err_x[3]
                 pi_amplitude = one_rabi_cycle_period / 2
-                
-                # Print result.
                 print("Rabi fit of data: " + str(pi_amplitude) + " ±" + str(fit_error/2))
+                
+                # ... find interval of sway:
+                sway_top = optimal_vals_x[0] + optimal_vals_x[1]
+                sway_bot = optimal_vals_x[0] - optimal_vals_x[1]
+                print("In magnitude, assuming no decay, the oscillations are swaying between [FS]: "+str(sway_bot)+" ↔ "+str(sway_top))
                 
                 # Store fit and its plusminus error bar.
                 (fitted_values[current_res_ii]).append((pi_amplitude, fit_error/2))
@@ -211,6 +214,7 @@ def decaying_cosine_function(
     ''' Function to be fitted against.
     '''
     return amplitude * np.cos(2*np.pi*(1/period) * t + phase) * np.exp(-t/decay_rate) + y_offset
+    #return np.abs(amplitude) * np.cos(2*np.pi*(1/period) * t + phase) * np.exp(-t/decay_rate) + y_offset
 
 def fit_periodicity(x, y):
     ''' Grab submitted data and perform a fit to find the periodicity.

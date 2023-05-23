@@ -464,9 +464,12 @@ def fit_oscillating_exponential_decay_t2_asterisk(
                     # Grab fitted values.
                     t2_asterisk_time = optimal_vals_x[0]
                     fit_error = fit_err_x[0]
+                    y_offset_from_fit = optimal_vals_x[2]
+                    y_offset_error_from_fit = fit_err_x[2]
                     
-                    # Print result.
+                    # Print results.
                     print("T₂* from exponential decay fit of data: " + str(t2_asterisk_time) + " ±" + str(fit_error/2))
+                    print("Offset in magnitude [FS]: "+str(y_offset_from_fit)+" ±"+str(y_offset_error_from_fit/2))
                     
                     # Store fit and its plusminus error bar.
                     ## Warning: append will append to both resonators unless
