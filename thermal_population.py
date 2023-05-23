@@ -20,6 +20,7 @@ from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
     change_dc_bias
+from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
     check_if_integration_window_is_legal, \
     get_timestamp_string
