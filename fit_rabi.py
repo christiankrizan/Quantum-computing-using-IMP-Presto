@@ -128,6 +128,8 @@ def fit_amplitude(
             
             # Get current trace.
             current_trace_to_fit = (mag_vals_matrix[current_res_ii])[current_z_axis_value]
+            control_amp_values[0]   = control_amp_values[1]
+            current_trace_to_fit[0] = current_trace_to_fit[1]
             
             # Try to fit current trace.
             try:
@@ -214,7 +216,7 @@ def decaying_cosine_function(
     ''' Function to be fitted against.
     '''
     return amplitude * np.cos(2*np.pi*(1/period) * t + phase) * np.exp(-t/decay_rate) + y_offset
-    #return np.abs(amplitude) * np.cos(2*np.pi*(1/period) * t + phase) * np.exp(-t/decay_rate) + y_offset
+    
 
 def fit_periodicity(x, y):
     ''' Grab submitted data and perform a fit to find the periodicity.
@@ -230,6 +232,14 @@ def fit_periodicity(x, y):
     
     # What is the cosine's resolution? = Delta t, but where time val. t = x
     delta_x = x[1]-x[0]
+    if delta_x == 0.0:
+        # Catch fucked-up x vectors done by quantum spaghetti aficionados.
+        i_iter = 0
+        while delta_x == 0.0:
+            if i_iter >= len(x)-2:
+                raise AttributeError("Error! The provided control_amp_array cannot be used to determine the amplitude stepping used when first acquiring the stored measurement data.")
+            delta_x = x[i_iter+1]-x[i_iter]
+            i_iter += 1
     
     # What is the Rabi periodicity? Make discrete FFT, select discr. value
     # with highest amplitude in the frequency domain.

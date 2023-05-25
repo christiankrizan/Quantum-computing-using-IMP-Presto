@@ -206,14 +206,16 @@ def fit_exponential_decay_t2_echo(
                     # Plot?
                     if plot_for_this_many_seconds != 0.0:
                         # Get trace data using the fitter's function and acquired values.
+                        ## Make larger fit vector.
+                        fit_vector_x = np.linspace(delay_arr_values[0], delay_arr_values[-1], 500)
                         fit_curve = exponential_decay_towards_mixed_state(
-                            t          = delay_arr_values,
+                            t          = fit_vector_x,
                             T2_echo    = optimal_vals_x[0],
                             y_nonmixed = optimal_vals_x[1],
                             y_mixed    = optimal_vals_x[2],
                         )
                         plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
-                        plt.plot(delay_arr_values, fit_curve, color="#ef1620")
+                        plt.plot(fit_vector_x, fit_curve, color="#ef1620")
                         plt.title('Ramsey spectroscopy with one refocusing pulse')
                         plt.ylabel('Demodulated amplitude [FS]')
                         plt.xlabel('Delay after the initial π/2 pulse [s]')
@@ -490,8 +492,10 @@ def fit_oscillating_exponential_decay_t2_asterisk(
                     # Plot?
                     if plot_for_this_many_seconds != 0.0:
                         # Get trace data using the fitter's function and acquired values.
+                        ## Make larger fit vector.
+                        fit_vector_x = np.linspace(delay_arr_values[0], delay_arr_values[-1], 500)
                         fit_curve = exponential_oscillatory_decay(
-                            t           = delay_arr_values,
+                            t           = fit_vector_x,
                             T2_asterisk = optimal_vals_x[0],
                             amplitude   = optimal_vals_x[1],
                             y_offset    = optimal_vals_x[2],
@@ -499,7 +503,7 @@ def fit_oscillating_exponential_decay_t2_asterisk(
                             phase       = optimal_vals_x[4],
                         )
                         plt.plot(delay_arr_values, current_trace_to_fit, color="#034da3")
-                        plt.plot(delay_arr_values, fit_curve, color="#ef1620")
+                        plt.plot(fit_vector_x, fit_curve, color="#ef1620")
                         plt.title('Ramsey spectroscopy')
                         plt.ylabel('Demodulated amplitude [FS]')
                         plt.xlabel('Delay after the initial π/2 pulse [s]')
