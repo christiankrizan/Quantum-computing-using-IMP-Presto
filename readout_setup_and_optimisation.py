@@ -901,7 +901,7 @@ def optimise_readout_frequency_g_e_f(
         optimal_choice_idx = biggest_perimeter_idx
     else:
         optimal_choice_idx = biggest_fidelity_idx
-    print("\nAfter weighing the metrics, entry " + list_of_current_complex_datasets[optimal_choice_idx,0]+" is hereby crowned as the optimal readout. (Scores: [Area, Inter-state distance, Perimeter] = "+str([weighted_area, weighted_mean_distance, weighted_perimeter, weighted_readout_fidelity])+")")
+    print("\nAfter weighing the metrics, entry " + list_of_current_complex_datasets[optimal_choice_idx,0]+" is hereby crowned as the optimal readout. (Scores: [Area, Inter-state distance, Perimeter, Readout assignment fidelity] = "+str([weighted_area, weighted_mean_distance, weighted_perimeter, weighted_readout_fidelity])+")")
     
     # We know the winner, get its confusion matrix.
     ## Perhaps a TODO: the confusion matrix was acquired several times before.
@@ -1139,19 +1139,21 @@ def optimise_integration_window_g_e_f(
     readout_stimulus_port,
     readout_sampling_port,
     readout_freq_nco,
-    readout_freq,
-    readout_amp,
+    readout_freq_A,
+    readout_amp_A,
+    readout_freq_B,
+    readout_amp_B,
     readout_duration,
     
     sampling_duration,
     readout_sampling_delay,
-    repetition_delay,
+    repetition_rate,
     
-    integation_window_start_min,
-    integation_window_start_max,
+    integration_window_start_min,
+    integration_window_start_max,
     num_integration_window_start_steps,
-    integation_window_stop_min,
-    integation_window_stop_max,
+    integration_window_stop_min,
+    integration_window_stop_max,
     num_integration_window_stop_steps,
     
     control_port,
@@ -1172,7 +1174,6 @@ def optimise_integration_window_g_e_f(
     resonator_transmon_pair_id_number,
     
     reset_dc_to_zero_when_finished = True,
-    force_device_reboot_on_connection_error = False,
     
     my_weight_given_to_area_spanned_by_qubit_states = 0.0,
     my_weight_given_to_mean_distance_between_all_states = 0.0,
@@ -1195,7 +1196,7 @@ def optimise_integration_window_g_e_f(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        },
+        }
     ):
     ''' Perform complex domain readout using swept integration window
         start and stop times. This function will generate one complex-plane
@@ -1218,18 +1219,29 @@ def optimise_integration_window_g_e_f(
         multiple of 300 µs.
     '''
     
-    assert 1 == 0, "Halted! This entire file does not support default_exported_log_file_name, because as of writing this assertion message -- it was unknown whether appending default_exported_log_file_name to various calls in this file would break something. Let's go through this file and see where default_exported_log_file_name should be added."
-    assert 1 == 0, "Halted! The subroutine get_complex_data_for_readout_optimisation_g_e_f has been modified, but the integration window optimisation routine has not yet been updated to reflect the changes to USB NCO in said subroutine."
-    assert 1 == 0, "TODO IMPORTANT Halted again!! There is a fundemental flaw in the routine: if you ever change your integration window, then you must re-draw the readout complex plane to get new population blobs. Because, the blobs move with integration window settings, as is shown here: [FIG. 3, https://arxiv.org/pdf/1504.06030.pdf]"
-    
     ## Input sanitation
     assert type(resonator_transmon_pair_id_number) == int, "Error: the argument resonator_transmon_pair_id_number expects an int, but a "+str(type(resonator_transmon_pair_id_number))+" was provided."
     
-    # Declare arrays for the integration window start and stop times.
-    integration_window_start_arr = np.linspace(integation_window_start_min, integation_window_start_max, num_integration_window_start_steps)
-    integration_window_stop_arr  = np.linspace(integation_window_stop_min,  integation_window_stop_max,  num_integration_window_stop_steps )
+    ## Check that at least some kind of data will be saved.
+    if  (my_weight_given_to_area_spanned_by_qubit_states == 0) and \
+        (my_weight_given_to_mean_distance_between_all_states == 0) and \
+        (my_weight_given_to_hamiltonian_path_perimeter == 0) and \
+        (my_weight_given_to_readout_fidelity == 0):
+        raise AttributeError("Error: All user-argument weights are set to 0, there is nothing to optimise since everything will be 0. No data will be saved. Halting.")
     
-    # All weighted output complex data "scores" will be stored later.
+    # Check whether the integration window is legal.
+    integration_window_stop = check_if_integration_window_is_legal(
+        sample_rate = 1e9,
+        sampling_duration = sampling_duration,
+        integration_window_start = np.min([integration_window_start_min, integration_window_start_max]),
+        integration_window_stop  = np.min([integration_window_stop_min,  integration_window_stop_max ]),
+    )
+    
+    # Declare arrays for the integration window start and stop times.
+    integration_window_start_arr = np.linspace(integration_window_start_min, integration_window_start_max, num_integration_window_start_steps)
+    integration_window_stop_arr  = np.linspace(integration_window_stop_min,  integration_window_stop_max,  num_integration_window_stop_steps )
+    
+    # All output complex data plots will be stored for reference later on.
     list_of_current_complex_datasets = []
     
     # For this type of measurement, all data will always be saved as
@@ -1260,97 +1272,110 @@ def optimise_integration_window_g_e_f(
                 # Print time remaining?
                 print_time_remaining = False
             else:
-                # We are on the lookout for the device crashing,
-                # see TODO in the except-clause.
-                try:
-                    current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
-                        ip_address = ip_address,
-                        ext_clk_present = ext_clk_present,
-                        
-                        readout_stimulus_port = readout_stimulus_port,
-                        readout_sampling_port = readout_sampling_port,
-                        readout_freq = readout_freq,
-                        readout_amp = readout_amp,
-                        readout_duration = readout_duration,
-                        
-                        sampling_duration = sampling_duration,
-                        readout_sampling_delay = readout_sampling_delay,
-                        repetition_delay = repetition_delay,
-                        integration_window_start = curr_integration_start, # Sweep parameter!
-                        integration_window_stop  = curr_integration_stop,  # Sweep parameter!
-                        
-                        control_port = control_port,
-                        control_amp_01 = control_amp_01,
-                        control_freq_01 = control_freq_01,
-                        control_duration_01 = control_duration_01,
-                        control_amp_12 = control_amp_12,
-                        control_freq_12 = control_freq_12,
-                        control_duration_12 = control_duration_12,
-                        
-                        coupler_dc_port = coupler_dc_port,
-                        coupler_dc_bias = coupler_dc_bias,
-                        added_delay_for_bias_tee = added_delay_for_bias_tee,
-                        
-                        num_averages = num_averages,
-                        num_shots_per_state = num_shots_per_state,
-                        resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
-                        
-                        use_log_browser_database = use_log_browser_database,
-                        suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
-                        axes = axes
-                    )
-                    
-                    # current_complex_dataset will be a char array. Convert to string.
-                    current_complex_dataset = "".join(current_complex_dataset)
-                    
-                    # Analyse the complex dataset, without ruining the stored
-                    # discriminator settings.
-                    area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity = \
-                        calculate_area_mean_perimeter_fidelity( \
-                            path_to_data = os.path.abspath(current_complex_dataset)
+                ## Perform this step within a connection handler loop,
+                ## to catch crashes.
+                success = False
+                tries = 0
+                while ((not success) and (tries <= 5)):
+                    tries += 1
+                    try:
+                        current_complex_dataset = get_complex_data_for_readout_optimisation_g_e_f(
+                            ip_address = ip_address,
+                            ext_clk_present = ext_clk_present,
+                            
+                            readout_stimulus_port = readout_stimulus_port,
+                            readout_sampling_port = readout_sampling_port,
+                            readout_freq_nco = readout_freq_nco,
+                            readout_freq_of_static_resonator = readout_freq_A,
+                            readout_amp_of_static_resonator = readout_amp_A,
+                            readout_freq_of_swept_resonator = readout_freq_B,
+                            readout_amp_of_swept_resonator = readout_amp_B,
+                            readout_duration = readout_duration,
+                            
+                            sampling_duration = sampling_duration,
+                            readout_sampling_delay = readout_sampling_delay,
+                            repetition_rate = repetition_rate,
+                            integration_window_start = curr_integration_start, # A swept parameter!
+                            integration_window_stop  = curr_integration_stop,  # A swept parameter!
+                            
+                            control_port = control_port,
+                            control_freq_nco = control_freq_nco,
+                            control_amp_01 = control_amp_01,
+                            control_freq_01 = control_freq_01,
+                            control_duration_01 = control_duration_01,
+                            control_amp_12 = control_amp_12,
+                            control_freq_12 = control_freq_12,
+                            control_duration_12 = control_duration_12,
+                            
+                            coupler_dc_port = coupler_dc_port,
+                            coupler_dc_bias = coupler_dc_bias,
+                            settling_time_of_bias_tee = settling_time_of_bias_tee,
+                            
+                            num_averages = num_averages,
+                            num_shots_per_state = num_shots_per_state,
+                            resonator_transmon_pair_id_number = resonator_transmon_pair_id_number,
+                            
+                            reset_dc_to_zero_when_finished = reset_dc_to_zero_when_finished,
+                            
+                            use_log_browser_database = use_log_browser_database,
+                            suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
+                            axes = axes
                         )
-                    
-                    # We no longer need this data file, so we should clean
-                    # up the hard drive space.
-                    attempt = 0
-                    max_attempts = 5
-                    success = False
-                    while (attempt < max_attempts) and (not success):
-                        try:
-                            os.remove(os.path.abspath(current_complex_dataset))
-                            success = True
-                        except FileNotFoundError:
-                            attempt += 1
-                            time.sleep(0.2)
-                    if (not success):
-                        raise OSError("Error: could not delete data file "+str(os.path.abspath(current_complex_dataset))+" after "+str(max_attempts)+" attempts. Halting.")
-                    
-                    # Typecasting to numpy.
-                    area_spanned = np.array(area_spanned)
-                    mean_state_distance = np.array(mean_state_distance)
-                    hamiltonian_path_perimeter = np.array(hamiltonian_path_perimeter)
-                    readout_fidelity = np.array(readout_fidelity)
-                    
-                    # Print time remaining?
-                    print_time_remaining = True
+                        
+                        success = True # Done
+                    except ConnectionRefusedError:
+                        if force_device_reboot_on_connection_error:
+                            force_system_restart_over_ssh("129.16.115.184")
+                assert success, "Halted! Unrecoverable crash detected."
                 
-                except ConnectionRefusedError:
-                    
-                    # If the Presto drops the connection for whatever reason
-                    # that has not been figured out yet, return 0.
-                    # (2022-04-17: it's an IMP-confirmed bug)
-                    # (2023-01-30: there is a remote-run hotfix available)
-                    area_spanned = np.array(0.0)
-                    mean_state_distance = np.array(0.0)
-                    hamiltonian_path_perimeter = np.array(0.0)
-                    readout_fidelity = np.array(0.0)
-                    
-                    # Print time remaining?
-                    print_time_remaining = False
-                    
-                    # TODO Error due to a device bug, still confirmed 2022-04-17.
-                    # UPDATE 2023-01-30: There is at least a remote fix available.
-                    print("DEVICE ERROR: ConnectionRefusedError: the Presto device dropped the Ethernet connection and must be restarted manually.")
+                # current_complex_dataset will be a char array. Convert to string.
+                current_complex_dataset = "".join(current_complex_dataset)
+                
+                ## Analyse the complex dataset. Note here that the
+                ## discriminator's coordinate dataset *must* be changed
+                ## as the integration window is altered. Because,
+                ## changing the integration window, moves the complex states'
+                ## population blob centre coordinates.
+                
+                # At this point, we must update the discriminator settings JSON.
+                update_discriminator_settings_with_value(
+                    path_to_data = os.path.abspath( current_complex_dataset )
+                )
+                ## TODO is it really needed to have both
+                ## update_discriminator_settings_with_value, and
+                ## calculate_area_mean_perimeter_fidelity, since
+                ## the latter already calculates the population centres?
+                ## Perhaps it is the the latter that should be changed?
+                ## So that it doesn't re-calculate population centres for
+                ## a provided set of data? Think about this choice.
+                area_spanned, mean_state_distance, hamiltonian_path_perimeter, readout_fidelity, confusion_matrix = calculate_area_mean_perimeter_fidelity(
+                    path_to_data = os.path.abspath( current_complex_dataset ),
+                    update_discriminator_settings_json = True
+                )
+                
+                # We no longer need this data file, so we should clean
+                # up the hard drive space.
+                attempt = 0
+                max_attempts = 5
+                success = False
+                while (attempt < max_attempts) and (not success):
+                    try:
+                        os.remove(os.path.abspath(current_complex_dataset))
+                        success = True
+                    except FileNotFoundError:
+                        attempt += 1
+                        time.sleep(0.2)
+                if (not success):
+                    raise OSError("Error: could not delete data file "+str(os.path.abspath(current_complex_dataset))+" after "+str(max_attempts)+" attempts. Halting.")
+                
+                # Typecasting to numpy.
+                area_spanned = np.array(area_spanned)
+                mean_state_distance = np.array(mean_state_distance)
+                hamiltonian_path_perimeter = np.array(hamiltonian_path_perimeter)
+                readout_fidelity = np.array(readout_fidelity)
+                
+                # Print time remaining?
+                print_time_remaining = True
             
             tock = time.time() # Get a time estimate.
             num_tick_tocks += 1
@@ -1427,7 +1452,6 @@ def optimise_integration_window_g_e_f(
             processed_data[curr_index_in_processed_data] = curr_2d_grid
             curr_index_in_processed_data += 1
     
-    # Data to be stored.
     hdf5_steps = [
         'integration_window_stop_arr', "s",
         'integration_window_start_arr', "s",
@@ -1435,33 +1459,37 @@ def optimise_integration_window_g_e_f(
     hdf5_singles = [
         'readout_stimulus_port', "",
         'readout_sampling_port', "",
-        'readout_freq', "Hz",
-        'readout_amp', "FS",
+        'readout_freq_nco', "Hz",
+        'readout_freq_A', "Hz",
+        'readout_amp_A', "FS",
+        'readout_freq_B', "Hz",
+        'readout_amp_B', "FS",
         'readout_duration', "s",
         
         'sampling_duration', "s",
         'readout_sampling_delay', "s",
-        'repetition_delay', "s",
+        'repetition_rate', "s",
         
-        'integation_window_start_min', "s",
-        'integation_window_start_max', "s",
+        'integration_window_start_min', "s",
+        'integration_window_start_max', "s",
         'num_integration_window_start_steps', "",
         
-        'integation_window_stop_min', "s",
-        'integation_window_stop_max', "s",
+        'integration_window_stop_min', "s",
+        'integration_window_stop_max', "s",
         'num_integration_window_stop_steps', "",
         
         'control_port', "",
-        'control_amp_01', "FS",
+        'control_freq_nco', "Hz",
         'control_freq_01', "Hz",
+        'control_amp_01', "FS",
         'control_duration_01', "s",
-        'control_amp_12', "FS",
         'control_freq_12', "Hz",
+        'control_amp_12', "FS",
         'control_duration_12', "s",
         
         #'coupler_dc_port', "",
-        'coupler_dc_bias', "FS",
-        'added_delay_for_bias_tee', "s",
+        'coupler_dc_bias', "V",
+        'settling_time_of_bias_tee,', "s",
         
         'num_averages', "",
         'num_shots_per_state', "",

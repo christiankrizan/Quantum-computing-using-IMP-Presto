@@ -392,7 +392,6 @@ def iswap_sweep_duration_and_detuning(
             phases_q        = np.full_like(coupler_ac_freq_iswap_if_arr, bandsign(coupler_ac_freq_iswap_centre_if)),
         )
         
-        
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
@@ -3590,7 +3589,7 @@ def iswap_tune_coupler_drive_phase(
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
             pls.hardware.set_dc_bias(0.0, coupler_dc_port)
-        
+    
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
     

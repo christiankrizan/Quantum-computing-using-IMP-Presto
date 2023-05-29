@@ -47,33 +47,41 @@ def show_user_time_remaining(seconds):
         to complete, and print the result in a human-legible form.
     '''
     calc = seconds
-    print("\n\n##############################\nEstimated true time remaining:")
+    row_of_text_to_print = ""
     if calc < 60.0:
         calc_s = calc
-        print(str(round(calc_s,2))+" second(s).")
+        row_of_text_to_print = str(round(calc_s,2))+" second(s)."
     elif calc < 3600.0:
         calc_m = int(calc // 60)
         calc_s = calc -(calc_m * 60)
-        print(str(calc_m)+" minute(s), "+str(round(calc_s,2))+" seconds.")
+        row_of_text_to_print = str(calc_m)+" minute(s), "+str(round(calc_s,2))+" seconds."
     elif calc < 86400.0:
         calc_h = int(calc // 3600)
         calc_m = int((calc -(calc_h * 3600)) // 60)
         calc_s = calc -(calc_h * 3600) -(calc_m * 60)
-        print(str(calc_h)+" hour(s), "+str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds.")
+        row_of_text_to_print = str(calc_h)+" hour(s), "+str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds."
     elif calc < 604800:
         calc_d = int(calc // 86400)
         calc_h = int((calc -(calc_d * 86400)) // 3600)
         calc_m = int((calc -(calc_d * 86400) -(calc_h * 3600)) // 60)
         calc_s =  calc -(calc_d * 86400) -(calc_h * 3600) -(calc_m * 60)
-        print(str(calc_d)+" day(s), "+str(calc_h)+" hours, "+str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds.")
+        row_of_text_to_print = str(calc_d)+" day(s), "+str(calc_h)+" hours, "+str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds."
     elif calc < 2629743.83:
         calc_w = int(calc // 604800)
         calc_d = int((calc -(calc_w * 604800)) // 86400)
         calc_h = int((calc -(calc_w * 604800) -(calc_d * 86400)) // 3600)
         calc_m = int((calc -(calc_w * 604800) -(calc_d * 86400) -(calc_h * 3600)) // 60)
         calc_s =  calc -(calc_w * 604800) -(calc_d * 86400) -(calc_h * 3600) -(calc_m * 60)
-        print(str(calc_w)+" week(s), "+str(calc_d)+" days, "+str(calc_h)+" hours, "+str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds.")
-    print("##############################\n")
+        row_of_text_to_print = str(calc_w)+" week(s), "+str(calc_d)+" days, "+str(calc_h)+" hours, "+str(calc_m)+" minutes, "+str(round(calc_s,2))+" seconds."
+    
+    # Print message!
+    if len(row_of_text_to_print) > 30:
+        length_of_string_to_print = len(row_of_text_to_print)
+    else:
+        length_of_string_to_print = 30
+    print("\n\n" + "#" * length_of_string_to_print + "\nEstimated true time remaining:")
+    print(row_of_text_to_print)
+    print("#" * length_of_string_to_print)
 
 def get_timestamp_string(pretty = False):
     ''' Return an appropriate timestamp string.
