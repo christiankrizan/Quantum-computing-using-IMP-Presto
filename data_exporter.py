@@ -13,9 +13,9 @@ import json
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
-from datetime import datetime
 from data_discriminator import discriminate
-
+from time_calculator import get_timestamp_string
+from datetime import datetime # Needed for making the save folders.
 
 def ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs):
     ''' Assert that the received keys bear (an even number of) entries,
@@ -47,11 +47,6 @@ def stylise_axes(axes):
         axes[axis] = axes[axis].replace('lambda','λ')
         axes[axis] = axes[axis].replace('Lambda','Λ')
     return axes
-
-def get_timestamp_string():
-    ''' Return an appropriate timestamp string.
-    '''
-    return (datetime.now()).strftime("%d-%b-%Y_(%H_%M_%S)")
 
 def get_dict_for_step_list(
     step_entry_name,
@@ -216,176 +211,23 @@ def save(
     if isinstance(name_of_measurement_that_ran, list):
         name_of_measurement_that_ran = "".join(name_of_measurement_that_ran)
     
-    # Build a processed_data tensor for later.
-    processed_data = []
-    
     # Is the user only interested in time traces?
     if not data_to_store_consists_of_time_traces_only:
         
-        # Get index corresponding to integration_window_start and
-        # integration_window_stop respectively.
-        integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
-        integration_stop_index  = np.argmin(np.abs(time_vector - integration_window_stop ))
-        
-        # Make a list of integers, where each integer corresponds to
-        # an index along the integration window, that will be post-processed.
-        integration_indices     = np.arange(integration_start_index, integration_stop_index)
-        
-        # Acquire the DFT sample frequencies contained within the
-        # fetched_data_arr trace. freq_arr contains the centres of
-        # the (representable) segments of the discretised frequency axis.
-        dt = time_vector[1] - time_vector[0]
-        '''num_samples = len(integration_indices)'''
-        num_samples = 8*len(integration_indices)
-        freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
-        
-        ## Treat zero-input resonator IF arguments.
-        ## Note that all IF entries are converted into lists.
-        
-        # Did the user not send any IF information? Then assume IF = 0 Hz.
-        # Did the user drive one resonator on resonance? Then set its IF to 0.
-        if len(resonator_freq_if_arrays_to_fft) == 0:
-            print("Warning! No IF information provided to FFT. Assuming IF = 0 Hz.")
-            # Append entry corresponding to this resonator.
-            # Let's cast it to list already, since that would happen later
-            # if we don't.
-            resonator_freq_if_arrays_to_fft.append( [0] )
-        else:
-            # The user has provided some kind of IF data.
-            for pp in range(len(resonator_freq_if_arrays_to_fft)):
-                # Have the user supplied empty sweeps?
-                if resonator_freq_if_arrays_to_fft[pp] == []:
-                    print("Warning! No IF sweep information provided to FFT at entry "+str(pp)+". Assuming IF = 0 Hz for this entry.")
-                    # Append entry corresponding to this resonator.
-                    # Let's cast it to list already, since that would happen later
-                    # if we don't.
-                    resonator_freq_if_arrays_to_fft[pp] = [0]
-        
-        # Now, get the index on the freq_arr, that corresponds to the IFs
-        # used. Sweeps will become arrays of freq_arr indices.
-        integration_indices_list = []
-        for _ro_freq_if in resonator_freq_if_arrays_to_fft:
-            if (not isinstance(_ro_freq_if, list)) and (not isinstance(_ro_freq_if, np.ndarray)):
-                _curr_item = [_ro_freq_if] # Cast to list if not list.
-            else:
-                _curr_item = _ro_freq_if   # _ro_freq_if is a list, we're good.
-            # The user may have swept the frequency => many IFs.
-            ## Otherwise every entry in integration_indices_list,
-            ## will just be an array with a single value,
-            ## being that single IF.
-            curr_array = []
-            for if_point in _curr_item:
-                # Append the index of the freq_arr that best matches
-                # the sought-for IF frequency.
-                curr_array.append( np.argmin(np.abs(freq_arr - if_point)) )
-                print("Appended index: "+str(np.argmin(np.abs(freq_arr - if_point)))+", which is "+str(freq_arr[np.argmin(np.abs(freq_arr - if_point))])+" Hz. A diff by "+str(_ro_freq_if[0] - freq_arr[np.argmin(np.abs(freq_arr - if_point))])+" Hz.")
-            integration_indices_list.append( curr_array )
-        
-        # Execute complex FFT. Every row of the resp_fft matrix,
-        # contains the FFT of every time trace that was ever collected
-        # using .store() -- meaning that for instance resp_fft[0,:]
-        # contains the FFT of the first store event in the first repeat.
-        #    If the user swept the IF frequency, then picking whatever
-        #    frequency in the FFT that is closest to the list of IF frequencies
-        #    will return may identical indices.
-        #    Ie. something like [124, 124, 124, 124, 124, 125, 125, 125, 125]
-        #    Instead, we should demodulate the collected data.
-        item_counter = 1
-        for _item in integration_indices_list:
-            
-            # Print status to the user.
-            if len(integration_indices_list) > 1:
-                print("Fourier transforming item "+str(item_counter)+" of "+str(len(integration_indices_list))+".")
-                item_counter += 1
-            else:
-                print("Fourier transforming...")
-            
-            # Do FFT!            
-            if len(_item) <= 1:
-                '''resp_fft = np.fft.fft(fetched_data_arr[:, 0, integration_indices], axis=-1)'''
-                arr_to_fft = fetched_data_arr[:, 0, integration_indices]
-                
-                # For progress plotting during FFT
-                progress = np.linspace(0.0,100.0,len(arr_to_fft)).astype(int)
-                tic = time.time()
-                
-                ## TODO the zero-padding here below,
-                ##      is done within microseconds.
-                new_arr = []
-                for row in range(len(arr_to_fft)):
-                    new_arr.append(np.append(arr_to_fft[row], np.zeros([1,len(arr_to_fft[0])*7])))
-                    toc = time.time()
-                    if (-(tic - toc) >= 5):
-                        print("Progress: "+str(progress[row])+"% done.")
-                        tic = time.time()
-                new_arr = np.array(new_arr)
-                resp_fft = np.fft.fft(new_arr, axis=-1)
-                
-                # At this point, to clear up memory, we should clear out
-                # at least new_arr, and arr_to_fft.
-                del new_arr
-                del arr_to_fft
-                del progress
-                del tic
-                del toc
-                
-                '''processed_data.append( 2/num_samples * resp_fft[:, _item[0]] )'''
-                processed_data.append( 2/(num_samples/8) * resp_fft[:, _item[0]] ) # TODO: Should, or should not, the num_samples part be modified after zero-padding the data?
-            else:
-                print("WARNING: Currently, resonator frequency sweeps are not FFT'd due to a lack of demodulation. The Y-axis offset following your sweep is thus completely fictional.") # TODO
-                print("WARNING: The current FFT method is not demodulating sufficiently. If you are using large averages, you may experience a weird offset on your Y-axis.") # TODO
-                return_arr = (np.mean(np.abs(fetched_data_arr[:, 0, integration_indices]), axis=-1) +fetched_data_offset[0])*fetched_data_scale[0]
-                
-                ## TODO: The commented part below is not finished. ##
-                
-                ################# IF frequency sweep (case) #################
-                # Every new row in resp_fft corresponds to another ("the next")
-                # instance of .store() in the entire sequencer program.
-                # If the user swept some IF frequency during the sequence,
-                # then the current _item will be a list, triggering this case.
-                
-                # Each new entry in _item will be the index (in the FFT
-                # for that particular row in the grand resp_fft matrix)
-                # that corresponds to the peak we want.
-                
-                """ This is actually a good one, except noise output (FFT resolution error perhaps?)
-                ll = 0
-                return_arr = []
-                for fft_row in resp_fft[:]:
-                    return_arr.append( \
-                        fft_row[ _item[ ll ] ] \
-                    )
-                    ll += 1"""
-                
-                """return_arr = []
-                if len(_item[:]) == inner_loop_size:
-                    # The frequency sweep happened as an inner loop.
-                    for ll in range(inner_loop_size*outer_loop_size):
-                        fft_row = np.fft.fft(fetched_data_arr[ll, 0, integration_indices] * 2*np.cos(2*np.pi*_item[ll % inner_loop_size]), axis=-1) / num_samples
-                        return_arr.append( \
-                            fft_row[ np.argmin(np.abs(freq_arr - _item[len(_item[:])//2] )) ] \
-                        )
-                        # TODO Remove the stuff to the right: #fft_row[ _item[ (ll % inner_loop_size) ] ]
-                else:
-                    pass
-                    # The frequency sweep happened as an outer loop.
-                    ee = 0
-                    ff = 0
-                    for fft_row in resp_fft[:]:
-                        return_arr.append( fft_row[ _item[ee] ] )
-                        ff += 1
-                        if ff == outer_loop_size:
-                            ff = 0
-                            ee += 1"""
-                            
-                # We have picked the appropriate fq.-swept indices. Return!
-                processed_data.append( 2 * np.array(return_arr) )
-        
-        # Clean up.
-        del item_counter
+        # Send data to post-processor
+        processed_data = post_process_time_trace_data(
+            time_vector = time_vector,
+            integration_window_start = integration_window_start,
+            integration_window_stop = integration_window_stop,
+            resonator_freq_if_arrays_to_fft = resonator_freq_if_arrays_to_fft,
+            fetched_data_arr = fetched_data_arr,
+            fetched_data_offset = fetched_data_offset,
+            fetched_data_scale = fetched_data_scale,
+        )
         
     else:
         # The user is only interested in time trace data.
+        processed_data = []
         processed_data.append( fetched_data_arr[:, 0, :] )
     
     # Clear out fetched_data_arr if it's not needed anymore, to save on memory.
@@ -635,6 +477,157 @@ def save(
     # Return the .h5 save path to the calling script
     return filepath_to_exported_h5_file
 
+def post_process_time_trace_data(
+    time_vector,
+    integration_window_start,
+    integration_window_stop,
+    resonator_freq_if_arrays_to_fft,
+    fetched_data_arr,
+    fetched_data_offset,
+    fetched_data_scale,
+    ):
+    ''' Using the provided arguments,
+        1. Demodulate the time trace data held within fetched_data_arr.
+        2. Perform FFT on segment held within the integration window bounds.
+        3. Return the element at 0 Hz baseband as the (complex) datapoint(s)
+           of choice.
+    '''
+    
+    # Prepare list, that will contain the processed data.
+    # Every new index of processed data, is another resonator.
+    processed_data = []
+    
+    # Get index corresponding to integration_window_start and
+    # integration_window_stop respectively.
+    integration_start_index = np.argmin(np.abs(time_vector - integration_window_start))
+    integration_stop_index  = np.argmin(np.abs(time_vector - integration_window_stop ))
+    
+    # Make a list of integers, where each integer corresponds to
+    # an index along the integration window, that will be post-processed.
+    integration_indices     = np.arange(integration_start_index, integration_stop_index)
+    
+    # Acquire parameters needed for FFT-ing the data.
+    ## TODO: Remove this part?
+    ##dt = time_vector[1] - time_vector[0]
+    ##num_samples = len(integration_indices)
+    ##freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
+    
+    # Did the user not send any IF information? Then assume IF = 0 Hz.
+    # Did the user drive one resonator on resonance? Then set its IF to 0.
+    ## Note: all IF entries are converted into lists later on, anyhow.
+    if len(resonator_freq_if_arrays_to_fft) == 0:
+        print("Warning! No IF information provided to FFT. Assuming IF = 0 Hz.")
+        # Append entry corresponding to this resonator.
+        # Let's cast it to list already, since that would happen later
+        # if we don't.
+        resonator_freq_if_arrays_to_fft.append( [0] )
+    else:
+        # The user has provided some kind of IF data.
+        for pp in range(len(resonator_freq_if_arrays_to_fft)):
+            # Have the user supplied empty sweeps?
+            if resonator_freq_if_arrays_to_fft[pp] == []:
+                print("Warning! No IF sweep information provided to FFT at entry "+str(pp)+". Assuming IF = 0 Hz for this entry.")
+                # Append entry corresponding to this resonator.
+                # Let's cast it to list already, since that would happen later
+                # if we don't.
+                resonator_freq_if_arrays_to_fft[pp] = [0]
+    
+    # Instead of getting indices of some freq_arr, let's instead demodulate the
+    # data, so that our sought-for frequency content is at baseband 0 Hz!
+    for arr_ii in range(len(resonator_freq_if_arrays_to_fft)):
+        
+        # Grab the next resonator's IF frequency (array)!
+        _ro_freq_if = resonator_freq_if_arrays_to_fft[arr_ii]
+        
+        # Parse the IF input, cast to lists if entries are non-list.
+        if (not isinstance(_ro_freq_if, list)) and (not isinstance(_ro_freq_if, np.ndarray)):
+            _ro_freq_if = [_ro_freq_if]
+        
+        # Print progress?
+        if len(_ro_freq_if) > 1:
+            print("Resonator " + \
+                str(arr_ii+1) + " of " + \
+                str(len(resonator_freq_if_arrays_to_fft))+":")
+        
+        # _ro_freq_if may either be single-valued, or list-valued.
+        # List-valued entries correspond to IF sweeps, typically
+        # resonator spectroscopy sweeps.
+        processed_data_sweep_arr = []
+        for arr_jj in range(len(_ro_freq_if)):
+            
+            # Which is the next IF to demodulate with?
+            _current_if_to_demodulate = _ro_freq_if[arr_jj]
+            
+            # Print progress?
+            if (len(_ro_freq_if) > 1) and ((arr_jj % 6) == 0):
+                print("Progress: "+str(round(arr_jj/len(_ro_freq_if)*100,1))+" %")
+            
+            # _current_if_to_demodulate is either a single item (single IF)
+            # or all items in a for-looped list of IFs.
+            # Single-valued entries in _ro_freq_if results in just one FFT.
+            
+            # Fetch data to work on
+            arr_to_fft = fetched_data_arr[:, 0, integration_indices]
+            
+            ## arr_to_fft is an object shaped (num_datapoints_in_measurement, len(integration_indices))
+            ## So, that would be all (instrument-averaged) time traces,
+            ## for every datapoint in the measurement plot.
+            ##
+            ## 2D-sweeps are at this point irrelevant. All values are
+            ## merely provided on a single line; reshaping into 2D data
+            ## happens later.
+            ##
+            ## Example: in a 50x4 sweep for some measurement with 50 points
+            ##          swept over four values on some other variable,
+            ##          then the arr_to_fft would be shaped
+            ##          (200, len(integration_indices))
+            
+            # Get time t that corresponds to the integration indices.
+            ## How should the time vector look like for the demodulation
+            ## carrier? Let's assume that the sampling window
+            ## always starts at 0.0 seconds. Because, this is likely
+            ## where the Presto instrument itself assumes that t = 0 is.
+            ## This way, I am trying to keep the demodulation carrier
+            ## in phase with the Presto's first demodulation carrier.
+            t = np.linspace( \
+                time_vector[integration_indices[0]], \
+                time_vector[integration_indices[-1]], \
+                len(integration_indices) \
+            )
+            
+            # Demodulate!
+            for ii in range(len(arr_to_fft)):
+                ## FOR OLD FILES, WITH MEASUREMENT SCRIPTS WHERE THE IF    ##
+                ## FREQUENCY WAS ALWAYS POSITIVE REGARDLESS OF LSB OR USB, ##
+                ## YOU'LL HAVE TO SUPPLY A FORCED -f_demod NEGATION HERE:  ##
+                arr_to_fft[ii] = arr_to_fft[ii] * np.exp(+2j * np.pi * -_current_if_to_demodulate * t)
+                #arr_to_fft[ii] = arr_to_fft[ii] * np.exp(+2j * np.pi * _current_if_to_demodulate * t)
+            
+            # Perform FFT!
+            resp_fft = np.fft.fft(arr_to_fft, axis=-1)
+            
+            # Is _ro_freq_if single-valued?
+            #   => There is one IF for all datapoints.
+            if len(_ro_freq_if) == 1:
+                processed_data.append( 2/(num_samples) * resp_fft[:, 0] ) # Append result to processed_data.
+            else:
+                # We're looking at a frequency sweep with many IFs.
+                # Only grab the one datapoint currently valid for the
+                # current IF being demodulated with.
+                processed_data_sweep_arr.append( 2/(num_samples) * resp_fft[arr_jj, 0] )
+        
+        # Did we process an IF frequency sweep?
+        if processed_data_sweep_arr != []:
+            # We did.
+            processed_data.append( np.array(processed_data_sweep_arr) )
+            del processed_data_sweep_arr
+        ## else:
+        ##    Otherwise, we don't have to care, the FFT was done all in one go.
+    
+    # Return the post-processed data.
+    return processed_data
+
+
 def export_processed_data_to_file(
     filepath_of_calling_script,
     
@@ -743,7 +736,7 @@ def export_processed_data_to_file(
     try:
         import Labber
         labber_import_worked = True
-    except:
+    except ModuleNotFoundError:
         print("Could not import the Labber library; "                      + \
               "no data was saved in the Log Browser compatible format. "   + \
               "\n\nTo remedy this error, you should now do the following:" + \
@@ -916,7 +909,12 @@ def export_processed_data_to_file(
         h5f.create_dataset("First_key_that_was_swept", data = (ext_keys[0])['name']) # Denote which value was the first one to be swept.
         h5f.create_dataset("Second_key_that_was_swept", data = (ext_keys[1])['name']) # Denote which value was the second one to be swept.
         
-        print("Data saved using H5PY, see " + save_path_h5py)
+        # Report done.
+        print( \
+            "Data saved using H5PY at "          + \
+            get_timestamp_string(pretty = True)  + \
+            ", see " + save_path_h5py \
+        )
     
     # Return the .h5 save path to the calling function
     return save_path_h5py
@@ -945,6 +943,7 @@ def export_raw_data_to_new_file(
     save_complex_data = True
     ext_keys = None
     log_dict_list = None
+    fetched_data_arr = None
     with h5py.File(path_to_saved_file_containing_raw_data, 'r') as h5f:
         
         # Get all keys in the hdf5 file.
@@ -999,10 +998,10 @@ def export_raw_data_to_new_file(
                         # Files that contain *only* the parameter
                         # readout_freq_centre and readout_freq_span,
                         # will be caught too, since the suffix is ""
-                        readout_freq_nco    = dict_containing_all_attributes['readout_freq_nco'+item_suffix]
-                        readout_freq_centre = dict_containing_all_attributes['readout_freq_centre'+item_suffix]
-                        readout_freq_span   = dict_containing_all_attributes['readout_freq_span'+item_suffix]
-                        num_freqs           = dict_containing_all_attributes['num_freqs']
+                        readout_freq_nco    = dict_containing_all_attributes['readout_freq_nco'+item_suffix][0]
+                        readout_freq_centre = dict_containing_all_attributes['readout_freq_centre'+item_suffix][0]
+                        readout_freq_span   = dict_containing_all_attributes['readout_freq_span'+item_suffix][0]
+                        num_freqs           = dict_containing_all_attributes['num_freqs'][0]
                         ## TODO, instead of assuming num_freqs, one could look
                         ##       at the length of the readout array.
                         
@@ -1047,6 +1046,18 @@ def export_raw_data_to_new_file(
         # Save complex data?
         save_complex_data = log_dict_list[0]['complex']
     
+    # Attempt to pull the raw data out of the file, report if failure.
+    fetched_data_fetch_successful = False
+    try:
+        fetched_data_arr = dict_containing_all_keys["fetched_data_arr"]
+        fetched_data_fetch_successful = True
+    except KeyError:
+        # Failure, do nothing.
+        pass
+    if (not fetched_data_fetch_successful):
+        raise KeyError("Error! Could not pull raw data from file: \""+str(path_to_saved_file_containing_raw_data)+"\" - check whether your measurement ran with the flag \"save_raw_time_data = True\"")
+    del fetched_data_fetch_successful # Clean up.
+    
     # Export extracted data to file.
     save(
         timestamp = get_timestamp_string(), # Timestamps are not saved. Get a new one.
@@ -1054,7 +1065,7 @@ def export_raw_data_to_new_file(
         log_dict_list = log_dict_list,
         
         time_vector = dict_containing_all_keys["time_vector"],
-        fetched_data_arr = dict_containing_all_keys["fetched_data_arr"],
+        fetched_data_arr = fetched_data_arr,
         fetched_data_scale = dict_containing_all_keys["User_set_scale_to_Y_axis"],
         fetched_data_offset = dict_containing_all_keys["User_set_offset_to_Y_axis"],
         resonator_freq_if_arrays_to_fft = resonator_freq_if_arrays_to_fft,
