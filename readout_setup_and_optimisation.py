@@ -1567,7 +1567,7 @@ def optimise_integration_window_g_e_f(
         #time_vector = time_vector,   # Nothing to export here.
         #fetched_data_arr = [],       # Nothing to export here.
         timestamp = get_timestamp_string(),
-        append_to_log_name_before_timestamp = 'readout_integration_window',
+        append_to_log_name_before_timestamp = 'integration_window',
         append_to_log_name_after_timestamp = '',
         use_log_browser_database = use_log_browser_database,
         suppress_log_browser_export = suppress_log_browser_export,
