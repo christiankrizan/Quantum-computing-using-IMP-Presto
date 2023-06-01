@@ -431,6 +431,7 @@ def save(
                 fetch_thetas = np.copy(np.angle( fetch ))
                 
                 # Add user-set offset (Note: can be negative; "add minus y")
+                print("mm was: "+str(mm)+"\n... and fetched_dat_offset was: "+str(fetched_data_offset))
                 fetch_imag += np.copy(fetched_data_offset[mm]) * np.sin( fetch_thetas )
                 fetch_real += np.copy(fetched_data_offset[mm]) * np.cos( fetch_thetas )
                 fetch = fetch_real + fetch_imag*1j
@@ -567,12 +568,17 @@ def post_process_time_trace_data(
         # resonator spectroscopy sweeps.
         # For such sweeps, we need to know the total number of measurement
         # points that will be stored.
-        total_points_to_store = ((fetched_data_arr[:, 0, integration_indices]).shape)[0]
-        processed_data_sweep_arr = np.zeros(total_points_to_store, dtype=np.complex128)
-        ## TODO: right now, it is assumed that all IF sweeps has the frequency
-        ## sweep done using the repeat argument (= outer loop).
-        ## I am currently unsure as to how this fact can be resolved in a good way.
-        inner_loop_size = int(total_points_to_store/len(_ro_freq_if))
+        if (len(_ro_freq_if) > 1):
+            total_points_to_store = ((fetched_data_arr[:, 0, integration_indices]).shape)[0]
+            processed_data_sweep_arr = np.zeros(total_points_to_store, dtype=np.complex128)
+            ## TODO: right now, it is assumed that all IF sweeps has the frequency
+            ## sweep done using the repeat argument (= outer loop).
+            ## I am currently unsure as to how this fact can be resolved in a good way.
+            inner_loop_size = int(total_points_to_store/len(_ro_freq_if))
+        else:
+            # This array is checked later to determine whether there
+            # was an IF sweep.
+            processed_data_sweep_arr = []
         for arr_jj in range(len(_ro_freq_if)):
             
             # Which is the next IF to demodulate with?
@@ -666,8 +672,6 @@ def post_process_time_trace_data(
             del processed_data_sweep_arr
         ## else:
         ##    Otherwise, we don't have to care, the FFT was done all in one go.
-    
-    print("DEBUG:\n"+str(processed_data))
     
     # Return the post-processed data.
     return processed_data
