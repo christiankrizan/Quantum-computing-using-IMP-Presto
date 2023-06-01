@@ -889,7 +889,7 @@ def resonator_spectroscopy_ro0_over_iswap_duration(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [ np.abs(readout_freq_if_arr_B) ],
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr_B ],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,

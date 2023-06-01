@@ -292,7 +292,7 @@ def find_drag_coefficient_lambda_over_anharmonicity(
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
-        
+        raise NotImplementedError("Halted! Surely, something is missing in the .save() statement below? There is no IF provided. TODO")
         
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''

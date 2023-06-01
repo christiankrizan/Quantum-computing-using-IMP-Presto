@@ -454,7 +454,7 @@ def ramsey01_ro0(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if ],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -884,7 +884,7 @@ def ramsey01_ro0_virtual_z(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if ],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1905,7 +1905,7 @@ def ramsey12_ro1(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if ],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -2363,7 +2363,7 @@ def ramsey01_echo_r0(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if)],
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if ],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,

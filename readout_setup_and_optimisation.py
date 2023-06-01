@@ -523,7 +523,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_B)], # TODO: This script should be made multiplexed, check whether the state discrimination (and data_exporter.py) can handle that.
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if_B ], # TODO: This script should be made multiplexed, check whether the state discrimination (and data_exporter.py) can handle that.
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1793,6 +1793,8 @@ def get_time_traces_for_g_e_f(
             phases_q     = bandsign(control_freq_if_12),
         )
         
+        raise NotImplementedError("Halted! Surely, this measurement cannot be compelte? There is no IF argument provided below for the .save() call.")
+        
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
@@ -2100,7 +2102,7 @@ def get_wire_to_readout_delay(
             phases_q     =  0.0,
         )
         
-        
+        raise NotImplementedError("Halted! Surely, this measurement script cannot be complete? There is no IF argument provided in the .save() call below.")
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)

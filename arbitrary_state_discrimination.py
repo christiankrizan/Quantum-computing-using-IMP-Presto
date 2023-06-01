@@ -497,7 +497,7 @@ def discriminate_state_11(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if_A, readout_freq_if_B ],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -657,7 +657,7 @@ def discriminate_state_11(
                 fetched_data_arr = fetched_data_arr,
                 fetched_data_scale = axes['y_scaler'],
                 fetched_data_offset = axes['y_offset'],
-                resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
+                resonator_freq_if_arrays_to_fft = [ readout_freq_if_A, readout_freq_if_B ],
                 
                 filepath_of_calling_script = os.path.realpath(__file__),
                 use_log_browser_database = use_log_browser_database,
@@ -1220,7 +1220,7 @@ def discriminate_state_22(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if_A, readout_freq_if_B ],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
@@ -1387,7 +1387,7 @@ def discriminate_state_22(
                 fetched_data_arr = fetched_data_arr,
                 fetched_data_scale = axes['y_scaler'],
                 fetched_data_offset = axes['y_offset'],
-                resonator_freq_if_arrays_to_fft = [np.abs(readout_freq_if_A), np.abs(readout_freq_if_B)], # TODO: Automatic USB / LSB selection not considered, always set positive for now.
+                resonator_freq_if_arrays_to_fft = [ readout_freq_if_A, readout_freq_if_B ],
                 
                 filepath_of_calling_script = os.path.realpath(__file__),
                 use_log_browser_database = use_log_browser_database,

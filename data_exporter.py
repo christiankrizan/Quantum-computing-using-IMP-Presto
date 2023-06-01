@@ -600,8 +600,8 @@ def post_process_time_trace_data(
                 ## FOR OLD FILES, WITH MEASUREMENT SCRIPTS WHERE THE IF    ##
                 ## FREQUENCY WAS ALWAYS POSITIVE REGARDLESS OF LSB OR USB, ##
                 ## YOU'LL HAVE TO SUPPLY A FORCED -f_demod NEGATION HERE:  ##
-                arr_to_fft[ii] = arr_to_fft[ii] * np.exp(+2j * np.pi * -_current_if_to_demodulate * t)
-                #arr_to_fft[ii] = arr_to_fft[ii] * np.exp(+2j * np.pi * _current_if_to_demodulate * t)
+                #arr_to_fft[ii] = arr_to_fft[ii] * np.exp(+2j * np.pi * -_current_if_to_demodulate * t)
+                arr_to_fft[ii] = arr_to_fft[ii] * np.exp(+2j * np.pi * _current_if_to_demodulate * t)
             
             # Perform FFT!
             resp_fft = np.fft.fft(arr_to_fft, axis=-1)
@@ -1011,7 +1011,9 @@ def export_raw_data_to_new_file(
                         readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
                         
                         # Append the calculated readout frequency span.
-                        resonator_freq_if_arrays_to_fft.append( np.abs(readout_freq_if_arr) )
+                        ##resonator_freq_if_arrays_to_fft.append( np.abs(readout_freq_if_arr) )
+                        print("Note: an instance of np.abs() was removed here, back when the readout post-processing code was upgraded. If your resonator IFs look weird, you may want to look into the code where this print statement is located.")
+                        resonator_freq_if_arrays_to_fft.append( readout_freq_if_arr )
                         
                         del f_start, f_stop, readout_freq_if_arr
                         del readout_freq_nco, readout_freq_centre
