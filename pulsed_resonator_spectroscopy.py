@@ -618,27 +618,27 @@ def find_f_ro0_sweep_power(
         # Define repetition counter for T.
         repetition_counter = 1
         
-        # For every resonator stimulus pulse frequency to sweep over:
-        for ii in range(num_freqs):
+        # For every resonator stimulus pulse amplitude to sweep over:
+        for ii in range(num_amplitudes):
             
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
-            # Commence readout, swept in frequency.
+            # Commence readout, swept in amplitude.
             pls.reset_phase(T, readout_stimulus_port)
             pls.output_pulse(T, readout_pulse)
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
-            # Move to next scanned frequency
-            pls.next_frequency(T, readout_stimulus_port)
-            T += 20e-9 # Add some time for changing the frequency.
+            # Move to the next amplitude.
+            pls.next_scale(T, readout_stimulus_port)
+            T += 20e-9 # Add some time for changing the amplitude.
             
             # Is this the last iteration?
-            if ii == num_freqs-1:
-                # Increment the swept amplitude.
-                pls.next_scale(T, readout_stimulus_port)
-                T += 20e-9 # Add some time for changing the amplitude.
+            if ii == num_amplitudes-1:
+                # Increment the swept frequency.
+                pls.next_frequency(T, readout_stimulus_port)
+                T += 20e-9 # Add some time for changing the frequency.
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -652,7 +652,7 @@ def find_f_ro0_sweep_power(
         # Average the measurement over 'num_averages' averages
         pls.run(
             period          =   T,
-            repeat_count    =   num_amplitudes,
+            repeat_count    =   num_freqs,
             num_averages    =   num_averages,
             print_time      =   True,
         )
@@ -783,8 +783,8 @@ def find_f_ro0_sweep_power(
             
             integration_window_start = integration_window_start,
             integration_window_stop  = integration_window_stop,
-            inner_loop_size = num_freqs,
-            outer_loop_size = num_amplitudes,
+            inner_loop_size = num_amplitudes,
+            outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
             default_exported_log_file_name = default_exported_log_file_name,
@@ -793,6 +793,7 @@ def find_f_ro0_sweep_power(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
             save_raw_time_data = save_raw_time_data,
@@ -1502,8 +1503,8 @@ def find_f_ro1_sweep_power(
         # Define repetition counter for T.
         repetition_counter = 1
         
-        # For every resonator stimulus pulse frequency to sweep over:
-        for ii in range(num_freqs):
+        # For every resonator stimulus pulse amplitude to sweep over:
+        for ii in range(num_amplitudes):
             
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
@@ -1513,21 +1514,21 @@ def find_f_ro1_sweep_power(
             pls.output_pulse(T, control_pulse_pi_01)
             T += control_duration_01
             
-            # Commence readout, swept in frequency.
+            # Commence readout, swept in amplitude.
             pls.reset_phase(T, readout_stimulus_port)
             pls.output_pulse(T, readout_pulse)
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
-            # Move to next scanned frequency
-            pls.next_frequency(T, readout_stimulus_port)
-            T += 20e-9 # Add some time for changing the frequency.
+            # Move to the next amplitude.
+            pls.next_scale(T, readout_stimulus_port)
+            T += 20e-9 # Add some time for changing the amplitude.
             
             # Is this the last iteration?
-            if ii == num_freqs-1:
-                # Increment the swept amplitude.
-                pls.next_scale(T, readout_stimulus_port)
-                T += 20e-9 # Add some time for changing the amplitude.
+            if ii == num_amplitudes-1:
+                # Increment the swept frequency.
+                pls.next_frequency(T, readout_stimulus_port)
+                T += 20e-9 # Add some time for changing the frequency.
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -1541,7 +1542,7 @@ def find_f_ro1_sweep_power(
         # Average the measurement over 'num_averages' averages
         pls.run(
             period          =   T,
-            repeat_count    =   num_amplitudes,
+            repeat_count    =   num_freqs,
             num_averages    =   num_averages,
             print_time      =   True,
         )
@@ -1679,8 +1680,8 @@ def find_f_ro1_sweep_power(
             
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
-            inner_loop_size = num_freqs,
-            outer_loop_size = num_amplitudes,
+            inner_loop_size = num_amplitudes,
+            outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
             default_exported_log_file_name = default_exported_log_file_name,
@@ -1689,6 +1690,7 @@ def find_f_ro1_sweep_power(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
             save_raw_time_data = save_raw_time_data,
@@ -2464,8 +2466,8 @@ def find_f_ro2_sweep_power(
         # Define repetition counter for T.
         repetition_counter = 1
         
-        # For every resonator stimulus pulse frequency to sweep over:
-        for ii in range(num_freqs):
+        # For every resonator stimulus pulse amplitude to sweep over:
+        for ii in range(num_amplitudes):
         
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
@@ -2479,21 +2481,21 @@ def find_f_ro2_sweep_power(
             pls.output_pulse(T, control_pulse_pi_12)
             T += control_duration_12
             
-            # Commence readout, swept in frequency.
+            # Commence readout, swept in amplitude.
             pls.reset_phase(T, readout_stimulus_port)
             pls.output_pulse(T, readout_pulse)
             pls.store(T + readout_sampling_delay) # Sampling window
             T += readout_duration
             
-            # Move to next scanned frequency
-            pls.next_frequency(T, readout_stimulus_port)
-            T += 20e-9 # Add some time for changing the frequency.
+            # Move to the next amplitude.
+            pls.next_scale(T, readout_stimulus_port)
+            T += 20e-9 # Add some time for changing the amplitude.
             
             # Is this the last iteration?
-            if ii == num_freqs-1:
-                # Increment the swept amplitude.
-                pls.next_scale(T, readout_stimulus_port)
-                T += 20e-9 # Add some time for changing the amplitude.
+            if ii == num_amplitudes-1:
+                # Increment the swept frequency.
+                pls.next_frequency(T, readout_stimulus_port)
+                T += 20e-9 # Add some time for changing the frequency.
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
@@ -2649,8 +2651,8 @@ def find_f_ro2_sweep_power(
             
             integration_window_start = integration_window_start,
             integration_window_stop = integration_window_stop,
-            inner_loop_size = num_freqs,
-            outer_loop_size = num_amplitudes,
+            inner_loop_size = num_amplitudes,
+            outer_loop_size = num_freqs,
             
             save_complex_data = save_complex_data,
             default_exported_log_file_name = default_exported_log_file_name,
@@ -2659,6 +2661,7 @@ def find_f_ro2_sweep_power(
             select_resonator_for_single_log_export = '',
             
             suppress_log_browser_export = suppress_log_browser_export,
+            force_matrix_reshape_flip_row_and_column = True,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
             save_raw_time_data = save_raw_time_data,
