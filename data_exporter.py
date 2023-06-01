@@ -507,9 +507,8 @@ def post_process_time_trace_data(
     integration_indices     = np.arange(integration_start_index, integration_stop_index)
     
     # Acquire parameters needed for FFT-ing the data.
-    ## TODO: Remove this part?
+    num_samples = len(integration_indices)
     ##dt = time_vector[1] - time_vector[0]
-    ##num_samples = len(integration_indices)
     ##freq_arr = np.fft.fftfreq(num_samples, dt)  # Get DFT frequency "axis"
     
     # Did the user not send any IF information? Then assume IF = 0 Hz.
@@ -549,17 +548,38 @@ def post_process_time_trace_data(
                 str(arr_ii+1) + " of " + \
                 str(len(resonator_freq_if_arrays_to_fft))+":")
         
+        # Get time t that corresponds to the integration indices.
+        # This t is used later when doing the demodulation.
+        ## How should the time vector look like for the demodulation
+        ## carrier? Let's assume that the sampling window
+        ## always starts at 0.0 seconds. Because, this is likely
+        ## where the Presto instrument itself assumes that t = 0 is.
+        ## This way, I am trying to keep the demodulation carrier
+        ## in phase with the Presto's first demodulation carrier.
+        t = np.linspace( \
+            time_vector[integration_indices[0]], \
+            time_vector[integration_indices[-1]], \
+            len(integration_indices) \
+        )
+        
         # _ro_freq_if may either be single-valued, or list-valued.
         # List-valued entries correspond to IF sweeps, typically
         # resonator spectroscopy sweeps.
-        processed_data_sweep_arr = []
+        # For such sweeps, we need to know the total number of measurement
+        # points that will be stored.
+        total_points_to_store = ((fetched_data_arr[:, 0, integration_indices]).shape)[0]
+        processed_data_sweep_arr = np.zeros(total_points_to_store, dtype=np.complex128)
+        ## TODO: right now, it is assumed that all IF sweeps has the frequency
+        ## sweep done using the repeat argument (= outer loop).
+        ## I am currently unsure as to how this fact can be resolved in a good way.
+        inner_loop_size = int(total_points_to_store/len(_ro_freq_if))
         for arr_jj in range(len(_ro_freq_if)):
             
             # Which is the next IF to demodulate with?
             _current_if_to_demodulate = _ro_freq_if[arr_jj]
             
             # Print progress?
-            if (len(_ro_freq_if) > 1) and ((arr_jj % 6) == 0):
+            if (len(_ro_freq_if) > 1) and ((arr_jj % 11) == 0):
                 print("Progress: "+str(round(arr_jj/len(_ro_freq_if)*100,1))+" %")
             
             # _current_if_to_demodulate is either a single item (single IF)
@@ -567,7 +587,15 @@ def post_process_time_trace_data(
             # Single-valued entries in _ro_freq_if results in just one FFT.
             
             # Fetch data to work on
-            arr_to_fft = fetched_data_arr[:, 0, integration_indices]
+            if len(_ro_freq_if) == 1:
+                arr_to_fft = fetched_data_arr[:, 0, integration_indices]
+            else:
+                # Then this is an IF-sweep, and we may select smaller
+                # chunks for FFT'ing.
+                ## TODO: Right now, it is assumed that all IF sweeps
+                ## has the frequency sweep in the repeat (outer loop) of
+                ## the measurement. I am unsure of a good way to fix this fact.
+                arr_to_fft = fetched_data_arr[inner_loop_size*arr_jj:(inner_loop_size*arr_jj)+inner_loop_size, 0, integration_indices]
             
             ## arr_to_fft is an object shaped (num_datapoints_in_measurement, len(integration_indices))
             ## So, that would be all (instrument-averaged) time traces,
@@ -581,19 +609,6 @@ def post_process_time_trace_data(
             ##          swept over four values on some other variable,
             ##          then the arr_to_fft would be shaped
             ##          (200, len(integration_indices))
-            
-            # Get time t that corresponds to the integration indices.
-            ## How should the time vector look like for the demodulation
-            ## carrier? Let's assume that the sampling window
-            ## always starts at 0.0 seconds. Because, this is likely
-            ## where the Presto instrument itself assumes that t = 0 is.
-            ## This way, I am trying to keep the demodulation carrier
-            ## in phase with the Presto's first demodulation carrier.
-            t = np.linspace( \
-                time_vector[integration_indices[0]], \
-                time_vector[integration_indices[-1]], \
-                len(integration_indices) \
-            )
             
             # Demodulate!
             for ii in range(len(arr_to_fft)):
@@ -612,17 +627,47 @@ def post_process_time_trace_data(
                 processed_data.append( 2/(num_samples) * resp_fft[:, 0] ) # Append result to processed_data.
             else:
                 # We're looking at a frequency sweep with many IFs.
-                # Only grab the one datapoint currently valid for the
+                # Only grab the datapoints currently valid for the
                 # current IF being demodulated with.
-                processed_data_sweep_arr.append( 2/(num_samples) * resp_fft[arr_jj, 0] )
+                
+                # Remember: in 2D sweeps, the final output is still just a
+                # straight line of data where all (second dimension)-iterations
+                # have been stringed onto eachother.
+                # Example: you do a 3x6 pixel sweep; 6 traces of 3 datapoints.
+                # The data that was sent to this function, then consisted of
+                # [1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3].
+                # Thus, for IF sweeps, we need to select multiple points
+                # to store for each IF. For the very first IF, we need to
+                # grab all of the "1" datapoints in that FFT'd vector. Etc.
+                # At this point, we must thus figure out the spacing between
+                # every "1" in the sequence.
+                ## TODO since there was a large change to keep bias sweeps
+                ## on the *inner* loop of the measurements, this means
+                ## that the datapoints are structured:
+                ## [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3]
+                ## The solution to this fact is very hacky as of now,
+                ## since it assumes that all IF sweeps performs said IF
+                ## sweep on the repeat (aka. outer) loop of the measurements.
+                ## TODO: I am unsure of how to best solve this issue.
+                '''for uu in range(0, total_points_to_store, len(_ro_freq_if)):
+                    print("Selecting point: "+str(arr_jj + uu))
+                    processed_data_sweep_arr[arr_jj + uu] = 2/(num_samples) * resp_fft[arr_jj + uu, 0]'''
+                for uu in range(0, inner_loop_size):
+                    ##processed_data_sweep_arr[arr_jj*inner_loop_size + uu] = 2/(num_samples) * resp_fft[arr_jj*inner_loop_size + uu, 0]
+                    processed_data_sweep_arr[arr_jj*inner_loop_size + uu] = 2/(num_samples) * resp_fft[uu, 0]
+            
+            # At this point, we may free up some memory.
+            del resp_fft
         
         # Did we process an IF frequency sweep?
         if processed_data_sweep_arr != []:
             # We did.
-            processed_data.append( np.array(processed_data_sweep_arr) )
+            processed_data.append( processed_data_sweep_arr )
             del processed_data_sweep_arr
         ## else:
         ##    Otherwise, we don't have to care, the FFT was done all in one go.
+    
+    print("DEBUG:\n"+str(processed_data))
     
     # Return the post-processed data.
     return processed_data
