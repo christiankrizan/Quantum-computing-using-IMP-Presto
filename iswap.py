@@ -1607,11 +1607,9 @@ def iswap_sweep_duration_and_amplitude(
             phases_q        = bandsign(coupler_ac_freq_if_iswap),
         )
         
-        
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
-        
         
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
@@ -1948,7 +1946,7 @@ def iswap_sweep_amplitude_and_detuning(
     
     ## Initial array declaration
     
-    # Declare amplitude array for the AC coupler tone to be swept
+    # Declare amplitude array for the AC coupler tone to be swept.
     coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)
     
     # Instantiate the interface
@@ -2039,7 +2037,6 @@ def iswap_sweep_amplitude_and_detuning(
             sync      = True,
         )
         
-        
         ''' Setup scale LUTs '''
         
         # Readout port amplitude
@@ -2070,7 +2067,6 @@ def iswap_sweep_amplitude_and_detuning(
             group           = 0,
             scales          = coupler_ac_amp_arr,
         )
-        
         
         ### Setup readout pulse ###
         

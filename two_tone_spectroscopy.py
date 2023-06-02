@@ -1125,7 +1125,7 @@ def pulsed01_sweep_power(
     
     ## Initial array declaration
 
-    # Declare amplitude array for the control pulse to be swept
+    # Declare amplitude array for the control pulse to be swept.
     control_amp_01_arr = np.linspace(control_amp_01_min, control_amp_01_max, num_amplitudes)
     
     # Instantiate the interface
