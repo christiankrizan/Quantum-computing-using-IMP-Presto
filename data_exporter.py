@@ -431,7 +431,6 @@ def save(
                 fetch_thetas = np.copy(np.angle( fetch ))
                 
                 # Add user-set offset (Note: can be negative; "add minus y")
-                print("mm was: "+str(mm)+"\n... and fetched_dat_offset was: "+str(fetched_data_offset))
                 fetch_imag += np.copy(fetched_data_offset[mm]) * np.sin( fetch_thetas )
                 fetch_real += np.copy(fetched_data_offset[mm]) * np.cos( fetch_thetas )
                 fetch = fetch_real + fetch_imag*1j
