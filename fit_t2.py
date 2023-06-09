@@ -185,13 +185,13 @@ def fit_exponential_decay_t2_echo(
                     fit_error = fit_err_x[0]
                     
                     # Print result.
-                    print("T₂_echo from exponential decay fit of data: " + str(t2_echo_time) + " ±" + str(fit_error/2))
+                    print("T₂_echo from exponential decay fit of data: " + str(t2_echo_time) + " ±" + str(fit_error))
                     
                     # Store fit and its plusminus error bar.
                     ## Warning: append will append to both resonators unless
                     ## you are very darn careful at this step.
                     previous_content_in_fitted_values = (fitted_values[current_res_ii]).copy()
-                    previous_content_in_fitted_values.append((t2_echo_time, fit_error/2))
+                    previous_content_in_fitted_values.append((t2_echo_time, fit_error))
                     fitted_values[current_res_ii] = previous_content_in_fitted_values.copy()
                     del previous_content_in_fitted_values
                     
@@ -201,7 +201,7 @@ def fit_exponential_decay_t2_echo(
                     ## Seems to have been working this far. But I foresee
                     ## user inputs that might break that code snippet.
                     ## Case in point, multiplexed readouts.
-                    #(fitted_values[current_res_ii]).append((t2_echo_time, fit_error/2))
+                    #(fitted_values[current_res_ii]).append((t2_echo_time, fit_error))
                     
                     # Plot?
                     if plot_for_this_many_seconds != 0.0:
@@ -247,7 +247,7 @@ def fit_exponential_decay_t2_echo(
                     
                     # Store failed fit and its failed plusminus error bar.
                     ## TODO this part here has probably not been protected against usage cases with multiplexed readouts.
-                    (fitted_values[current_res_ii]).append((t2_echo_time, fit_error/2))
+                    (fitted_values[current_res_ii]).append((t2_echo_time, fit_error))
         
         # Append!
         list_of_fitted_values.append( fitted_values )
@@ -470,14 +470,14 @@ def fit_oscillating_exponential_decay_t2_asterisk(
                     y_offset_error_from_fit = fit_err_x[2]
                     
                     # Print results.
-                    print("T₂* from exponential decay fit of data: " + str(t2_asterisk_time) + " ±" + str(fit_error/2))
-                    print("Offset in magnitude [FS]: "+str(y_offset_from_fit)+" ±"+str(y_offset_error_from_fit/2))
+                    print("T₂* from exponential decay fit of data: " + str(t2_asterisk_time) + " ±" + str(fit_error))
+                    print("Offset in magnitude [FS]: "+str(y_offset_from_fit)+" ±"+str(y_offset_error_from_fit))
                     
                     # Store fit and its plusminus error bar.
                     ## Warning: append will append to both resonators unless
                     ## you are very darn careful at this step.
                     previous_content_in_fitted_values = (fitted_values[current_res_ii]).copy()
-                    previous_content_in_fitted_values.append((t2_asterisk_time, fit_error/2))
+                    previous_content_in_fitted_values.append((t2_asterisk_time, fit_error))
                     fitted_values[current_res_ii] = previous_content_in_fitted_values.copy()
                     del previous_content_in_fitted_values
                     
@@ -487,7 +487,7 @@ def fit_oscillating_exponential_decay_t2_asterisk(
                     ## Seems to have been working this far. But I foresee
                     ## user inputs that might break that code snippet.
                     ## Case in point, multiplexed readouts.
-                    #(fitted_values[current_res_ii]).append((t2_asterisk_time, fit_error/2))
+                    #(fitted_values[current_res_ii]).append((t2_asterisk_time, fit_error))
                     
                     # Plot?
                     if plot_for_this_many_seconds != 0.0:
@@ -535,7 +535,7 @@ def fit_oscillating_exponential_decay_t2_asterisk(
                     
                     # Store failed fit and its failed plusminus error bar.
                     ## TODO this part here has probably not been protected against usage cases with multiplexed readouts.
-                    (fitted_values[current_res_ii]).append((t2_asterisk_time, fit_error/2))
+                    (fitted_values[current_res_ii]).append((t2_asterisk_time, fit_error))
         
         # Append!
         list_of_fitted_values.append( fitted_values )

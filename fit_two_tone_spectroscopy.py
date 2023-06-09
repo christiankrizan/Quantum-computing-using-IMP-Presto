@@ -151,10 +151,10 @@ def fit_resonance_peak(
                 fit_error      = fit_err[1]
                 
                 # Print result.
-                print("Gaussian fit of two-tone spectroscopy data: " + str(resonator_peak) + " ±" + str(fit_error/2))
+                print("Gaussian fit of two-tone spectroscopy data: " + str(resonator_peak) + " ±" + str(fit_error))
                 
                 # Store fit and its plusminus error bar.
-                (fitted_values[current_res_ii]).append((resonator_peak, fit_error/2))
+                (fitted_values[current_res_ii]).append((resonator_peak, fit_error))
                 
                 # Plot?
                 if plot_for_this_many_seconds != 0.0:
@@ -191,7 +191,7 @@ def fit_resonance_peak(
                     print("Two-tone spectroscopy fit failure! Cannot fit the provided raw data.")
                 
                 # Store failed fit and its failed plusminus error bar.
-                (fitted_values[current_res_ii]).append((resonator_peak, fit_error/2))
+                (fitted_values[current_res_ii]).append((resonator_peak, fit_error))
     
     # We're done.
     return fitted_values

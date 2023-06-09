@@ -24,8 +24,8 @@ def force_system_restart_over_ssh(
     assert isinstance(ip_address, str), "Error! Could not parse provided IP address string."
     
     # Initiate remote reboot.
-    print(  "The Presto was dead at "+str(get_timestamp_string(pretty = True)) + \
-            ". Requiescat in frusta.\n\nRebooting...\n\n")
+    print("The Presto was dead at "+str(get_timestamp_string(pretty = True)) +\
+          ". Requiescat in frusta.\n\nRebooting...\n\n")
     
     # Check that the user has the required fabric package
     fabric_import_successful = False
@@ -45,9 +45,9 @@ def force_system_restart_over_ssh(
         pass
     
     # Allow time for the instrument to reboot.
-    print("Waiting for 20 more seconds.")
+    print("Waiting for 20 seconds.")
     sleep(10)
-    print("Waiting for 10 more seconds.")
+    print("Still 10 seconds left.")
     sleep(10)
     print("Reboot attempt completed.")
     

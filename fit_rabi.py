@@ -146,7 +146,7 @@ def fit_amplitude(
                 one_rabi_cycle_period = optimal_vals_x[3]
                 fit_error = fit_err_x[3]
                 pi_amplitude = one_rabi_cycle_period / 2
-                print("Rabi fit of data: " + str(pi_amplitude) + " ±" + str(fit_error/2))
+                print("Rabi fit of data: " + str(pi_amplitude) + " ±" + str(fit_error))
                 
                 # ... find interval of sway:
                 sway_top = optimal_vals_x[0] + optimal_vals_x[1]
@@ -154,7 +154,7 @@ def fit_amplitude(
                 print("In magnitude, assuming no decay, the oscillations are swaying between [FS]: "+str(sway_bot)+" ↔ "+str(sway_top))
                 
                 # Store fit and its plusminus error bar.
-                (fitted_values[current_res_ii]).append((pi_amplitude, fit_error/2))
+                (fitted_values[current_res_ii]).append((pi_amplitude, fit_error))
                 
                 # Plot?
                 if plot_for_this_many_seconds != 0.0:
@@ -200,7 +200,7 @@ def fit_amplitude(
                     print("Rabi oscillation fit failure! Cannot fit the provided raw data.")
                 
                 # Store failed fit and its failed plusminus error bar.
-                (fitted_values[current_res_ii]).append((pi_amplitude, fit_error/2))
+                (fitted_values[current_res_ii]).append((pi_amplitude, fit_error))
     
     # We're done.
     return fitted_values

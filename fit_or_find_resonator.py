@@ -354,12 +354,12 @@ def fit_or_find_resonator_dip_or_lorentzian(
                 
                 # Print result.
                 if (not report_lowest_resonance_point_of_filtered_curve):
-                    print("Resonator frequency from Lorentzian fit of data: " + str(resonator_dip) + " ±" + str(fit_or_find_error/2))
+                    print("Resonator frequency from Lorentzian fit of data: " + str(resonator_dip) + " ±" + str(fit_or_find_error))
                 else:
-                    print("Lowest point of filtered resonator data: " + str(resonator_dip) + " ±" + str(fit_or_find_error/2))
+                    print("Lowest point of filtered resonator data: " + str(resonator_dip) + " ±" + str(fit_or_find_error))
                 
                 # Store fit and its plusminus error bar.
-                (fitted_values[current_res_ii]).append((resonator_dip, fit_or_find_error/2))
+                (fitted_values[current_res_ii]).append((resonator_dip, fit_or_find_error))
                 
                 # Plot?
                 if plot_for_this_many_seconds != 0.0:
@@ -396,7 +396,7 @@ def fit_or_find_resonator_dip_or_lorentzian(
                     print("Resonator fit failure! Cannot fit the provided raw data.")
                 
                 # Store failed fit and its failed plusminus error bar.
-                (fitted_values[current_res_ii]).append((resonator_dip, fit_or_find_error/2))
+                (fitted_values[current_res_ii]).append((resonator_dip, fit_or_find_error))
     
     # We're done.
     return fitted_values

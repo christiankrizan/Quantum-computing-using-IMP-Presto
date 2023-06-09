@@ -141,7 +141,7 @@ def find_coupler_frequency_from_avoided_two_level_crossings(
     
     # For the fitting routine, we need to estimate the following parameters:
     # → phi_0,
-    # → freq_of_coupler,
+    # → freq_of_untuned_coupler,
     # → static_flux_offset,
     
     # Make an estimate of the phi_0.
@@ -153,7 +153,7 @@ def find_coupler_frequency_from_avoided_two_level_crossings(
     
     # Make an estimate of the coupler frequency.
     # The assumed order of the coupler frequency is 2 * qubit frequency.
-    freq_of_coupler = 2 * y[0]
+    freq_of_untuned_coupler = 2 * y[0]
     
     # Make an estimate of the initial static flux. Ideally, this value is zero.
     if initial_guess_of_static_flux_offset != 0.0:
@@ -172,7 +172,7 @@ def find_coupler_frequency_from_avoided_two_level_crossings(
             f     = tunable_coupler_frequency_function,
             xdata = x,
             ydata = y,
-            p0    = (phi_0, freq_of_coupler, static_flux_offset)
+            p0    = (phi_0, freq_of_untuned_coupler, static_flux_offset)
         )
         
         # covariance_mtx_of_opt_vals is the covariance matrix of optimal_vals.
@@ -181,13 +181,13 @@ def find_coupler_frequency_from_avoided_two_level_crossings(
         fit_error = np.sqrt(np.diag(covariance_mtx_of_opt_vals))
         
         # Report fitted values.
-        print("Frequency of coupler: " + str(optimal_vals[1]) + " Hz ±" + str(fit_error[1]/2) + " Hz")
-        print("Phi₀: " + str(optimal_vals[0]) + " "+flux_quantum_unit+" ±" + str(fit_error[0]/2) + " "+flux_quantum_unit)
-        print("Static flux offset: " + str(optimal_vals[2]) + " "+flux_quantum_unit+" ±" + str(fit_error[2]/2) + " "+flux_quantum_unit)
+        print("Frequency of coupler: " + str(optimal_vals[1]) + " Hz ±" + str(fit_error[1]) + " Hz")
+        print("Phi₀: " + str(optimal_vals[0]) + " "+flux_quantum_unit+" ±" + str(fit_error[0]) + " "+flux_quantum_unit)
+        print("Static flux offset: " + str(optimal_vals[2]) + " "+flux_quantum_unit+" ±" + str(fit_error[2]) + " "+flux_quantum_unit)
         
         # Store fit and its plusminus error bar.
         for ii in range(len(optimal_vals)):
-            fitted_values.append((optimal_vals[ii], fit_error[ii]/2))
+            fitted_values.append((optimal_vals[ii], fit_error[ii]))
         
         # Plot?
         if plot_for_this_many_seconds != 0.0:
@@ -205,10 +205,10 @@ def find_coupler_frequency_from_avoided_two_level_crossings(
             # Get trace data using the fitter's function and acquired values.
             fit_plot_x_vector = np.linspace(low_plot_lim, high_plot_lim, 200)
             fit_curve = tunable_coupler_frequency_function(
-                phi                = fit_plot_x_vector,
-                phi_0              = optimal_vals[0],
-                freq_of_coupler    = optimal_vals[1],
-                static_flux_offset = optimal_vals[2],
+                phi                     = fit_plot_x_vector,
+                phi_0                   = optimal_vals[0],
+                freq_of_untuned_coupler = optimal_vals[1],
+                static_flux_offset      = optimal_vals[2],
             )
             
             # Set figure size, and font sizes.
@@ -255,7 +255,7 @@ def find_coupler_frequency_from_avoided_two_level_crossings(
 def tunable_coupler_frequency_function(
     phi,
     phi_0,
-    freq_of_coupler,
+    freq_of_untuned_coupler,
     static_flux_offset,
     ):
     ''' The formula below is a variant of (2) in McKay et al. 2016,
@@ -265,7 +265,7 @@ def tunable_coupler_frequency_function(
         residual flux threading the coupler SQUID, that was locked in place
         when the SQUID became superconducting.
     '''
-    return np.abs(freq_of_coupler) * np.sqrt( np.abs( np.cos( np.pi * (static_flux_offset + phi)/phi_0 ) ) )
+    return np.abs(freq_of_untuned_coupler) * np.sqrt( np.abs( np.cos( np.pi * (static_flux_offset + phi)/phi_0 ) ) )
 
 
 
@@ -442,10 +442,10 @@ def fit_two_tone_spectroscopy_vs_coupler_bias(
             fit_error      = fit_err[1]
             
             # Print result.
-            print("TODO" + str(resonator_peak) + " ±" + str(fit_error/2))
+            print("TODO" + str(resonator_peak) + " ±" + str(fit_error))
             
             # Store fit and its plusminus error bar.
-            (fitted_values[current_res_ii]).append((resonator_peak, fit_error/2))
+            (fitted_values[current_res_ii]).append((resonator_peak, fit_error))
             
             # Plot?
             if plot_for_this_many_seconds != 0.0:
@@ -482,7 +482,7 @@ def fit_two_tone_spectroscopy_vs_coupler_bias(
                 print("Two-tone spectroscopy fit failure! Cannot fit the provided raw data.")
             
             # Store failed fit and its failed plusminus error bar.
-            (fitted_values[current_res_ii]).append((resonator_peak, fit_error/2))
+            (fitted_values[current_res_ii]).append((resonator_peak, fit_error))
     
     # We're done.
     return fitted_values

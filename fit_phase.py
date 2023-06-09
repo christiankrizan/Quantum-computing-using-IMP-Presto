@@ -164,13 +164,13 @@ def fit_phase_offset(
                     
                     # Print result.
                     if verbose:
-                        print("Phase offset from cosine fit of data: " + str(phase_offset) + " ±" + str(fit_error/2))
+                        print("Phase offset from cosine fit of data: " + str(phase_offset) + " ±" + str(fit_error))
                     
                     # Store fit and its plusminus error bar.
                     ## Warning: append will append to both resonators unless
                     ## you are very darn careful at this step.
                     previous_content_in_fitted_values = (fitted_values[current_res_ii]).copy()
-                    previous_content_in_fitted_values.append((phase_offset, fit_error/2))
+                    previous_content_in_fitted_values.append((phase_offset, fit_error))
                     fitted_values[current_res_ii] = previous_content_in_fitted_values.copy()
                     del previous_content_in_fitted_values
                     
@@ -216,7 +216,7 @@ def fit_phase_offset(
                         print("Phase fit failure! Cannot fit the provided raw data.")
                     
                     # Store failed fit and its failed plusminus error bar.
-                    (fitted_values[current_res_ii]).append((phase_offset, fit_error/2))
+                    (fitted_values[current_res_ii]).append((phase_offset, fit_error))
         
         # Append!
         list_of_fitted_values[kk] = fitted_values
