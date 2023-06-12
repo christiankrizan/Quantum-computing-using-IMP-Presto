@@ -1124,7 +1124,7 @@ def pulsed01_sweep_power(
         control_freq_01_span = 0.0
     
     ## Initial array declaration
-
+    
     # Declare amplitude array for the control pulse to be swept.
     control_amp_01_arr = np.linspace(control_amp_01_min, control_amp_01_max, num_amplitudes)
     
@@ -1280,7 +1280,7 @@ def pulsed01_sweep_power(
         
         # For every control pulse frequency to sweep over:
         for ii in range(num_freqs):
-        
+            
             # Get a time reference, used for gauging the iteration length.
             T_begin = T
             
@@ -1313,7 +1313,7 @@ def pulsed01_sweep_power(
         ################################
         ''' EXPERIMENT EXECUTES HERE '''
         ################################
-
+        
         # Average the measurement over 'num_averages' averages
         pls.run(
             period          =   T,

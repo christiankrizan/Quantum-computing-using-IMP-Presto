@@ -1232,8 +1232,11 @@ def estimate_phi_ac(
             T_begin = T
             
             # Reset phases
-            pls.reset_phase(T, control_port)
+            pls.reset_phase(T, [control_port, coupler_ac_port])
             phase = reset_phase_counter(T, control_port, 0, phases_declared, pls)
+            
+            # Engage the AC flux bias.
+            pls.output_pulse(T, coupler_ac_pulse)
             
             # Apply the first pi_01_half pulse.
             pls.output_pulse(T, control_pulse_pi_01_half)
@@ -1260,6 +1263,10 @@ def estimate_phi_ac(
                 # Increment the swept amplitude.
                 pls.next_scale(T, coupler_ac_port, group = 0)
                 T += 20e-9 # Add some time for changing the amplitude.
+            
+            # Assert that the coupler AC pulse is not playing still.
+            if T < (T_begin + coupler_ac_duration):
+                T = (T_begin + coupler_ac_duration)
             
             # Get T that aligns with the repetition rate.
             T, repetition_counter = get_repetition_rate_T(
