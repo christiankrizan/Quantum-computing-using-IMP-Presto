@@ -16,6 +16,7 @@ from numpy import hanning as von_hann
 from data_discriminator import discriminate
 from time_calculator import get_timestamp_string
 from datetime import datetime # Needed for making the save folders.
+from random import randint
 
 def ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs):
     ''' Assert that the received keys bear (an even number of) entries,
@@ -1251,13 +1252,95 @@ def stitch(
     # There may be different scales and offsets in the provided files.
     # We'll keep a running tab to make sure these scales and offsets do
     # not differ.
-    ##running_scale  = []
-    ##running_offset = []
-    ## TODO: Grab the scale and offset data, and re-scale + re-offset the data.
-    ##       The arguments use_this_scale and use_this_offset have been
-    ##       prepared for this purpose. TODO NOTE: currently disabled.
+    scales_used_in_the_files = []
+    offset_used_in_the_files = []
+    for file_item in list_of_h5_files_to_stitch:
+        with h5py.File( file_item, 'r') as h5f:
+            
+            ## Check for missing scales.
+            try:
+                scales_used_in_the_files.append( \
+                    h5f["User_set_scale_to_Y_axis"][()] \
+                )
+            except KeyError:
+                if randint(1,100) == 100:
+                    # There is no scale, Gromit.
+                    print("There is no scale, Gromit.")
+                
+                # How many resonators were read?
+                res_read = (h5f["processed_data"][()].shape)[0]
+                
+                # Report that assumed offsets will be appended.
+                to_report = "["
+                to_assume = []
+                for tt in range(res_read):
+                    
+                    # Append assumption.
+                    to_assume.append(np.array( [1.0] ))
+                    
+                    # Build something to report.
+                    to_report += "1.0"
+                    if tt != res_read-1:
+                        # There are more "1.0" entries to add.
+                        to_report += ", "
+                    else:
+                        # We're done.
+                        to_report += "]"
+                
+                # Print warning.
+                print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis scaling. Assuming " + to_report)
+                
+                # Append list of assumptions.
+                scales_used_in_the_files.append( to_assume )
+                
+                # Clean up.
+                del to_report
+                del to_assume
+                del res_read
+            
+            ## Check for missing offsets.
+            try:
+                offset_used_in_the_files.append( \
+                    h5f["User_set_offset_to_Y_axis"][()] \
+                )
+            except KeyError:
+                if randint(1,100) == 100:
+                    # There is no offset, Gromit.
+                    print("There is no offset, Gromit.")
+                
+                # How many resonators were read?
+                res_read = (h5f["processed_data"][()].shape)[0]
+                
+                # Report that assumed offsets will be appended.
+                to_report = "["
+                to_assume = []
+                for tt in range(res_read):
+                    
+                    # Append assumption.
+                    to_assume.append(np.array( [0.0] ))
+                    
+                    # Build something to report.
+                    to_report += "0.0"
+                    if tt != res_read-1:
+                        # There are more "0.0" entries to add.
+                        to_report += ", "
+                    else:
+                        # We're done.
+                        to_report += "]"
+                
+                # Print warning.
+                print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis offset. Assuming " + to_report)
+                
+                # Append list of assumptions.
+                offset_used_in_the_files.append( to_assume )
+                
+                # Clean up.
+                del to_report
+                del to_assume
+                del res_read
+            
     
-    # There may be different time traces in the files.
+    # There may be time traces stored in the files.
     # We'll keep track so that no data files have data collected at
     # different time trace settings. Likewise, it's also possible that
     # the user is attempting to stitch together a file
@@ -1273,9 +1356,7 @@ def stitch(
     # once it's time to check for a suitable filepath.
     filepath_of_calling_script = []
     
-    # The files that are to be stiched together will have two (or one) axes
-    # in common that were swept over during the measurement. Let's
-    # make sure we only consider these axes' swept data. Make flags.
+    # Identify the axes that were swept.
     first_swept_key_found  = False
     second_swept_key_found = False
     first_key  = []
@@ -1308,11 +1389,6 @@ def stitch(
     
     # Treat every provided item in the list!
     for current_filepath_item_in_list in list_of_h5_files_to_stitch:
-        
-        # It is likely that the returned entry from some function is
-        # a list of characters. If so, remake them into a filepath.
-        if type(current_filepath_item_in_list) == list:
-            current_filepath_item_in_list = "".join(current_filepath_item_in_list)
         
         # Get data.
         with h5py.File(current_filepath_item_in_list, 'r') as h5f:
