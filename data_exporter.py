@@ -1161,7 +1161,7 @@ def convert_numpy_entries_in_ext_keys_to_list( ext_keys_to_convert ):
 
 def stitch(
     h5_files_to_stitch_as_list_or_folder,
-    merge_if_x_and_z_axes_are_identical = True, # Halt to ensure there is no overwrite because of poor user arguments.
+    merge_if_x_and_z_axes_are_identical = False, # Halt to ensure there is no overwrite because of poor user arguments.
     use_this_scale  = [1.0],
     use_this_offset = [0.0],
     log_browser_tag  = 'default',
@@ -1180,34 +1180,73 @@ def stitch(
         Finally, delete all old files if so requested.
     '''
     
-    ## TODO All 35 lines below this TODO needs optimisation.
-    ##      The .isinstance and TypeError exception-checking
-    ##      should be done in a better way.
-    
-    # User argument check, if the user is attempting to stich a single file,
-    # or a whole folder. These usage cases have happened :)
+    # Considering the usage cases that have happened, the following inputs
+    # will be parsed: strings, lists of strings, lists of files, lists
+    # of folders with files, lists of files and folders with files.
     if isinstance(h5_files_to_stitch_as_list_or_folder, str):
-        # The user provided a string instead of a list. Fix this.
-        list_of_h5_files_to_stitch = [h5_files_to_stitch_as_list_or_folder]
+        # The user provided a string, rework it into a list.
+        h5_files_to_stitch_as_list_or_folder = [h5_files_to_stitch_as_list_or_folder]
         
-    elif (not isinstance(h5_files_to_stitch_as_list_or_folder, list)):
-        if os.path.isdir(h5_files_to_stitch_as_list_or_folder):
+    elif isinstance(h5_files_to_stitch_as_list_or_folder, list):
+        # The user provided a list.
+        # Was it a list of chars?
+        if len(h5_files_to_stitch_as_list_or_folder[0]) == 1:
+            # Let's check.
+            it_was_not_a_list_of_chars = False
+            for item in h5_files_to_stitch_as_list_or_folder:
+                if not ((len(item) == 1) and (isinstance(item, str))):
+                    it_was_not_a_list_of_chars = True
+            if not it_was_not_a_list_of_chars:
+                # The user provided a list of chars, this fact is indicative of
+                # an error in using the os package. Print warning.
+                print(  "WARNING: the data stitcher was provided a list of "+\
+                        "chars as input. This fact is indicative of a "+\
+                        "coding error, there is likely some function that "+\
+                        "does not parse filepaths correctly as they are "+\
+                        "returned as results from other functions. For "+\
+                        "instance, a measurement returning the path of "+\
+                        "its final results file.")
+                h5_files_to_stitch_as_list_or_folder = [''.join(h5_files_to_stitch_as_list_or_folder)]
+            
+            # Clean up.
+            del it_was_not_a_list_of_chars
+    else:
+        # Unexpected input.
+        raise TypeError( \
+            "Error! Expected argument inputs of type string or "+\
+            "list, but got input of type "+\
+            str(type(h5_files_to_stitch_as_list_or_folder)))
+    
+    # At this point, the input is parsable. Let's build a list
+    # of items to stitch.
+    list_of_h5_files_to_stitch = []
+    for item in h5_files_to_stitch_as_list_or_folder:
+        # Is this item a filepath, or a directory of files to add?
+        if os.path.isdir( item ):
             # The user provided a directory.
-            # Ensure that only .hdf5 files (.h5) get added.
-            list_of_h5_files_to_stitch = []
-            for file_item in os.listdir( h5_files_to_stitch_as_list_or_folder ):
+            # Append all .hdf5 files (.h5) in this directory.
+            for file_item in os.listdir( item ):
                 if (file_item.endswith('.h5')) or (file_item.endswith('.hdf5')):
                     print("Found file: \""+str(file_item)+"\"")
                     list_of_h5_files_to_stitch.append(file_item)
+        
+        elif os.path.isfile( item ):
+            # It's a file. Add if .hdf5 file (.h5)
+            if (item.endswith('.h5')) or (item.endswith('.hdf5')):
+                print("Found file: \""+str(item)+"\"")
+                list_of_h5_files_to_stitch.append(item)
+        
+        else:
+            # The entry is not a directory, nor a file.
+            print("WARNING: cannot understand provided path \""+str(item)+"\" → skipping.")
     
-    # First things first, let's check that the stitcher has something
-    # to work with.
-    try:
-        assert len(list_of_h5_files_to_stitch) != 0, \
-            "Error: the stitching routine was ordered to treat " + \
-            "exported data files. But, no data filepaths were provided."
-    except TypeError as e:
-        raise TypeError("Error: the data export stitcher was called with a non-list argument. The full type error is: \n"+str(e))
+    # Let's check that the stitcher has something to work with.
+    if len(list_of_h5_files_to_stitch) == 0:
+        raise RuntimeError( \
+            "Error! The data stitcher could not "+\
+            "find any HDF5 data to work with. Check your arguments.")
+    
+    # At this point, we've acquired data to work with.
     
     # There may be different scales and offsets in the provided files.
     # We'll keep a running tab to make sure these scales and offsets do
