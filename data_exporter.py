@@ -1163,8 +1163,8 @@ def convert_numpy_entries_in_ext_keys_to_list( ext_keys_to_convert ):
 def stitch(
     h5_files_to_stitch_as_list_or_folder,
     merge_if_x_and_z_axes_are_identical = False, # Halt to ensure there is no overwrite because of poor user arguments.
-    use_this_scale  = [1.0],
-    use_this_offset = [0.0],
+    use_this_scale  = None,
+    use_this_offset = None,
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     use_log_browser_database = True,
@@ -1254,91 +1254,133 @@ def stitch(
     # not differ.
     scales_used_in_the_files = []
     offset_used_in_the_files = []
-    for file_item in list_of_h5_files_to_stitch:
+    for fff in range(len(list_of_h5_files_to_stitch)):
+        
+        # Grab the next file item.
+        file_item = list_of_h5_files_to_stitch[fff]
         with h5py.File( file_item, 'r') as h5f:
             
-            ## Check for missing scales.
-            try:
-                scales_used_in_the_files.append( \
-                    h5f["User_set_scale_to_Y_axis"][()] \
-                )
-            except KeyError:
-                if randint(1,100) == 100:
-                    # There is no scale, Gromit.
-                    print("There is no scale, Gromit.")
-                
-                # How many resonators were read?
-                res_read = (h5f["processed_data"][()].shape)[0]
-                
-                # Report that assumed offsets will be appended.
-                to_report = "["
-                to_assume = []
-                for tt in range(res_read):
-                    
-                    # Append assumption.
-                    to_assume.append(np.array( [1.0] ))
-                    
-                    # Build something to report.
-                    to_report += "1.0"
-                    if tt != res_read-1:
-                        # There are more "1.0" entries to add.
-                        to_report += ", "
-                    else:
-                        # We're done.
-                        to_report += "]"
-                
-                # Print warning.
-                print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis scaling. Assuming " + to_report)
-                
-                # Append list of assumptions.
-                scales_used_in_the_files.append( to_assume )
-                
-                # Clean up.
-                del to_report
-                del to_assume
-                del res_read
+            # How many resonators were read?
+            res_read = (h5f["processed_data"][()].shape)[0]
             
-            ## Check for missing offsets.
-            try:
-                offset_used_in_the_files.append( \
-                    h5f["User_set_offset_to_Y_axis"][()] \
-                )
-            except KeyError:
-                if randint(1,100) == 100:
-                    # There is no offset, Gromit.
-                    print("There is no offset, Gromit.")
+            # Is the user overriding which scale to use?
+            if use_this_scale != None:
                 
-                # How many resonators were read?
-                res_read = (h5f["processed_data"][()].shape)[0]
-                
-                # Report that assumed offsets will be appended.
-                to_report = "["
-                to_assume = []
-                for tt in range(res_read):
-                    
-                    # Append assumption.
-                    to_assume.append(np.array( [0.0] ))
-                    
-                    # Build something to report.
-                    to_report += "0.0"
-                    if tt != res_read-1:
-                        # There are more "0.0" entries to add.
-                        to_report += ", "
+                # The user is overriding the scaling to be used.
+                # Is the user-supplied scaling usable?
+                improper_argument = False
+                try:
+                    if len(use_this_scale[fff]) == res_read:
+                        scales_used_in_the_files.append( use_this_scale[fff] )
                     else:
-                        # We're done.
-                        to_report += "]"
-                
-                # Print warning.
-                print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis offset. Assuming " + to_report)
-                
-                # Append list of assumptions.
-                offset_used_in_the_files.append( to_assume )
-                
-                # Clean up.
-                del to_report
-                del to_assume
-                del res_read
+                        improper_argument = True
+                except IndexError:
+                    improper_argument = True
+                if improper_argument:
+                    raise TypeError("Error! Invalid scaling provided as input argument. Expected a list of "+str(len(list_of_h5_files_to_stitch))+" scale arrays, where each array was supposed to be a numpy array of length "+str(res_read)+", which corresponds to "+str(res_read)+" resonator(s).")
+                del improper_argument
             
+            else:
+                # The user is not overriding which scaling to use!
+                
+                ## Check for missing scales.
+                try:
+                    scales_used_in_the_files.append( \
+                        h5f["User_set_scale_to_Y_axis"][()] \
+                    )
+                except KeyError:
+                    if randint(1,100) == 100:
+                        # There is no scale, Gromit.
+                        print("There is no scale, Gromit.")
+                    
+                    # Report that assumed offsets will be appended.
+                    to_report = "["
+                    to_assume = []
+                    for tt in range(res_read):
+                        
+                        # Append assumption.
+                        to_assume.append(np.array( [1.0] ))
+                        
+                        # Build something to report.
+                        to_report += "1.0"
+                        if tt != res_read-1:
+                            # There are more "1.0" entries to add.
+                            to_report += ", "
+                        else:
+                            # We're done.
+                            to_report += "]"
+                    
+                    # Print warning.
+                    print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis scaling. Assuming " + to_report)
+                    
+                    # Append list of assumptions.
+                    scales_used_in_the_files.append( to_assume )
+                    
+                    # Clean up.
+                    del to_report
+                    del to_assume
+                    del res_read
+            
+            # Is the user overriding which offset to use?
+            if use_this_offset != None:
+                
+                # The user is overriding the offset to be used.
+                # Is the user-supplied offset usable?
+                improper_argument = False
+                try:
+                    if len(use_this_offset[fff]) == res_read:
+                        offset_used_in_the_files.append( use_this_offset[fff] )
+                    else:
+                        improper_argument = True
+                except IndexError:
+                    improper_argument = True
+                if improper_argument:
+                    raise TypeError("Error! Invalid offset provided as input argument. Expected a list of "+str(len(list_of_h5_files_to_stitch))+" offset arrays, where each array was supposed to be a numpy array of length "+str(res_read)+", which corresponds to "+str(res_read)+" resonator(s).")
+                del improper_argument
+            
+            else:
+                # The user is not overriding which offset to use!
+                
+                ## Check for missing offsets.
+                try:
+                    offset_used_in_the_files.append( \
+                        h5f["User_set_offset_to_Y_axis"][()] \
+                    )
+                except KeyError:
+                    if randint(1,100) == 100:
+                        # There is no offset, Gromit.
+                        print("There is no offset, Gromit.")
+                    
+                    # How many resonators were read?
+                    res_read = (h5f["processed_data"][()].shape)[0]
+                    
+                    # Report that assumed offsets will be appended.
+                    to_report = "["
+                    to_assume = []
+                    for tt in range(res_read):
+                        
+                        # Append assumption.
+                        to_assume.append(np.array( [0.0] ))
+                        
+                        # Build something to report.
+                        to_report += "0.0"
+                        if tt != res_read-1:
+                            # There are more "0.0" entries to add.
+                            to_report += ", "
+                        else:
+                            # We're done.
+                            to_report += "]"
+                    
+                    # Print warning.
+                    print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis offset. Assuming " + to_report)
+                    
+                    # Append list of assumptions.
+                    offset_used_in_the_files.append( to_assume )
+                    
+                    # Clean up.
+                    del to_report
+                    del to_assume
+                    del res_read
     
     # There may be time traces stored in the files.
     # We'll keep track so that no data files have data collected at
@@ -1395,30 +1437,6 @@ def stitch(
             
             # Notify the user.
             print("Extracting data: "+str(current_filepath_item_in_list))
-            
-            """# Did this file have a scale set for its data?
-            try:
-                scale = h5f["User_set_scale_to_Y_axis"][()]
-                if running_scale == []:
-                    running_scale = scale
-                else:
-                    if not (scale == running_scale).all():
-                        raise NotImplementedError("File \""+current_filepath_item_in_list+"\" has a different scale than all previous files in the stitching; the stitcher does currently not support re-scaling.")
-            except KeyError:
-                # "There is no scale, Gromit."
-                pass"""
-            
-            """# Did this file have an offset to its data?
-            try:
-                offset = h5f["User_set_offset_to_Y_axis"][()]
-                if running_offset == []:
-                    running_offset = offset
-                else:
-                    if not (offset == running_offset).all():
-                        raise NotImplementedError("File \""+current_filepath_item_in_list+"\" has a different offset than all previous files in the stitching; the stitcher does currently not support re-offsetting the data files.")
-            except KeyError:
-                # "There is no offset, Gromit."
-                pass"""
             
             # Make sure that the time traces are compatible in the
             # provided data files.
@@ -1505,7 +1523,7 @@ def stitch(
             except KeyError:
                 # This file contains no information regarding which was the
                 # first key to be swept in the measurement.
-                ## BUT WAS IT SUPPOSED TO??
+                ## But was it supposed to?
                 if first_swept_key_found:
                     # Discrepancy detected!
                     raise KeyError( \
@@ -1513,7 +1531,7 @@ def stitch(
                     "axis of file \""+str(current_filepath_item_in_list) + \
                     "\" to be \""+first_key+"\", but this file did not " + \
                     "report that it contains data for this expected axis.")
-                # All right fine, the file what not expected to contain
+                # Fine, the file was not expected to contain
                 # an entry for the first swept key. But it still has none.
                 raise KeyError( \
                     "Error! The file \""+str(current_filepath_item_in_list) + \
@@ -1558,7 +1576,6 @@ def stitch(
             if log_dict_list == []:
                 log_dict_list = json.loads( h5f.attrs["log_dict_list"] )
             
-            
             # Let's get information about what resonator IFs were used in the
             # measurement.
             # TODO This fetching needs to be looked at further.
@@ -1570,27 +1587,6 @@ def stitch(
                 except KeyError:
                     print("Warning! Could not extract readout resonator IF information from the supplied file. This parameter was set to \"[]\"")
             
-            
-            ## TODO This part should likely be removed.
-            """for item in h5f.keys():
-                if item.startswith('fetched_data_arr'):
-                    # Raw data will not be stitched, that's kind of the point.
-                    print("WARNING: File \""+current_filepath_item_in_list+"\" contains raw data. This raw data will be excluded from the stitched-together file export. The whole point of having the data stitcher is to avoid loading the primary PC memory with hundreds of gibibytes of data.")
-                elif ( \
-                    (item != 'time_vector') and \
-                    (item != 'processed_data') and \
-                    (item != 'User_set_scale_to_Y_axis') and \
-                    (item != 'User_set_offset_to_Y_axis') and \
-                    (item != 'filepath_of_calling_script') and \
-                    (item != 'First_key_that_was_swept') and \
-                    (item != 'Second_key_that_was_swept') and \
-                    (item != first_key) and (item != second_key)):
-                    # For now, let's just catch whether usage cases exist
-                    # where swept entries must be considered beyond the
-                    # first two swept keys.
-                    assert NotImplementedError("Halted! The file \""+current_filepath_item_in_list+"\" contained more swept entries than just those belonging to the axes of the measurement. The triggering entry was \""+str(item)+"\"")
-            """
-            
             # By now, we are ready to grab data held within this file.
             curr_processed_data = h5f["processed_data"][()]
             
@@ -1601,11 +1597,28 @@ def stitch(
                 # This has not been established. Then, declare
                 # the big_fat_list_of_canvases to be the same
                 # length as the number of resonators (or probabilities)
-                # Repeat this for the big_fat_list_of_canvases too.
-                big_fat_list_of_canvases = [ [] for _ in range(len(curr_processed_data)) ]
+                big_fat_list_of_canvases = [ [] for _ in range(4   )]##len(curr_processed_data)) ]
                 big_fat_list_of_x_axes   = [ [] for _ in range(len(curr_processed_data)) ]
                 big_fat_list_of_z_axes   = [ [] for _ in range(len(curr_processed_data)) ]
                 big_fat_list_length_has_been_established = True
+                
+                ## The datastructure is the following:
+                ## Imagine a 4-resonator readout, and 3 measurements
+                ## to be stitched together.
+                ## big_fat_list_of_canvases is thus:
+                ##       **Res1**  **Res2**  **Res3**  **Res4**
+                ##    [  [  a1,    [  b1,    [  c1,    [  d1,  
+                ##          a2,       b2,       c2,       d2,  
+                ##          a3  ]     b3  ]     c3  ]     d3  ]  ]
+                ##
+                ##  ... where a, b, c, are all 2D canvases of data.
+                ##      Specifically, one ROW of big_fat_list, corresponds
+                ##      to the first measurement file.
+                ##      Whereas one COLUMN corresponds to a resonator or
+                ##      a scoped probability.
+                ##      Likewise, the x and z axes big_fat_lists,
+                ##      contain the x or z axis that corresponds to
+                ##      the 2D canvas contained at that "coordinate."
             
             # The final data will be stored in a (curr_)"canvas" with
             # some 2D dimension corresponding to the data collected at
@@ -1615,11 +1628,11 @@ def stitch(
             for entry_idx in range(len(curr_processed_data)):
                 # Grab a new canvas (for this resonator) to be added into
                 # the big fat list. curr_canvas WILL be a 2D object,
-                # although this object might have only one row.
+                # although this object might have only one row of data.
                 # Repeat the same procedure for getting the X and Z axes.
                 curr_canvas = curr_processed_data[entry_idx]
                 big_fat_list_of_canvases[entry_idx].append(curr_canvas)
-                big_fat_list_of_x_axes[entry_idx].append( h5f[first_key][()]  )
+                big_fat_list_of_x_axes[entry_idx].append( h5f[first_key][()] )
                 ## It is possible that the 2D-sweep has merely a single
                 ## swept dimension. In that case, let's catch this, and
                 ## simply ignore the big_fat_list_of_z_axes.
@@ -1632,13 +1645,15 @@ def stitch(
                     # .hdf5 file.
                     big_fat_list_of_z_axes[entry_idx].append( h5f.attrs[second_key] )
             
-            # The big fat list of canvases has been updated, per resonator.
-            # Meaning that, big_fat_list_of_canvases[res] is the combined
-            # data of every measurement file provided, for resonator res.
-            
+            # At this point, big_fat_list_of_canvases[res] is the combined
+            # data of every measurement file provided. Every row in the
+            # big_fat_lists corresponds to one measurement file. Every
+            # column correspond to a particular resonator or probability.
+    
     # At this point, we have stored all data that there is to stitch together
     # in a massive variable. We may now assemble all data together.
     print("Data extracted successfully from all files!\n")
+    
     ## Let's detect at this point whether we like to paint a big canvas,
     ## or whether every axis is identical, meaning that we'd like to
     ## merge files together.
@@ -1752,16 +1767,14 @@ def stitch(
         # We may now go on to export the final, stitched, data.
         
     else:
-        
-        ## TODO REMEMBER FOR THE FUTURE THAT WHAT IS EXPORTED IN THE END
-        ##      IS (FOR INSTANCE) running_scale, running_offset
-    
-        raise NotImplementedError("Halted. Not finished.")
         for current_resonator in range(len(big_fat_list_of_canvases)):
             # Get current big fat set of 2D-plots to merge.
             current_list_of_2D_arrays_to_merge = big_fat_list_of_canvases[current_resonator]
             current_list_of_corresponding_x_axes = big_fat_list_of_x_axes[current_resonator]
             current_list_of_corresponding_z_axes = big_fat_list_of_z_axes[current_resonator]
+            
+            raise NotImplementedError("Halted! Not finished.")
+            
             
             # The list current_list_of_2D_arrays_to_merge contains N entries
             # where N is the number of files the user provided to the stitcher.
