@@ -420,24 +420,13 @@ def save(
             fetch = processed_data[mm]
             fetch.shape = (outer_loop_size, inner_loop_size)
             
-            if not save_complex_data:
-                processed_data[mm] = (np.abs(fetch) +fetched_data_offset[mm])*(fetched_data_scale[mm])
-            else:
-                # The user might have set some scale and offset.
-                # The offset would in that case have been set as
-                # a portion of the magnitude.
-                fetch_imag = np.copy(np.imag(fetch))
-                fetch_real = np.copy(np.real(fetch))
-                #fetch_thetas = np.arctan2( fetch_imag, fetch_real ) # Keep in mind the quadrants! np.arctan2 gives the same values as np.angle()
-                fetch_thetas = np.copy(np.angle( fetch ))
-                
-                # Add user-set offset (Note: can be negative; "add minus y")
-                fetch_imag += np.copy(fetched_data_offset[mm]) * np.sin( fetch_thetas )
-                fetch_real += np.copy(fetched_data_offset[mm]) * np.cos( fetch_thetas )
-                fetch = fetch_real + fetch_imag*1j
-                
-                # Scale with some user-set scale and store.
-                processed_data[mm] = fetch * fetched_data_scale[mm]
+            # Scale and offset the data as requested by the user.
+            processed_data[mm] = scale_and_offset_processed_data_canvas(
+                processed_data_canvas = fetch,
+                scale  = fetched_data_scale[mm],
+                offset = fetched_data_offset[mm],
+                input_data_is_complex = save_complex_data,
+            )
     
     # Did the user request to flip the processed data?
     # I.e. that every new repeat in some measurement will be a column
@@ -1163,8 +1152,8 @@ def convert_numpy_entries_in_ext_keys_to_list( ext_keys_to_convert ):
 def stitch(
     h5_files_to_stitch_as_list_or_folder,
     merge_if_x_and_z_axes_are_identical = False, # Halt to ensure there is no overwrite because of poor user arguments.
-    use_this_scale  = None,
-    use_this_offset = None,
+    use_this_scale  = [1.0],
+    use_this_offset = [0.0],
     log_browser_tag  = 'default',
     log_browser_user = 'default',
     use_log_browser_database = True,
@@ -1250,9 +1239,11 @@ def stitch(
     
     # At this point, we've acquired data to work with.
     
-    # There may be different scales and offsets in the provided files.
-    # We'll keep a running tab to make sure these scales and offsets do
-    # not differ.
+    ## We need to know which scaling and offset to use
+    ## for the final export. And, the scaling and offset used in
+    ## the individual files themselves.
+    
+    # Get scaling and offset in the individual files.
     scales_used_in_the_files = []
     offset_used_in_the_files = []
     for fff in range(len(list_of_h5_files_to_stitch)):
@@ -1264,126 +1255,93 @@ def stitch(
             # How many resonators were read?
             res_read = (h5f["processed_data"][()].shape)[0]
             
-            # Is the user overriding which scale to use?
-            if use_this_scale != None:
-            
-                # The user is overriding the scaling to be used.
-                # Is the user-supplied scaling usable?
-                improper_argument = False
-                try:
-                    if len(use_this_scale[fff]) == res_read:
-                        scales_used_in_the_files.append( use_this_scale[fff] )
+            # Get the scaling used in this file. Append an assumption
+            # if there is no information about said scaling.
+            try:
+                scales_used_in_the_files.append( \
+                    h5f["User_set_scale_to_Y_axis"][()] \
+                )
+                # Success, we got the scaling used for this item.
+            except KeyError:
+                if randint(1,100) == 100:
+                    # There is no scale, Gromit.
+                    print("There is no scale, Gromit.")
+                
+                # There was no scaling to be had.
+                # Report that an assumed scaling will be appended instead.
+                to_report = "["
+                to_assume = []
+                for tt in range(res_read):
+                    
+                    # Append assumption.
+                    to_assume.append(np.array( [1.0] ))
+                    
+                    # Build something to report.
+                    to_report += "1.0"
+                    if tt != res_read-1:
+                        # There are more "1.0" entries to add.
+                        to_report += ", "
                     else:
-                        improper_argument = True
-                except IndexError:
-                    improper_argument = True
-                if improper_argument:
-                    raise TypeError("Error! Invalid scaling provided as input argument. Expected a list of "+str(len(list_of_h5_files_to_stitch))+" scale arrays, where each array was supposed to be a numpy array of length "+str(res_read)+", which corresponds to "+str(res_read)+" resonator(s).")
-                del improper_argument
-            
-            else:
-                # The user is not overriding which scaling to use!
+                        # We're done.
+                        to_report += "]"
                 
-                ## Check for missing scales.
-                try:
-                    scales_used_in_the_files.append( \
-                        h5f["User_set_scale_to_Y_axis"][()] \
-                    )
-                except KeyError:
-                    if randint(1,100) == 100:
-                        # There is no scale, Gromit.
-                        print("There is no scale, Gromit.")
-                    
-                    # Report that assumed offsets will be appended.
-                    to_report = "["
-                    to_assume = []
-                    for tt in range(res_read):
-                        
-                        # Append assumption.
-                        to_assume.append(np.array( [1.0] ))
-                        
-                        # Build something to report.
-                        to_report += "1.0"
-                        if tt != res_read-1:
-                            # There are more "1.0" entries to add.
-                            to_report += ", "
-                        else:
-                            # We're done.
-                            to_report += "]"
-                    
-                    # Print warning.
-                    print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis scaling. Assuming " + to_report)
-                    
-                    # Append list of assumptions.
-                    scales_used_in_the_files.append( to_assume )
-                    
-                    # Clean up.
-                    del to_report
-                    del to_assume
-                    del res_read
-            
-            # Is the user overriding which offset to use?
-            if use_this_offset != None:
-            
-                raise NotImplementedError('Halted! Warning! The arguments use_this_offset and use_this_scale, have been interpreted incorrectly. These are effectively bugged in the data sticher as of writing.')
+                # Print warning.
+                print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis scaling. Assuming " + to_report + ".")
                 
-                # The user is overriding the offset to be used.
-                # Is the user-supplied offset usable?
-                improper_argument = False
-                try:
-                    if len(use_this_offset[fff]) == res_read:
-                        offset_used_in_the_files.append( use_this_offset[fff] )
+                # Append list of assumptions.
+                scales_used_in_the_files.append( to_assume )
+                
+                # Clean up.
+                del to_report
+                del to_assume
+            
+            # Get the offset used in this file. Append an assumption
+            # if there is no information about said offset.
+            try:
+                offset_used_in_the_files.append( \
+                    h5f["User_set_offset_to_Y_axis"][()] \
+                )
+                # Success, we got the offset used for this item.
+            except KeyError:
+                if randint(1,100) == 100:
+                    # There is no offset, Gromit.
+                    print("There is no offset, Gromit.")
+                
+                # There was no offset to be had.
+                # Report that an assumed offset will be appended instead.
+                to_report = "["
+                to_assume = []
+                for tt in range(res_read):
+                    
+                    # Append assumption.
+                    to_assume.append(np.array( [0.0] ))
+                    
+                    # Build something to report.
+                    to_report += "0.0"
+                    if tt != res_read-1:
+                        # There are more "0.0" entries to add.
+                        to_report += ", "
                     else:
-                        improper_argument = True
-                except IndexError:
-                    improper_argument = True
-                if improper_argument:
-                    raise TypeError("Error! Invalid offset provided as input argument. Expected a list of "+str(len(list_of_h5_files_to_stitch))+" offset arrays, where each array was supposed to be a numpy array of length "+str(res_read)+", which corresponds to "+str(res_read)+" resonator(s).")
-                del improper_argument
-            
-            else:
-                # The user is not overriding which offset to use!
+                        # We're done.
+                        to_report += "]"
                 
-                ## Check for missing offsets.
-                try:
-                    offset_used_in_the_files.append( \
-                        h5f["User_set_offset_to_Y_axis"][()] \
-                    )
-                except KeyError:
-                    if randint(1,100) == 100:
-                        # There is no offset, Gromit.
-                        print("There is no offset, Gromit.")
-                    
-                    # How many resonators were read?
-                    res_read = (h5f["processed_data"][()].shape)[0]
-                    
-                    # Report that assumed offsets will be appended.
-                    to_report = "["
-                    to_assume = []
-                    for tt in range(res_read):
-                        
-                        # Append assumption.
-                        to_assume.append(np.array( [0.0] ))
-                        
-                        # Build something to report.
-                        to_report += "0.0"
-                        if tt != res_read-1:
-                            # There are more "0.0" entries to add.
-                            to_report += ", "
-                        else:
-                            # We're done.
-                            to_report += "]"
-                    
-                    # Print warning.
-                    print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis offset. Assuming " + to_report)
-                    
-                    # Append list of assumptions.
-                    offset_used_in_the_files.append( to_assume )
-                    
-                    # Clean up.
-                    del to_report
-                    del to_assume
-                    del res_read
+                # Print warning.
+                print("WARNING: the file "+str(file_item)+" did not contain any information about the measurement's Y-axis offset. Assuming " + to_report + ".")
+                
+                # Append list of assumptions.
+                offset_used_in_the_files.append( to_assume )
+                
+                # Clean up.
+                del to_report
+                del to_assume
+            
+            # Clean up res_read.
+            del res_read
+    
+    ## At this point, we've made a list containing the scaling used
+    ## (or assumed to be used) for every measurement. See:
+    ##     → scales_used_in_the_files
+    ##     → offset_used_in_the_files
     
     # There may be time traces stored in the files.
     # We'll keep track so that no data files have data collected at
@@ -1874,9 +1832,57 @@ def stitch(
                 # Get canvas.
                 worked_on_canvas = current_list_of_2D_arrays_to_merge[canvas_number]
                 
+                # When working with scaling and offset, we must
+                # know whether the data is compex.
+                ## TODO:    I think this "must know" requirement
+                ##          can be removed somehow.
+                try:
+                    save_complex_data = (type(worked_on_canvas[0][0]) == np.complex128)
+                except TypeError:
+                    # Whoopsie, there is no Z-axis for some reason.
+                    save_complex_data = (type(worked_on_canvas[0]) == np.complex128)
+                
                 # Normalise canvas so that everything is treated
-                # using the same scaling and offset.
-                ''' TODO: scale and offset work goes here. '''
+                # using the same scaling and offset. To save on computation,
+                # check whether this step is necessary.
+                orig_scale  = scales_used_in_the_files[canvas_number][current_resonator]
+                orig_offset = offset_used_in_the_files[canvas_number][current_resonator]
+                if (orig_scale != 1.0) and (orig_offset != 0.0):
+                    # The original datafile has to be normalised.
+                    if verbose:
+                        print(  "File "+str(canvas_number)+", resonator "  + \
+                                str(current_resonator)+", contained some " + \
+                                "scaling and offset to it, and have thus " + \
+                                "had its data normalised before stitching.")
+                    
+                    ## To un-offset and un-scale some function y = A·x + B,
+                    ## offset with -(B·A) and scale with 1/A.
+                    worked_on_canvas = scale_and_offset_processed_data_canvas(
+                        processed_data_canvas = worked_on_canvas,
+                        scale  = 1/orig_scale,
+                        offset = -(orig_offset*orig_scale),
+                        input_data_is_complex = save_complex_data,
+                    )
+                
+                # Now, should we in fact apply some offset and scale
+                # onto the data? As in, did the user request it?
+                if (use_this_scale[current_resonator] != 1.0) and (use_this_offset[current_resonator] != 1.0):
+                    # The user did request some scaling and offset.
+                    if verbose:
+                        print(  "Applying scale "+\
+                                str(use_this_scale[current_resonator])+\
+                                " and offset "+\
+                                str(use_this_offset[current_resonator])+\
+                                " to file "+str(canvas_number)+\
+                                ", resonator "+str(current_resonator)+".")
+                    
+                    # We may apply this scaling and offset here already.
+                    worked_on_canvas = scale_and_offset_processed_data_canvas(
+                        processed_data_canvas = worked_on_canvas,
+                        scale  = use_this_scale[current_resonator],
+                        offset = use_this_offset[current_resonator],
+                        input_data_is_complex = save_complex_data,
+                    )
                 
                 # Grab coordinate x and z in the canvas being worked on.
                 # Insert the datapoint into the final canvas.
@@ -1908,37 +1914,43 @@ def stitch(
                         # paint the canvas
                         final_canvas_for_this_resonator[z_coord][x_coord] = datapoint
             
-            ## At this point, all canvases have been painted for this
-            ## resonator. We may append the data to processed_data.
-            ## And, clean up.
-            ''' TODO: scale and offset work goes here. Feature request: the user should be able to request which scale and offset that the final output should have.
-                        Fact is, I think I messed up with "use_this_scale" and "use_this_offset" - these two were probably meant to be the scale and offset to be applied
-                        onto the final result, and not the values that the input was supposed to have. As in, the user was never supposed to be able to override
-                        the scale and offset values there were held in the files to begin with.'''
+            ## All canvases have been painted for this resonator.
+            ## We may append the data to processed_data. And, clean up.
             processed_data.append(final_canvas_for_this_resonator)
             del final_canvas_for_this_resonator
     
-    print("WARNING! Awaiting a bug fix for scaling and offset, these have been hardcoded to [1.0] and [0.0] for now, respectively.")
+    # At this point, we may verify that the user-requested scale
+    # and offset, has the expected data structure.
+    res_read = len(processed_data)
+    if len(use_this_scale) != res_read:
+        raise TypeError("Error! The user-provided scaling list does not contain scale information for all resonators available in the output data. The faulty argument is \"use_this_scale\".")
+    if len(use_this_offset) != res_read:
+        raise TypeError("Error! The user-provided offset list does not contain offset information for all resonators available in the output data. The faulty argument is \"use_this_offset\".")
     
-    # Now, we must modify the ext_keys with what was stitched together.
-    print("WARNING! No check is done to assert that the first key in ext_keys is really the first swept key, and that the second key is really the second swept key. This must be done.")
-    extract_first_key_original  = ext_keys[0]
-    extract_second_key_original = ext_keys[1]
-    extract_first_key_original['values']  = final_x_axis_of_this_resonator
-    extract_second_key_original['values'] = final_z_axis_of_this_resonator
-    ext_keys[0] = extract_first_key_original.copy()
-    ext_keys[1] = extract_second_key_original.copy()
+    # We must also modify the ext_keys with what was stitched together.
+    # Figure out the index of the key that was swept.
+    for indices in range(len(ext_keys)):
+        observed_key = (ext_keys[indices]).copy()
+        if observed_key['name'] == first_key:
+            # Found the first key's index!
+            observed_key['values'] = final_x_axis_of_this_resonator
+            ext_keys[indices] = observed_key.copy()
+        elif observed_key['name'] == second_key:
+            # Found the second key's index!
+            observed_key['values'] = final_z_axis_of_this_resonator
+            ext_keys[indices] = observed_key.copy()
+        del observed_key
     
     # Export combined data!
     filepath_to_exported_h5_file = export_processed_data_to_file(
         filepath_of_calling_script = filepath_of_calling_script,
-    
+        
         ext_keys = ext_keys,
         log_dict_list = log_dict_list,
         
         processed_data = processed_data,
-        fetched_data_scale = [1.0], # TODO! HOTFIX
-        fetched_data_offset = [0.0], # TODO! HOTFIX
+        fetched_data_scale  = use_this_scale,
+        fetched_data_offset = use_this_offset,
         resonator_freq_if_arrays_to_fft = resonator_freq_if_arrays_to_fft,
         
         timestamp = get_timestamp_string(),
@@ -1963,3 +1975,36 @@ def stitch(
                 # Gentlemen, it has been a pleasure to play with you all tonight.
                 os.remove(item_to_delete)
     return filepath_to_exported_h5_file
+
+def scale_and_offset_processed_data_canvas(
+    processed_data_canvas,
+    scale,
+    offset,
+    input_data_is_complex = True,
+    ):
+    ''' Take a set of data. Then, scale it with some user-provided scale,
+        as well as some user-provided offset. The data is assumed to be
+        complex. Thus, the scaling is done on both the real and
+        imaginary components of the dataset.
+    '''
+    # If the input data is complex, we'll work with the imaginary and
+    # real components separately.
+    if input_data_is_complex:
+        # The offset would have been set as a portion of the magnitude.
+        fetch_imag   = np.copy( np.imag(  processed_data_canvas ))
+        fetch_real   = np.copy( np.real(  processed_data_canvas ))
+        fetch_thetas = np.copy( np.angle( processed_data_canvas ))
+        
+        # Add user-set offset (Note: can be negative; "add minus y")
+        fetch_imag += np.copy(offset) * np.sin( fetch_thetas )
+        fetch_real += np.copy(offset) * np.cos( fetch_thetas )
+        processed_data_canvas = fetch_real + fetch_imag*1j
+        
+        # Scale with some user-set scale.
+        result = processed_data_canvas * scale
+    else:
+        # The input data is not complex.
+        result = (np.abs(processed_data_canvas) + offset) * scale
+    
+    # Return result.
+    return result
