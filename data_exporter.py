@@ -1172,6 +1172,7 @@ def stitch(
     select_resonator_for_single_log_export = '',
     delete_old_files_after_stitching = False,
     default_exported_log_file_name = 'default',
+    verbose = False,
     ):
     ''' A function that stiches together exported data files.
         
@@ -1265,7 +1266,7 @@ def stitch(
             
             # Is the user overriding which scale to use?
             if use_this_scale != None:
-                
+            
                 # The user is overriding the scaling to be used.
                 # Is the user-supplied scaling usable?
                 improper_argument = False
@@ -1323,6 +1324,8 @@ def stitch(
             
             # Is the user overriding which offset to use?
             if use_this_offset != None:
+            
+                raise NotImplementedError('Halted! Warning! The arguments use_this_offset and use_this_scale, have been interpreted incorrectly. These are effectively bugged in the data sticher as of writing.')
                 
                 # The user is overriding the offset to be used.
                 # Is the user-supplied offset usable?
@@ -1435,8 +1438,9 @@ def stitch(
         # Get data.
         with h5py.File(current_filepath_item_in_list, 'r') as h5f:
             
-            # Notify the user.
-            print("Extracting data: "+str(current_filepath_item_in_list))
+            # Notify the user?
+            if verbose:
+                print("Extracting data: "+str(current_filepath_item_in_list))
             
             # Make sure that the time traces are compatible in the
             # provided data files.
@@ -1597,7 +1601,7 @@ def stitch(
                 # This has not been established. Then, declare
                 # the big_fat_list_of_canvases to be the same
                 # length as the number of resonators (or probabilities)
-                big_fat_list_of_canvases = [ [] for _ in range(4   )]##len(curr_processed_data)) ]
+                big_fat_list_of_canvases = [ [] for _ in range(len(curr_processed_data)) ]
                 big_fat_list_of_x_axes   = [ [] for _ in range(len(curr_processed_data)) ]
                 big_fat_list_of_z_axes   = [ [] for _ in range(len(curr_processed_data)) ]
                 big_fat_list_length_has_been_established = True
@@ -1652,7 +1656,10 @@ def stitch(
     
     # At this point, we have stored all data that there is to stitch together
     # in a massive variable. We may now assemble all data together.
-    print("Data extracted successfully from all files!\n")
+    print("Data extracted successfully from all files!")
+    
+    # Create a list that will hold the final processed data.
+    processed_data = []
     
     ## Let's detect at this point whether we like to paint a big canvas,
     ## or whether every axis is identical, meaning that we'd like to
@@ -1767,32 +1774,160 @@ def stitch(
         # We may now go on to export the final, stitched, data.
         
     else:
+        # The user is expecting that the X- and Z- axes may differ.
         for current_resonator in range(len(big_fat_list_of_canvases)):
             # Get current big fat set of 2D-plots to merge.
             current_list_of_2D_arrays_to_merge = big_fat_list_of_canvases[current_resonator]
             current_list_of_corresponding_x_axes = big_fat_list_of_x_axes[current_resonator]
             current_list_of_corresponding_z_axes = big_fat_list_of_z_axes[current_resonator]
             
-            raise NotImplementedError("Halted! Not finished.")
+            ## The list current_list_of_2D_arrays_to_merge contains N entries
+            ## where the N rows correspond to the number of files that the user
+            ## provided to the stitcher. Every entry in
+            ## current_list_of_2D_arrays_to_merge will be merged together into
+            ## one 2D array. That 2D array can have a single pixel in Z-height,
+            ## mind you. Or X-height for that matter.
             
+            # Go through every axis and assemble the final X and Z axes
+            # of the final canvas; it's safe to start with item 0 here,
+            # since the instantiated x axis otherwise would have been [].
+            # That way, we save one loop iteration here.
+            final_x_axis_of_this_resonator = current_list_of_corresponding_x_axes[0]
+            final_z_axis_of_this_resonator = current_list_of_corresponding_z_axes[0]
             
-            # The list current_list_of_2D_arrays_to_merge contains N entries
-            # where N is the number of files the user provided to the stitcher.
-            # Every entry in current_list_of_2D_arrays_to_merge will be
-            # merged together into one 2D array. That 2D array can have a single
-            # pixel in Z-height, mind you. Or X-height for that matter.
+            # In the loop, we'll try to avoid merging things
+            # whenever possible. We'll "not set" a flag signalling that
+            # merger may be avoided, if possible.
+            we_know_that_all_x_axes_are_not_identical = False
+            we_know_that_all_z_axes_are_not_identical = False
             
-            # Go through every axis and assemble the final X (or Z) axis
-            # of the final canvas.
-            for x_axis_assembly_sweep in range(len(current_list_of_corresponding_x_axes)):
-                print(current_list_of_corresponding_x_axes[x_axis_assembly_sweep])
-            for z_axis_assembly_sweep in range(len(current_list_of_corresponding_z_axes)):
-                pass
+            # For all resonators...
+            ## Note that the number of resonators read (or probabilities
+            ## gathered) for anything related to the z-axis, will be
+            ## the same number as for the x-axis. Thus, do both simulatneously.
+            for idx in range(1,len(current_list_of_corresponding_x_axes)):
+                
+                # Fetch x and z axes.
+                x_item = current_list_of_corresponding_x_axes[idx]
+                z_item = current_list_of_corresponding_z_axes[idx]
+                
+                ## Merge on X? ##
+                if (not we_know_that_all_x_axes_are_not_identical):
+                    # Assume that they are identical, and check.
+                    if np.array_equiv( final_x_axis_of_this_resonator, x_item ):
+                        # This x-axis is identical to the previously checked
+                        # ones! We may fast-track.
+                        pass
+                    else:
+                        # Oh snaps, something in this x-axis is not identical.
+                        # We may no longer fast-track. To save time,
+                        # it's faster to not compare axes.
+                        we_know_that_all_x_axes_are_not_identical = True
+                
+                ## Merge on Z? ##
+                if (not we_know_that_all_z_axes_are_not_identical):
+                    # Assume that they are identical, and check.
+                    if np.array_equiv( final_z_axis_of_this_resonator, z_item ):
+                        # This z-axis is identical to the previously checked
+                        # ones! We may fast-track.
+                        pass
+                    else:
+                        # Oh snaps, something in this z-axis is not identical.
+                        # We may no longer fast-track. To save time,
+                        # it's faster to not compare axes.
+                        we_know_that_all_z_axes_are_not_identical = True
+                
+                # Append axes?
+                if we_know_that_all_x_axes_are_not_identical:
+                    final_x_axis_of_this_resonator = np.concatenate( \
+                        (final_x_axis_of_this_resonator, x_item) )
+                if we_know_that_all_z_axes_are_not_identical:
+                    final_z_axis_of_this_resonator = np.concatenate( \
+                        (final_z_axis_of_this_resonator, z_item) )
             
-            '''Using these axes values, assemble the final 2D canvas for this resonator.
-            ## First, look at every axis [for resonator N], and make the final expected final_axis [for resonator N] for dims Z and X. Then fill this big-ass 2D plot with 0.0 in every pixel. When making the final 2D plot [for resonator N], go pixelpixel by pixelpixel ALONG THE AXES OF THE CURRENT_2D_PLOT and pick out every value that is to be added to some pixelpixel in the big-ass plot.
-            ## If you notice that some entry in the big-ass plot IS NOT 0.0 --> THIS IS WHERE YOU ARE SUPPOSED TO TRIGGER THE OVERWRITE DETECTION, AND WARN THE USER THAT AN OVERWRITE HAS BEEN DETECTED AT VALUE pixelpixel.
-            '''
+            # If we added entries to the final x- or z-axis, then sort and
+            # remove duplicates.
+            if we_know_that_all_x_axes_are_not_identical:
+                final_x_axis_of_this_resonator = np.unique(final_x_axis_of_this_resonator)
+                if verbose:
+                    print("Detected that there were different x-axes in the canvases for resonator "+str(current_resonator)+".")
+            elif verbose:
+                print("Detected that all x-axes were identical for resonator "+str(current_resonator)+".")
+            if we_know_that_all_z_axes_are_not_identical:
+                final_z_axis_of_this_resonator = np.unique(final_z_axis_of_this_resonator)
+                if verbose:
+                    print("Detected that there were different z-axes in the canvases for resonator "+str(current_resonator)+".")
+            elif verbose:
+                print("Detected that all z-axes were identical for resonator "+str(current_resonator)+".")
+            
+            # At this point, we may make the final X and Z canvas
+            # for the currently looked-at resonator (or, probability).
+            final_canvas_for_this_resonator = \
+                np.empty( ( len(final_z_axis_of_this_resonator), \
+                            len(final_x_axis_of_this_resonator) ), \
+                            dtype = np.complex128) # dtype = Very important!!
+            final_canvas_for_this_resonator[:] = np.complex(np.nan)
+            
+            # Start assembling the final canvas for this resonator.
+            for canvas_number in range(len(current_list_of_2D_arrays_to_merge)):
+                
+                # Get canvas.
+                worked_on_canvas = current_list_of_2D_arrays_to_merge[canvas_number]
+                
+                # Normalise canvas so that everything is treated
+                # using the same scaling and offset.
+                ''' TODO: scale and offset work goes here. '''
+                
+                # Grab coordinate x and z in the canvas being worked on.
+                # Insert the datapoint into the final canvas.
+                x_vec_for_this_canvas = current_list_of_corresponding_x_axes[canvas_number]
+                z_vec_for_this_canvas = current_list_of_corresponding_z_axes[canvas_number]
+                
+                for row in range(len(worked_on_canvas[:])):
+                    
+                    # Figure out which z-index of the *final* canvas,
+                    # that we are painting.
+                    z_to_treat = z_vec_for_this_canvas[row]
+                    z_coord = np.where(final_z_axis_of_this_resonator==z_to_treat)[0][0]
+                    
+                    for col in range(len(worked_on_canvas[row][:])):
+                        
+                        # Figure out which x-index of the *final* canvas,
+                        # that we are painting.
+                        x_to_treat = x_vec_for_this_canvas[col]
+                        x_coord = np.where(final_x_axis_of_this_resonator==x_to_treat)[0][0]
+                        
+                        ## At this point, we know the precise
+                        ## x and z coordinate of the final canvas,
+                        ## that we are going to insert the datapoint at.
+                        
+                        # Fetch datapoint to paint.
+                        datapoint = worked_on_canvas[row][col]
+                        
+                        # On the identified z-index and x-index,
+                        # paint the canvas
+                        final_canvas_for_this_resonator[z_coord][x_coord] = datapoint
+            
+            ## At this point, all canvases have been painted for this
+            ## resonator. We may append the data to processed_data.
+            ## And, clean up.
+            ''' TODO: scale and offset work goes here. Feature request: the user should be able to request which scale and offset that the final output should have.
+                        Fact is, I think I messed up with "use_this_scale" and "use_this_offset" - these two were probably meant to be the scale and offset to be applied
+                        onto the final result, and not the values that the input was supposed to have. As in, the user was never supposed to be able to override
+                        the scale and offset values there were held in the files to begin with.'''
+            processed_data.append(final_canvas_for_this_resonator)
+            del final_canvas_for_this_resonator
+    
+    print("WARNING! Awaiting a bug fix for scaling and offset, these have been hardcoded to [1.0] and [0.0] for now, respectively.")
+    
+    # Now, we must modify the ext_keys with what was stitched together.
+    print("WARNING! No check is done to assert that the first key in ext_keys is really the first swept key, and that the second key is really the second swept key. This must be done.")
+    extract_first_key_original  = ext_keys[0]
+    extract_second_key_original = ext_keys[1]
+    extract_first_key_original['values']  = final_x_axis_of_this_resonator
+    extract_second_key_original['values'] = final_z_axis_of_this_resonator
+    ext_keys[0] = extract_first_key_original.copy()
+    ext_keys[1] = extract_second_key_original.copy()
     
     # Export combined data!
     filepath_to_exported_h5_file = export_processed_data_to_file(
@@ -1802,8 +1937,8 @@ def stitch(
         log_dict_list = log_dict_list,
         
         processed_data = processed_data,
-        fetched_data_scale = running_scale,
-        fetched_data_offset = running_offset,
+        fetched_data_scale = [1.0], # TODO! HOTFIX
+        fetched_data_offset = [0.0], # TODO! HOTFIX
         resonator_freq_if_arrays_to_fft = resonator_freq_if_arrays_to_fft,
         
         timestamp = get_timestamp_string(),
