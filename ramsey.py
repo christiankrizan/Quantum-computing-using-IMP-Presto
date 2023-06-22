@@ -285,6 +285,16 @@ def ramsey01_ro0(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # For every delay to step through:
         for ii in range(len(delay_arr)):
             
@@ -710,6 +720,16 @@ def ramsey01_ro0_virtual_z(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every phase to step through:
         for ii in range(num_phases):
@@ -1726,6 +1746,16 @@ def ramsey12_ro1(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # For every delay to step through:
         for ii in range(len(delay_arr)):
             
@@ -2183,6 +2213,16 @@ def ramsey01_echo_r0(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every delay to step through:
         for ii in range(len(delay_arr)):

@@ -96,7 +96,7 @@ def fit_exponential_decay_t1(
     # or a list of raw data to work with.
     list_of_fitted_values = []
     for current_fit_item in raw_data_or_path_to_data:
-    
+        
         # Get data.
         if the_user_provided_a_list_of_files:
             # The user provided a filepath to data.

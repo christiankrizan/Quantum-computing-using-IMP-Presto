@@ -176,12 +176,25 @@ def output_pulse_sweep_frequency(
         # Start of sequence
         T = 0.0  # s
         
-        # Pi pulse to be characterised
+        # Define repetition counter for T.
+        repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
+        # Pulse to be characterised
         pls.reset_phase(T, waveform_port)
         pls.output_pulse(T, waveform_pulse)
         T += waveform_duration
         
-        # Move to next amplitude
+        # Move to next frequency.
         pls.next_frequency(T, waveform_port)
         
         # Do a fake store

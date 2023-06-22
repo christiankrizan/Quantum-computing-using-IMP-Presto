@@ -309,6 +309,16 @@ def acquire_thermal_population_from_12_rabi_ro1(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # Run |1⟩ → |2⟩ Rabi oscillations,
         # with and without the |1⟩ state as the input state.
         for prepare_excited_or_not in range(2):

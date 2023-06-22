@@ -331,6 +331,8 @@ def discriminate_state_11(
         # Start of sequence
         T = 0.0  # s
         
+        raise NotImplementedError("Halted! This portion of the measurement code has not been updated to reflect the more modern approach to DC biasing.")
+        
         # Charge the bias tee.
         if coupler_dc_port != []:
             pls.reset_phase(T, coupler_dc_port)
@@ -1041,6 +1043,8 @@ def discriminate_state_22(
         
         # Start of sequence
         T = 0.0  # s
+        
+        raise NotImplementedError("Halted! This function requires a larger update in terms of its DC biasing.")
         
         # Charge the bias tee.
         if coupler_dc_port != []:

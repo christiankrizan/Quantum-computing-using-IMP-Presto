@@ -268,6 +268,16 @@ def t1_01_sweep_coupler(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # Since we have two arrays to step through, and since the
         # Presto API as of 2023-02-02 does not support having
         # "variable LUTs" in the sequencer, we have zero choice
@@ -532,6 +542,8 @@ def t1_01_sweep_coupler_multiplexed_ro0(
         
         ro0 designates that "the readout is done in state |0⟩."
     '''
+    
+    raise NotImplementedError("Halted! This function requires a larger update in terms of its DC biasing.")
     
     ## Input sanitisation
     
@@ -1275,6 +1287,16 @@ def t1_12_sweep_coupler_ro1(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # Since we have two arrays to step through, and since the
         # Presto API as of 2023-02-02 does not support having

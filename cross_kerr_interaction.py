@@ -346,6 +346,16 @@ def cross_kerr_interaction_vz_ramsey_ro0(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # Play impinging pulse?
         for play_impinging_pulse in [False, True]:
             

@@ -262,6 +262,16 @@ def amplitude_sweep_oscillation01_ro0(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
             
@@ -785,6 +795,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
         
         # Start of sequence
         T = 0.0 # s
+        
+        raise NotImplementedError("Halted, this function needs a large update to its DC biasing.")
         
         # Charge the bias tee.
         if coupler_dc_port != []:
@@ -1337,6 +1349,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         # Start of sequence
         T = 0.0 # s
         
+        raise NotImplementedError("Haltede, DC biasing update needed.")
+        
         # Charge the bias tee.
         if coupler_dc_port != []:
             pls.reset_phase(T, coupler_dc_port)
@@ -1806,6 +1820,16 @@ def amplitude_sweep_oscillation12_ro0(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
@@ -2283,6 +2307,16 @@ def amplitude_sweep_oscillation12_ro1(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
             
@@ -2743,6 +2777,16 @@ def duration_sweep_oscillation01_ro0(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # Since we have two arrays to step through, and since the
         # Presto API as of 2023-02-21 does not support having
@@ -3266,6 +3310,8 @@ def duration_sweep_oscillation12_ro1(
         
         # Start of sequence
         T = 0.0 # s
+        
+        raise NotImplementedError("Halted, a major DC biasing update is needed.")
         
         # Charge the bias tee.
         if coupler_dc_port != []:

@@ -300,6 +300,8 @@ def find_drag_coefficient_lambda_over_anharmonicity(
 
         # Start of sequence
         T = 0.0  # s
+        
+        raise NotImplementedError("Halted! This function requires a larger update in terms of its DC biasing.")
 
         # Charge the bias tee.
         if coupler_dc_port != []:

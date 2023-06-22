@@ -454,6 +454,8 @@ def execute(
         # Start of sequence
         T = 0.0  # s
         
+        raise NotImplementedError("Halted! This function needs an update in terms of its DC biasing.")
+        
         # Charge the bias tee.
         if coupler_dc_port != []:
             pls.reset_phase(T, coupler_dc_port)
@@ -1261,6 +1263,8 @@ def execute_DEMO(
         
         # Start of sequence
         T = 0.0  # s
+        
+        raise NotImplementedError("Halted! This function will have to have its DC biasing updated.")
         
         # Charge the bias tee.
         if coupler_dc_port != []:

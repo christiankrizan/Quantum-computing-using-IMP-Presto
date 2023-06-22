@@ -396,6 +396,16 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # For every resonator stimulus pulse frequency to sweep over:
         for ii in range(num_freqs):
             
@@ -972,6 +982,16 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every AC coupler amplitude to sweep over:
         for jj in range(num_amplitudes):
@@ -1569,6 +1589,16 @@ def cz20_sweep_duration_and_detuning(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # For every pulse duration to sweep over:
         for ii in range(num_time_steps):
             
@@ -2162,6 +2192,16 @@ def cz20_sweep_duration_and_detuning_state_probability(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every AC coupler frequency to scan:
         for jj in range(num_freqs):
@@ -2775,6 +2815,16 @@ def cz20_tune_local_accumulated_phase(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every phase value of the final pi-half gate:
         for ii in range(num_phases):
@@ -3420,6 +3470,16 @@ def cz20_tune_local_accumulated_phase_state_probability(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every phase value of the final pi-half gate:
         for ii in range(num_phases):
@@ -4070,6 +4130,16 @@ def cz20_conditional_cross_ramsey(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every phase value of the final pi-half gate:
         for ii in range(num_phases):

@@ -238,6 +238,16 @@ def find_f_ro0_sweep_coupler(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
             
@@ -617,6 +627,16 @@ def find_f_ro0_sweep_power(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every resonator stimulus pulse amplitude to sweep over:
         for ii in range(num_amplitudes):
@@ -1055,6 +1075,16 @@ def find_f_ro1_sweep_coupler(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
 
         # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
@@ -1502,6 +1532,16 @@ def find_f_ro1_sweep_power(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every resonator stimulus pulse amplitude to sweep over:
         for ii in range(num_amplitudes):
@@ -1981,6 +2021,16 @@ def find_f_ro2_sweep_coupler(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
@@ -2466,6 +2516,16 @@ def find_f_ro2_sweep_power(
         # Define repetition counter for T.
         repetition_counter = 1
         
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_dc_bias, coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
         # For every resonator stimulus pulse amplitude to sweep over:
         for ii in range(num_amplitudes):
         
@@ -2875,6 +2935,16 @@ def find_f_ro0_sweep_coupler_in_outer_measurement_loop(
         
         # Define repetition counter for T.
         repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
         
         # For every pulse to sweep over:
         for ii in range(len(coupler_amp_arr)):
