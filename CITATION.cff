@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: Indecorum
+message: >-
+  Please cite this software as given below. Applicable license terms
+  are given in https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/blob/master/LICENSE
+type: software
+authors:
+  - given-names: Christian
+    family-names: Križan
+    email: krizan@chalmers.se
+    affiliation: Chalmers University of Technology
+    orcid: 'https://orcid.org/0000-0002-5059-7998'
+identifiers:
+  - type: url
+    value: >-
+      https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto
+    description: GitHub repository with the source code.
+repository-code: >-
+  https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto
+abstract: >-
+  The code repository contains quantum computer interface
+  code, that tunes up quantum gates using the IMP Presto AWG
+  lock-in amplifier. The code accurately represents that
+  which the original repository author uses himself for
+  superconducting quantum computing experiments. 
+keywords:
+  - Quantum computing
+license: CC-BY-NC-SA-4.0
+commit: 6482db5
+version: Indev 2023-06-22
+date-released: '2023-06-22'

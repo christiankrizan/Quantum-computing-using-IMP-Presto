@@ -120,7 +120,6 @@ def pulsed01_sweep_coupler(
     # Declare amplitude array for the coupler to be swept
     coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
     
-    
     # Instantiate the interface
     print("\nConnecting to "+str(ip_address)+"...")
     with pulsed.Pulsed(
@@ -264,7 +263,7 @@ def pulsed01_sweep_coupler(
         #################################
         ''' PULSE SEQUENCE STARTS HERE'''
         #################################
-
+        
         # Start of sequence
         T = 0.0  # s
         
