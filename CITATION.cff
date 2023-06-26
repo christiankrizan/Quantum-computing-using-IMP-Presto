@@ -29,3 +29,20 @@ license: CC-BY-NC-SA-4.0
 commit: 6482db5
 version: Indev 2023-06-22
 date-released: '2023-06-22'
+preferred-citation:
+  type: software
+  authors:
+  - family-names: "Križan"
+    given-names: "Christian"
+    orcid: "https://orcid.org/0000-0002-5059-7998"
+  month: jun
+  title: "Indecorum"
+  license: CC-BY-NC-SA-4.0
+  license-url: "https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/blob/master/LICENSE"
+  filename: CITATION.cff
+  format: "Citation File Format"
+  institution:
+    name: "Chalmers University of Technology"
+  version: "Indev 2023-06-22"
+  year: 2023
+  url: "https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto"
