@@ -513,13 +513,18 @@ def post_process_time_trace_data(
     else:
         # The user has provided some kind of IF data.
         for pp in range(len(resonator_freq_if_arrays_to_fft)):
-            # Have the user supplied empty sweeps?
-            if resonator_freq_if_arrays_to_fft[pp] == []:
-                print("Warning! No IF sweep information provided to FFT at entry "+str(pp)+". Assuming IF = 0 Hz for this entry.")
-                # Append entry corresponding to this resonator.
-                # Let's cast it to list already, since that would happen later
-                # if we don't.
-                resonator_freq_if_arrays_to_fft[pp] = [0]
+            # Has the user supplied empty sweeps?
+            ## Bear in mind that the content may be just a single number.
+            ## Note: numpy NaN does not pass the float check, which is nice.
+            item_type = type(resonator_freq_if_arrays_to_fft[pp])
+            if (not (item_type == np.float64)) and (not (item_type == float)):
+                if len(resonator_freq_if_arrays_to_fft[pp]) == 0:
+                    print("Warning! No IF sweep information provided to FFT at entry "+str(pp)+". Assuming IF = 0 Hz for this entry.")
+                    # Append entry corresponding to this resonator.
+                    # Let's cast it to list already, since that would happen later
+                    # if we don't.
+                    resonator_freq_if_arrays_to_fft[pp] = [0]
+            del item_type
     
     # Instead of getting indices of some freq_arr, let's instead demodulate the
     # data, so that our sought-for frequency content is at baseband 0 Hz!
@@ -559,7 +564,7 @@ def post_process_time_trace_data(
         # points that will be stored.
         if (len(_ro_freq_if) > 1):
             total_points_to_store = ((fetched_data_arr[:, 0, integration_indices]).shape)[0]
-            processed_data_sweep_arr = np.zeros(total_points_to_store, dtype=np.complex128)
+            processed_data_sweep_arr = np.zeros(total_points_to_store, dtype = np.complex128)
             ## TODO: right now, it is assumed that all IF sweeps has the frequency
             ## sweep done using the repeat argument (= outer loop).
             ## I am currently unsure as to how this fact can be resolved in a good way.
@@ -655,7 +660,7 @@ def post_process_time_trace_data(
             del resp_fft
         
         # Did we process an IF frequency sweep?
-        if processed_data_sweep_arr != []:
+        if not (len(processed_data_sweep_arr) == 0):
             # We did.
             processed_data.append( processed_data_sweep_arr )
             del processed_data_sweep_arr
