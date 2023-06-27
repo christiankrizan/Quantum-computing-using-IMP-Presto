@@ -2018,6 +2018,7 @@ def pulsed01_sweep_coupler_in_outer_measurement_loop(
     save_complex_data = True,
     save_raw_time_data = False,
     use_log_browser_database = True,
+    suppress_log_browser_export = False,
     default_exported_log_file_name = 'default',
     log_browser_tag  = 'default',
     log_browser_user = 'default',
@@ -2264,8 +2265,8 @@ def pulsed01_sweep_coupler_in_outer_measurement_loop(
                         T_begin, T, repetition_rate, repetition_counter,
                     )
             
-            # Step the DC bias to the next point.
-            if coupler_dc_port != []:
+            # Step the DC bias to the next point, if possible.
+            if (coupler_dc_port != []) and ((ii+1) <= (len(coupler_amp_arr)-1)):
                 T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
                 T += settling_time_of_bias_tee
             
@@ -2429,6 +2430,7 @@ def pulsed01_sweep_coupler_in_outer_measurement_loop(
             select_resonator_for_single_log_export = '',
             
             force_matrix_reshape_flip_row_and_column = False,
+            suppress_log_browser_export = suppress_log_browser_export,
             log_browser_tag  = log_browser_tag,
             log_browser_user = log_browser_user,
             save_raw_time_data = save_raw_time_data,
