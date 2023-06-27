@@ -1185,8 +1185,11 @@ def stitch(
         
     elif isinstance(h5_files_to_stitch_as_list_or_folder, list):
         # The user provided a list.
+        # Grab the zeroeth item, for later comparison.
+        zeroeth_item = h5_files_to_stitch_as_list_or_folder[0]
+        
         # Was it a list of chars?
-        if len(h5_files_to_stitch_as_list_or_folder[0]) == 1:
+        if (len(zeroeth_item) == 1) and (type(zeroeth_item) == str):
             # Let's check.
             it_was_not_a_list_of_chars = False
             for item in h5_files_to_stitch_as_list_or_folder:
@@ -1206,6 +1209,31 @@ def stitch(
             
             # Clean up.
             del it_was_not_a_list_of_chars
+        
+        elif (type(h5_files_to_stitch_as_list_or_folder[0]) == list):
+            # The zeroeth item is a list. Has the input somehow
+            # gotten mangled into a list of lists of single-item string paths?
+            for ww in range(len(h5_files_to_stitch_as_list_or_folder)):
+                item = h5_files_to_stitch_as_list_or_folder[ww]
+                if (type(item) == list):
+                    if (len(item) == 1) and (type(item[0]) == str):
+                        if (os.path.isfile(item[0]) or os.path.isdir(item[0])):
+                            # At this point, we've found a weirdly
+                            # packed filepath or folder path.
+                            # Let's unpack said item one level.
+                            h5_files_to_stitch_as_list_or_folder[ww] = (h5_files_to_stitch_as_list_or_folder[ww])[0]
+                            if verbose:
+                                print("WARNING! I had to unpack the following input weirdly: '"+str(h5_files_to_stitch_as_list_or_folder[ww])+"'")
+                        else:
+                            raise TypeError( \
+                                "Error! Received input argument type "+\
+                                "'list of lists of strings'. Please remake"+\
+                                " this input into, at least, a list of "+\
+                                "strings.")
+        
+        # Clean up
+        del zeroeth_item
+            
     else:
         # Unexpected input.
         raise TypeError( \
