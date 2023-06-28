@@ -225,7 +225,7 @@ def save(
             fetched_data_offset = fetched_data_offset,
             fetched_data_scale = fetched_data_scale,
         )
-        
+    
     else:
         # The user is only interested in time trace data.
         processed_data = []
@@ -831,6 +831,7 @@ def export_processed_data_to_file(
                 step_channels = ext_keys,
                 use_database  = use_log_browser_database
             )
+            print("... Labber API handle initiated.")
             
             # Set project name, tag, and user in logfile.
             # Check whether the user wishes to set a custom tag and/or user
@@ -844,12 +845,13 @@ def export_processed_data_to_file(
             f.setProject(name_of_measurement_that_ran)
             f.setTags(log_browser_tag)
             f.setUser(log_browser_user)
-
+            
             # Store the post-processed data.
             print("... storing processed data into the .HDF5 file.")
             # TODO:  This part should cover an arbitrary number of fetched_data_arr
             #        arrays. And, this entire subroutine should be made fully
             #        generic.
+            
             if (select_resonator_for_single_log_export == ''):
                 
                 # Ensure that log_dict_list and processed_data matches.
@@ -888,13 +890,14 @@ def export_processed_data_to_file(
             
             # Check if the hdf5 file was created in the local directory.
             # This would happen if you change use_data to False in the
-            # Labber.createLogFile_ForData call. If so, move it to an appropriate
-            # directory. Make directories where necessary.
-            success_message = " in the Log Browser directory!"
+            # Labber.createLogFile_ForData call. If so, move it to an
+            # appropriate directory. Make directories where necessary.
             save_path = os.path.join(full_folder_path_where_data_will_be_saved, savefile_string)  # Full save path
             if os.path.isfile(os.path.join(folder_path_to_calling_script_attempting_to_save, savefile_string)):
                 shutil.move( os.path.join(folder_path_to_calling_script_attempting_to_save, savefile_string) , save_path)
                 success_message = ", see " + save_path
+            else:
+                success_message = " in the Log Browser directory!"
             
             # Print success message.
             print("Data saved" + success_message)
@@ -1249,10 +1252,16 @@ def stitch(
         if os.path.isdir( item ):
             # The user provided a directory.
             # Append all .hdf5 files (.h5) in this directory.
+            ## We need the root of this directory as well.
+            if item[-1] != "\\":
+                item += "\\"
+            directory_root = item
             for file_item in os.listdir( item ):
                 if (file_item.endswith('.h5')) or (file_item.endswith('.hdf5')):
-                    print("Found file: \""+str(file_item)+"\"")
-                    list_of_h5_files_to_stitch.append(file_item)
+                    print("Found file: \""+str(directory_root)+str(file_item)+"\"")
+                    list_of_h5_files_to_stitch.append(directory_root + file_item)
+            # Clean up
+            del directory_root
         
         elif os.path.isfile( item ):
             # It's a file. Add if .hdf5 file (.h5)
