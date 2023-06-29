@@ -1636,10 +1636,16 @@ def stitch(
                 # Repeat the same procedure for getting the X and Z axes.
                 curr_canvas = curr_processed_data[entry_idx]
                 big_fat_list_of_canvases[entry_idx].append(curr_canvas)
-                big_fat_list_of_x_axes[entry_idx].append( h5f[first_key][()] )
                 ## It is possible that the 2D-sweep has merely a single
-                ## swept dimension. In that case, let's catch this, and
-                ## simply ignore the big_fat_list_of_z_axes.
+                ## swept dimension. In that case, let's catch this.
+                try:
+                    big_fat_list_of_x_axes[entry_idx].append( h5f[first_key][()] )
+                except KeyError:
+                    # If faced with an "object doesn't exist" error here,
+                    # then the x-axis object was probably one-dimensional.
+                    # The first_key has been stored in a different way in the
+                    # .hdf5 file.
+                    big_fat_list_of_x_axes[entry_idx].append( h5f.attrs[first_key] )
                 try:
                     big_fat_list_of_z_axes[entry_idx].append( h5f[second_key][()] )
                 except KeyError:
