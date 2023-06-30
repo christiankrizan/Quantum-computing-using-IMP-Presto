@@ -25,6 +25,7 @@ from phase_calculator import \
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
+    initialise_dc_bias, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
