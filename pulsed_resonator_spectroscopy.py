@@ -19,6 +19,7 @@ from phase_calculator import bandsign
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
+    initialise_dc_bias, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
@@ -148,12 +149,13 @@ def find_f_ro0_sweep_coupler(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_amp_arr[0], \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_amp_arr) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_amp_arr,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -538,12 +540,13 @@ def find_f_ro0_sweep_power(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -948,12 +951,13 @@ def find_f_ro1_sweep_coupler(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_amp_arr[0], \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_amp_arr) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_amp_arr,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -1405,12 +1409,13 @@ def find_f_ro1_sweep_power(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -1870,12 +1875,13 @@ def find_f_ro2_sweep_coupler(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_amp_arr[0], \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_amp_arr) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_amp_arr,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -2363,12 +2369,13 @@ def find_f_ro2_sweep_power(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         
         # Sanitise user-input time arguments
@@ -2846,12 +2853,13 @@ def find_f_ro0_sweep_coupler_in_outer_measurement_loop(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_amp_arr[0], \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_amp_arr) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_amp_arr,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.

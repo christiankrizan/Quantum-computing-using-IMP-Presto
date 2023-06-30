@@ -461,12 +461,13 @@ def resonator_spectroscopy_ro0_over_iswap_duration(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -1043,7 +1044,7 @@ def estimate_phi_ac(
     num_phases = len(control_phase_arr)
     
     ## Initial array declaration
-
+    
     # Declare amplitude array for the AC coupler tone to be swept.
     coupler_ac_amp_arr = np.linspace(coupler_ac_amp_min, coupler_ac_amp_max, num_amplitudes)
     
@@ -1076,12 +1077,13 @@ def estimate_phi_ac(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.

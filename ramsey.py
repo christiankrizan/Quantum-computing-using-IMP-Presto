@@ -152,12 +152,13 @@ def ramsey01_ro0(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -604,12 +605,13 @@ def ramsey01_ro0_virtual_z(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -1586,12 +1588,13 @@ def ramsey12_ro1(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
@@ -2073,12 +2076,13 @@ def ramsey01_echo_r0(
         
         # Configure the DC bias. Also, let's charge the bias-tee.
         if coupler_dc_port != []:
-            pls.hardware.set_dc_bias( \
-                coupler_dc_bias, \
-                coupler_dc_port, \
-                range_i = get_dc_dac_range_integer(coupler_dc_bias) \
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_dc_bias,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
             )
-            time.sleep( settling_time_of_bias_tee )
         
         # Sanitise user-input time arguments
         plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
