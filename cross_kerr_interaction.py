@@ -448,7 +448,13 @@ def cross_kerr_interaction_vz_ramsey_ro0(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []

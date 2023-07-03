@@ -20,6 +20,7 @@ from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
     initialise_dc_bias, \
+    destroy_dc_bias, \
     change_dc_bias
 from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
@@ -293,7 +294,13 @@ def find_f_ro0_sweep_coupler(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -682,7 +689,13 @@ def find_f_ro0_sweep_power(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1138,7 +1151,13 @@ def find_f_ro1_sweep_coupler(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -1594,7 +1613,13 @@ def find_f_ro1_sweep_power(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -2091,7 +2116,13 @@ def find_f_ro2_sweep_coupler(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -2583,7 +2614,13 @@ def find_f_ro2_sweep_power(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []
@@ -3008,7 +3045,13 @@ def find_f_ro0_sweep_coupler_in_outer_measurement_loop(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
     
     # Declare path to whatever data will be saved.
     string_arr_to_return = []

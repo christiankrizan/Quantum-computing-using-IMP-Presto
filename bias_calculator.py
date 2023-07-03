@@ -84,7 +84,6 @@ def get_dc_dac_range_integer(
             found_range = 3  ## Where 3 = ±6.67 V;  6.0 = 90% of 6.666...
     return found_range
 
-
 def sanitise_dc_bias_arguments(
     coupler_dc_port,
     coupler_bias_min = None,
@@ -190,7 +189,6 @@ def sanitise_dc_bias_arguments(
     # Sweep or not, time to return.
     return coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, with_or_without_bias_string
 
-
 def initialise_dc_bias(
     pulse_object,
     static_dc_bias_or_list_to_sweep,
@@ -203,7 +201,7 @@ def initialise_dc_bias(
     '''
     # Assert that the input is legal.
     assert len(coupler_dc_port) > 0, \
-        "Halted! No DC ports were provided to the DC bias initialiser."
+        "Halted! No DC ports were provided, cannot change DC bias."
     
     # Is the intended input a list? In that case, then the value we'd
     # like to ramp to is in fact the first item of the list.
@@ -217,8 +215,8 @@ def initialise_dc_bias(
         initial_dc_value_to_set = static_dc_bias_or_list_to_sweep
     else:
         raise TypeError( \
-            "Error! Could not understand provided DC value to initialise " + \
-            "to. The provided value was: " + \
+            "Error! Could not understand provided DC value to change " + \
+            "into. The provided value was: " + \
             str(static_dc_bias_or_list_to_sweep)+".")
     
     # At this point, we know what is the value that we will ramp to.
@@ -240,7 +238,7 @@ def initialise_dc_bias(
         print(get_timestamp_string(pretty = True) + \
         ": Moving the DC bias from "+str(round(currently_set_dc_bias,3))+\
         " V to "+str(initial_dc_value_to_set)+" V at "+str(safe_slew_rate)+\
-        " V/s. The DC bias will be at its location in "+\
+        " V/s. The DC bias will be at its intended location in "+\
         str(round(time_required_for_traversal,2))+" seconds.")
     
     '''
@@ -440,6 +438,39 @@ def initialise_dc_bias(
     # Done initialising the DC bias!
     return
 
-def destroy_dc_bias():
-    #Ramp down to 0
-    pass
+def destroy_dc_bias(
+    pulse_object,
+    coupler_dc_port,
+    settling_time_of_bias_tee,
+    safe_slew_rate = 20e-3, # V / s
+    static_offset_from_zero = 0.0, # V
+    ):
+    ''' Reset the currently applied DC bias to zero, using a slew slew rate
+        that ramps the DC bias to 0 V.
+        
+        static_offset_from_zero allows the user to dictate that
+        "0 V from the Presto instrument" doesn't really equate to zero flux
+        through the SQUID loop. There may be some permanent minor flux.
+        Which, this argument allows the user to correct for.
+        
+        Example: the user runs destroy_dc_bias, which sets the DC bias to 0 V.
+        The user detects that there is still a flux left in the SQUID,
+        equatable to 14 mV worth of DC bias. The user may now set
+        static_offset_from_zero = 14e-3. The "reset to zero" is now
+        in fact a reset to -14e-3.
+    '''
+    
+    # To set the DC bias to 0, we may use the initialise DC bias command,
+    # but we're "initialising to 0 V" so to speak.
+    target_dc_that_is_zero = 0.0 - static_offset_from_zero
+    
+    initialise_dc_bias(
+        pulse_object = pulse_object,
+        static_dc_bias_or_list_to_sweep = target_dc_that_is_zero,
+        coupler_dc_port = coupler_dc_port,
+        settling_time_of_bias_tee = settling_time_of_bias_tee,
+        safe_slew_rate = safe_slew_rate,
+    )
+    
+    # Done!
+    return

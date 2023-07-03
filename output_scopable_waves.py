@@ -20,6 +20,7 @@ from bias_calculator import \
     sanitise_dc_bias_arguments, \
     get_dc_dac_range_integer, \
     initialise_dc_bias, \
+    destroy_dc_bias, \
     change_dc_bias
 from time_calculator import \
     check_if_integration_window_is_legal, \
@@ -218,7 +219,13 @@ def output_pulse_sweep_frequency(
         
         # Reset the DC bias port(s).
         if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            pls.hardware.set_dc_bias(0.0, coupler_dc_port)
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
         
         # Get fake store data
         time_vector, fetched_data_arr = pls.get_store_data()
