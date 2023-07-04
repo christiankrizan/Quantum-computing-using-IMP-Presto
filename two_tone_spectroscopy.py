@@ -939,7 +939,7 @@ def pulsed01_sweep_coupler_in_inner_loop(
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = '01' + with_or_without_bias_string,
+            append_to_log_name_before_timestamp = '01_inner_loop' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             

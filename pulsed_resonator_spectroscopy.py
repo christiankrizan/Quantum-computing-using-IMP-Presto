@@ -178,7 +178,428 @@ def find_f_ro0_sweep_coupler(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
+            freq      = readout_freq_nco,
+            in_ports  = readout_sampling_port,
+            out_ports = readout_stimulus_port,
+            tune      = True,
+            sync      = True,
+        )
+        
+        ''' Setup scale LUTs '''
+        
+        # Readout amplitude
+        pls.setup_scale_lut(
+            output_ports    = readout_stimulus_port,
+            group           = 0,
+            scales          = readout_amp,
+        )
+        
+        ### Setup readout pulse ###
+        
+        # Setup readout pulse envelope
+        readout_pulse = pls.setup_long_drive(
+            output_port =   readout_stimulus_port,
+            group       =   0,
+            duration    =   readout_duration,
+            amplitude   =   1.0,
+            amplitude_q =   1.0,
+            rise_time   =   0e-9,
+            fall_time   =   0e-9
+        )
+        
+        # Setup readout carrier, this tone will be swept in frequency.
+        # The user provides an intended span.
+        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
+        f_start = readout_freq_centre_if - readout_freq_span / 2
+        f_stop  = readout_freq_centre_if + readout_freq_span / 2
+        readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
+        
+        # Use the appropriate sideband.
+        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
+        
+        # Setup LUT
+        pls.setup_freq_lut(
+            output_ports = readout_stimulus_port,
+            group        = 0,
+            frequencies  = np.abs(readout_freq_if_arr),
+            phases       = np.full_like(readout_freq_if_arr, 0.0),
+            phases_q     = bandsign(readout_freq_if_arr),
+        )
+        
+        ### Setup sampling window ###
+        pls.set_store_ports(readout_sampling_port)
+        pls.set_store_duration(sampling_duration)
+        
+        
+        #################################
+        ''' PULSE SEQUENCE STARTS HERE'''
+        #################################
+
+        # Start of sequence
+        T = 0.0  # s
+        
+        # Define repetition counter for T.
+        repetition_counter = 1
+        
+        # Do we have to perform an initial set sequence of the DC bias?
+        if coupler_dc_port != []:
+            T_begin = T # Get a time reference.
+            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
+            T += settling_time_of_bias_tee
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
+        # For every pulse to sweep over:
+        for ii in range(len(coupler_amp_arr)):
+            
+            # For every frequency to sweep over:
+            for jj in range(num_freqs):
+                
+                # Get a time reference, used for gauging the iteration length.
+                T_begin = T
+                
+                # Commence readout, swept in frequency.
+                pls.reset_phase(T, readout_stimulus_port)
+                pls.output_pulse(T, readout_pulse)
+                pls.store(T + readout_sampling_delay) # Sampling window
+                T += readout_duration
+                
+                # Step the frequency array in a dumbfuck manner.
+                # Since, there is no way I can declare some sequencer-
+                # accesible register where I store the coupler_dc_bias
+                # values.
+                pls.next_frequency(T, readout_stimulus_port)
+                T += 20e-9 # Add some time for changing the frequency.
+                
+                # Is this NOT the last iteration?
+                if jj != num_freqs-1:
+                    # Then get a T that aligns with the repetition rate.
+                    # Otherwise, we'll change the DC bias, see end of ii loop.
+                    T, repetition_counter = get_repetition_rate_T(
+                        T_begin, T, repetition_rate, repetition_counter,
+                    )
+            
+            # Step the DC bias to the next point, if possible.
+            if (coupler_dc_port != []) and ((ii+1) <= (len(coupler_amp_arr)-1)):
+                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
+                T += settling_time_of_bias_tee
+            
+            # Get T that aligns with the repetition rate.
+            T, repetition_counter = get_repetition_rate_T(
+                T_begin, T, repetition_rate, repetition_counter,
+            )
+        
+        ################################
+        ''' EXPERIMENT EXECUTES HERE '''
+        ################################
+
+        # Average the measurement over 'num_averages' averages
+        pls.run(
+            period          =   T,
+            repeat_count    =   1, # Cannot use this repeat factor, very silly.
+            num_averages    =   num_averages,
+            print_time      =   True,
+        )
+        
+        # Reset the DC bias port(s).
+        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
+            destroy_dc_bias(
+                pulse_object = pls,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+                static_offset_from_zero = 0.0, # V
+            )
+    
+    # Declare path to whatever data will be saved.
+    string_arr_to_return = []
+    
+    if not pls.dry_run:
+        time_vector, fetched_data_arr = pls.get_store_data()
+        print("Raw data downloaded to PC.")
+        
+        ###########################################
+        ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
+        ###########################################
+        
+        # Data to be stored.
+        hdf5_steps = [
+            'readout_pulse_freq_arr', "Hz",
+            'coupler_amp_arr', "V",
+        ]
+        hdf5_singles = [
+            'readout_stimulus_port', "",
+            'readout_sampling_port', "",
+            'readout_freq_nco', "Hz",
+            'readout_freq_centre', "Hz",
+            'readout_freq_span', "Hz",
+            'readout_amp', "FS",
+            'readout_duration', "s",
+            
+            'sampling_duration', "s",
+            'readout_sampling_delay', "s",
+            'repetition_rate', "s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
+            
+            #'coupler_dc_port', "",
+            'settling_time_of_bias_tee', "s",
+            
+            'num_freqs', "",
+            'num_averages', "",
+            
+            'num_biases', "",
+            'coupler_bias_min', "V",
+            'coupler_bias_max', "V",
+        ]
+        hdf5_logs = []
+        try:
+            if len(states_to_discriminate_between) > 0:
+                for statep in states_to_discriminate_between:
+                    hdf5_logs.append('Probability for state |'+statep+'⟩')
+                    hdf5_logs.append("")
+            save_complex_data = False
+        except NameError:
+            pass # Fine, no state discrimnation.
+        if len(hdf5_logs) == 0:
+            hdf5_logs = [
+                'fetched_data_arr', "FS",
+            ]
+        
+        # Ensure the keyed elements above are valid.
+        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+            "Error: non-even amount of keys and units provided. " + \
+            "Someone likely forgot a comma."
+        
+        # Stylistically rework underscored characters in the axes dict.
+        axes = stylise_axes(axes)
+        
+        # Create step lists
+        ext_keys = []
+        for ii in range(0,len(hdf5_steps),2):
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_steps[ii],
+                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+                step_entry_unit   = hdf5_steps[ii+1],
+                axes = axes,
+                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+            ))
+        for jj in range(0,len(hdf5_singles),2):
+            ext_keys.append( get_dict_for_step_list(
+                step_entry_name   = hdf5_singles[jj],
+                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+                step_entry_unit   = hdf5_singles[jj+1],
+            ))
+        for qq in range(len(axes['y_scaler'])):
+            if (axes['y_scaler'])[qq] != 1.0:
+                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+            if (axes['y_offset'])[qq] != 0.0:
+                try:
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+                except IndexError:
+                    # The user is likely stepping a multiplexed readout with seperate plot exports.
+                    if (axes['y_unit'])[qq] != 'default':
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                    else:
+                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+        
+        # Create log lists
+        log_dict_list = []
+        for kk in range(0,len(hdf5_logs),2):
+            if len(hdf5_logs)/2 > 1:
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+            log_dict_list.append( get_dict_for_log_list(
+                log_entry_name = hdf5_logs[kk],
+                unit           = hdf5_logs[kk+1],
+                log_is_complex = save_complex_data,
+                axes = axes
+            ))
+        
+        # Save data!
+        string_arr_to_return.append(save(
+            timestamp = get_timestamp_string(),
+            ext_keys = ext_keys,
+            log_dict_list = log_dict_list,
+            
+            time_vector = time_vector,
+            fetched_data_arr = fetched_data_arr,
+            fetched_data_scale = axes['y_scaler'],
+            fetched_data_offset = axes['y_offset'],
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
+            
+            filepath_of_calling_script = os.path.realpath(__file__),
+            use_log_browser_database = use_log_browser_database,
+            
+            integration_window_start = integration_window_start,
+            integration_window_stop = integration_window_stop,
+            inner_loop_size = num_freqs,
+            outer_loop_size = num_biases,
+            
+            save_complex_data = save_complex_data,
+            source_code_of_executing_file = '', #get_sourcecode(__file__),
+            default_exported_log_file_name = default_exported_log_file_name,
+            append_to_log_name_before_timestamp = 'ro0' + with_or_without_bias_string,
+            append_to_log_name_after_timestamp  = '',
+            select_resonator_for_single_log_export = '',
+            
+            suppress_log_browser_export = suppress_log_browser_export,
+            force_matrix_reshape_flip_row_and_column = False,
+            log_browser_tag  = log_browser_tag,
+            log_browser_user = log_browser_user,
+            save_raw_time_data = save_raw_time_data,
+        ))
+    
+    return string_arr_to_return
+    
+def find_f_ro0_sweep_coupler_in_inner_loop(
+    ip_address,
+    ext_clk_present,
+    
+    readout_stimulus_port,
+    readout_sampling_port,
+    readout_freq_nco,
+    readout_freq_centre,
+    readout_freq_span,
+    readout_amp,
+    readout_duration,
+    
+    sampling_duration,
+    readout_sampling_delay,
+    repetition_rate,
+    integration_window_start,
+    integration_window_stop,
+    
+    coupler_dc_port,
+    settling_time_of_bias_tee,
+    
+    num_freqs,
+    num_averages,
+    
+    num_biases,
+    coupler_bias_min = -0.0,
+    coupler_bias_max = +0.0,
+    
+    skip_saving_control_data = False,
+    
+    reset_dc_to_zero_when_finished = True,
+    
+    save_complex_data = True,
+    save_raw_time_data = False,
+    use_log_browser_database = True,
+    suppress_log_browser_export = False,
+    default_exported_log_file_name = 'default',
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0],
+        "y_offset": [0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
+    ):
+    ''' Find the optimal readout frequency for reading out qubits in state |0>,
+        as a function of a swept pairwise coupler bias.
+        
+        If skip_saving_control_data = True, then no information about
+        the control pulse settings will be stored when exporting the
+        data file. If you intend to merge readout data files together,
+        then this flag must be set to True. Because otherwise there
+        will be information about (for instance) the |f>-state in
+        some files, and no information in other files, meaning that
+        various data merging routines will reject the data merge.
+        
+        ro0 designates that "the readout is done in state |0⟩."
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
+    '''
+    
+    ## Input sanitisation
+    
+    # DC bias argument sanitisation.
+    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
+    with_or_without_bias_string = sanitise_dc_bias_arguments(
+        coupler_dc_port  = coupler_dc_port,
+        coupler_bias_min = coupler_bias_min,
+        coupler_bias_max = coupler_bias_max,
+        num_biases       = num_biases,
+        coupler_dc_bias  = None
+    )
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (readout_freq_span != 0.0)):
+        print("Note: single readout frequency point requested, ignoring span parameter.")
+        readout_freq_span = 0.0
+    
+    ## Initial array declaration
+    
+    # Declare amplitude array for the coupler to be swept.
+    coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
+    
+    # Instantiate the interface
+    print("\nConnecting to "+str(ip_address)+"...")
+    with pulsed.Pulsed(
+        force_reload =   False,
+        address      =   ip_address,
+        ext_ref_clk  =   ext_clk_present,
+        adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
+        adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
+        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
+        dry_run      =   False
+    ) as pls:
+        print("Connected. Setting up...")
+        
+        # Readout output and input ports
+        pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
+        pls.hardware.set_dac_current(readout_stimulus_port, 40_500)
+        pls.hardware.set_inv_sinc(readout_stimulus_port, 0)
+        
+        # Configure the DC bias. Also, let's charge the bias-tee.
+        if coupler_dc_port != []:
+            initialise_dc_bias(
+                pulse_object = pls,
+                static_dc_bias_or_list_to_sweep = coupler_amp_arr,
+                coupler_dc_port = coupler_dc_port,
+                settling_time_of_bias_tee = settling_time_of_bias_tee,
+                safe_slew_rate = 20e-3, # V / s
+            )
+        
+        # Sanitise user-input time arguments
+        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
+        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
+        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
+        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
+        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
+        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
+        
+        # Check whether the integration window is legal.
+        integration_window_stop = check_if_integration_window_is_legal(
+            sample_rate = 1e9,
+            sampling_duration = sampling_duration,
+            integration_window_start = integration_window_start,
+            integration_window_stop  = integration_window_stop
+        )
+        
+        ''' Setup mixers '''
+        
+        # Readout port
+        pls.hardware.configure_mixer(
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
@@ -430,7 +851,7 @@ def find_f_ro0_sweep_coupler(
             save_complex_data = save_complex_data,
             source_code_of_executing_file = '', #get_sourcecode(__file__),
             default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = 'ro0' + with_or_without_bias_string,
+            append_to_log_name_before_timestamp = 'ro0_inner_loop' + with_or_without_bias_string,
             append_to_log_name_after_timestamp  = '',
             select_resonator_for_single_log_export = '',
             
@@ -1457,7 +1878,7 @@ def find_f_ro1_sweep_power(
         
         # Readout port
         pls.hardware.configure_mixer(
-            freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
+            freq      = readout_freq_nco,
             in_ports  = readout_sampling_port,
             out_ports = readout_stimulus_port,
             tune      = True,
@@ -2772,425 +3193,3 @@ def find_f_ro2_sweep_power(
         ))
     
     return string_arr_to_return
-
-def find_f_ro0_sweep_coupler_in_outer_measurement_loop(
-    ip_address,
-    ext_clk_present,
-    
-    readout_stimulus_port,
-    readout_sampling_port,
-    readout_freq_nco,
-    readout_freq_centre,
-    readout_freq_span,
-    readout_amp,
-    readout_duration,
-    
-    sampling_duration,
-    readout_sampling_delay,
-    repetition_rate,
-    integration_window_start,
-    integration_window_stop,
-    
-    coupler_dc_port,
-    settling_time_of_bias_tee,
-    
-    num_freqs,
-    num_averages,
-    
-    num_biases,
-    coupler_bias_min = -0.0,
-    coupler_bias_max = +0.0,
-    
-    skip_saving_control_data = False,
-    
-    reset_dc_to_zero_when_finished = True,
-    
-    save_complex_data = True,
-    save_raw_time_data = False,
-    use_log_browser_database = True,
-    suppress_log_browser_export = False,
-    default_exported_log_file_name = 'default',
-    log_browser_tag  = 'default',
-    log_browser_user = 'default',
-    axes =  {
-        "x_name":   'default',
-        "x_scaler": 1.0,
-        "x_unit":   'default',
-        "y_name":   'default',
-        "y_scaler": [1.0],
-        "y_offset": [0.0],
-        "y_unit":   'default',
-        "z_name":   'default',
-        "z_scaler": 1.0,
-        "z_unit":   'default',
-        }
-    ):
-    ''' Find the optimal readout frequency for reading out qubits in state |0>,
-        as a function of a swept pairwise coupler bias.
-        
-        If skip_saving_control_data = True, then no information about
-        the control pulse settings will be stored when exporting the
-        data file. If you intend to merge readout data files together,
-        then this flag must be set to True. Because otherwise there
-        will be information about (for instance) the |f>-state in
-        some files, and no information in other files, meaning that
-        various data merging routines will reject the data merge.
-        
-        ro0 designates that "the readout is done in state |0⟩."
-        
-        repetition_rate is the time multiple at which every single
-        measurement is repeated at. Example: a repetition rate of 300 µs
-        means that single iteration of a measurement ("a shot") begins anew
-        every 300 µs. If the measurement itself cannot fit into a 300 µs
-        window, then the next iteration will happen at the next integer
-        multiple of 300 µs.
-    '''
-    
-    ## Input sanitisation
-    
-    # DC bias argument sanitisation.
-    coupler_bias_min, coupler_bias_max, num_biases, coupler_dc_bias, \
-    with_or_without_bias_string = sanitise_dc_bias_arguments(
-        coupler_dc_port  = coupler_dc_port,
-        coupler_bias_min = coupler_bias_min,
-        coupler_bias_max = coupler_bias_max,
-        num_biases       = num_biases,
-        coupler_dc_bias  = None
-    )
-    
-    # Sanitisation for whether the user has a
-    # span engaged but only a single frequency.
-    if ((num_freqs == 1) and (readout_freq_span != 0.0)):
-        print("Note: single readout frequency point requested, ignoring span parameter.")
-        readout_freq_span = 0.0
-    
-    ## Initial array declaration
-    
-    # Declare amplitude array for the coupler to be swept.
-    coupler_amp_arr = np.linspace(coupler_bias_min, coupler_bias_max, num_biases)
-    
-    # Instantiate the interface
-    print("\nConnecting to "+str(ip_address)+"...")
-    with pulsed.Pulsed(
-        force_reload =   False,
-        address      =   ip_address,
-        ext_ref_clk  =   ext_clk_present,
-        adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
-        adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
-    ) as pls:
-        print("Connected. Setting up...")
-        
-        # Readout output and input ports
-        pls.hardware.set_adc_attenuation(readout_sampling_port, 0.0)
-        pls.hardware.set_dac_current(readout_stimulus_port, 40_500)
-        pls.hardware.set_inv_sinc(readout_stimulus_port, 0)
-        
-        # Configure the DC bias. Also, let's charge the bias-tee.
-        if coupler_dc_port != []:
-            initialise_dc_bias(
-                pulse_object = pls,
-                static_dc_bias_or_list_to_sweep = coupler_amp_arr,
-                coupler_dc_port = coupler_dc_port,
-                settling_time_of_bias_tee = settling_time_of_bias_tee,
-                safe_slew_rate = 20e-3, # V / s
-            )
-        
-        # Sanitise user-input time arguments
-        plo_clk_T = pls.get_clk_T() # Programmable logic clock period.
-        readout_duration  = int(round(readout_duration / plo_clk_T)) * plo_clk_T
-        sampling_duration = int(round(sampling_duration / plo_clk_T)) * plo_clk_T
-        readout_sampling_delay = int(round(readout_sampling_delay / plo_clk_T)) * plo_clk_T
-        repetition_rate = int(round(repetition_rate / plo_clk_T)) * plo_clk_T
-        settling_time_of_bias_tee = int(round(settling_time_of_bias_tee / plo_clk_T)) * plo_clk_T
-        
-        # Check whether the integration window is legal.
-        integration_window_stop = check_if_integration_window_is_legal(
-            sample_rate = 1e9,
-            sampling_duration = sampling_duration,
-            integration_window_start = integration_window_start,
-            integration_window_stop  = integration_window_stop
-        )
-        
-        ''' Setup mixers '''
-        
-        # Readout port
-        pls.hardware.configure_mixer(
-            freq      = readout_freq_nco,   # readout_freq_nco is set as the mixer NCO
-            in_ports  = readout_sampling_port,
-            out_ports = readout_stimulus_port,
-            tune      = True,
-            sync      = True,
-        )
-        
-        ''' Setup scale LUTs '''
-        
-        # Readout amplitude
-        pls.setup_scale_lut(
-            output_ports    = readout_stimulus_port,
-            group           = 0,
-            scales          = readout_amp,
-        )
-        
-        ### Setup readout pulse ###
-        
-        # Setup readout pulse envelope
-        readout_pulse = pls.setup_long_drive(
-            output_port =   readout_stimulus_port,
-            group       =   0,
-            duration    =   readout_duration,
-            amplitude   =   1.0,
-            amplitude_q =   1.0,
-            rise_time   =   0e-9,
-            fall_time   =   0e-9
-        )
-        
-        # Setup readout carrier, this tone will be swept in frequency.
-        # The user provides an intended span.
-        readout_freq_centre_if = readout_freq_nco - readout_freq_centre
-        f_start = readout_freq_centre_if - readout_freq_span / 2
-        f_stop  = readout_freq_centre_if + readout_freq_span / 2
-        readout_freq_if_arr = np.linspace(f_start, f_stop, num_freqs)
-        
-        # Use the appropriate sideband.
-        readout_pulse_freq_arr = readout_freq_nco - readout_freq_if_arr
-        
-        # Setup LUT
-        pls.setup_freq_lut(
-            output_ports = readout_stimulus_port,
-            group        = 0,
-            frequencies  = np.abs(readout_freq_if_arr),
-            phases       = np.full_like(readout_freq_if_arr, 0.0),
-            phases_q     = bandsign(readout_freq_if_arr),
-        )
-        
-        ### Setup sampling window ###
-        pls.set_store_ports(readout_sampling_port)
-        pls.set_store_duration(sampling_duration)
-        
-        
-        #################################
-        ''' PULSE SEQUENCE STARTS HERE'''
-        #################################
-
-        # Start of sequence
-        T = 0.0  # s
-        
-        # Define repetition counter for T.
-        repetition_counter = 1
-        
-        # Do we have to perform an initial set sequence of the DC bias?
-        if coupler_dc_port != []:
-            T_begin = T # Get a time reference.
-            T = change_dc_bias(pls, T, coupler_amp_arr[0], coupler_dc_port)
-            T += settling_time_of_bias_tee
-            # Get T that aligns with the repetition rate.
-            T, repetition_counter = get_repetition_rate_T(
-                T_begin, T, repetition_rate, repetition_counter,
-            )
-        
-        # For every pulse to sweep over:
-        for ii in range(len(coupler_amp_arr)):
-            
-            # For every frequency to sweep over:
-            for jj in range(num_freqs):
-                
-                # Get a time reference, used for gauging the iteration length.
-                T_begin = T
-                
-                # Commence readout, swept in frequency.
-                pls.reset_phase(T, readout_stimulus_port)
-                pls.output_pulse(T, readout_pulse)
-                pls.store(T + readout_sampling_delay) # Sampling window
-                T += readout_duration
-                
-                # Step the frequency array in a dumbfuck manner.
-                # Since, there is no way I can declare some sequencer-
-                # accesible register where I store the coupler_dc_bias
-                # values.
-                pls.next_frequency(T, readout_stimulus_port)
-                T += 20e-9 # Add some time for changing the frequency.
-                
-                # Is this NOT the last iteration?
-                if jj != num_freqs-1:
-                    # Then get a T that aligns with the repetition rate.
-                    # Otherwise, we'll change the DC bias, see end of ii loop.
-                    T, repetition_counter = get_repetition_rate_T(
-                        T_begin, T, repetition_rate, repetition_counter,
-                    )
-            
-            # Step the DC bias to the next point.
-            if coupler_dc_port != []:
-                T = change_dc_bias(pls, T, coupler_amp_arr[ii+1], coupler_dc_port)
-                T += settling_time_of_bias_tee
-            
-            # Get T that aligns with the repetition rate.
-            T, repetition_counter = get_repetition_rate_T(
-                T_begin, T, repetition_rate, repetition_counter,
-            )
-        
-        ################################
-        ''' EXPERIMENT EXECUTES HERE '''
-        ################################
-
-        # Average the measurement over 'num_averages' averages
-        pls.run(
-            period          =   T,
-            repeat_count    =   1, # Cannot use this repeat factor, very silly.
-            num_averages    =   num_averages,
-            print_time      =   True,
-        )
-        
-        # Reset the DC bias port(s).
-        if (coupler_dc_port != []) and reset_dc_to_zero_when_finished:
-            destroy_dc_bias(
-                pulse_object = pls,
-                coupler_dc_port = coupler_dc_port,
-                settling_time_of_bias_tee = settling_time_of_bias_tee,
-                safe_slew_rate = 20e-3, # V / s
-                static_offset_from_zero = 0.0, # V
-            )
-    
-    # Declare path to whatever data will be saved.
-    string_arr_to_return = []
-    
-    if not pls.dry_run:
-        time_vector, fetched_data_arr = pls.get_store_data()
-        print("Raw data downloaded to PC.")
-        
-        ###########################################
-        ''' SAVE AS LOG BROWSER COMPATIBLE HDF5 '''
-        ###########################################
-        
-        # Data to be stored.
-        hdf5_steps = [
-            'readout_pulse_freq_arr', "Hz",
-            'coupler_amp_arr', "V",
-        ]
-        hdf5_singles = [
-            'readout_stimulus_port', "",
-            'readout_sampling_port', "",
-            'readout_freq_nco', "Hz",
-            'readout_freq_centre', "Hz",
-            'readout_freq_span', "Hz",
-            'readout_amp', "FS",
-            'readout_duration', "s",
-            
-            'sampling_duration', "s",
-            'readout_sampling_delay', "s",
-            'repetition_rate', "s",
-            'integration_window_start', "s",
-            'integration_window_stop', "s",
-            
-            #'coupler_dc_port', "",
-            'settling_time_of_bias_tee', "s",
-            
-            'num_freqs', "",
-            'num_averages', "",
-            
-            'num_biases', "",
-            'coupler_bias_min', "V",
-            'coupler_bias_max', "V",
-        ]
-        hdf5_logs = []
-        try:
-            if len(states_to_discriminate_between) > 0:
-                for statep in states_to_discriminate_between:
-                    hdf5_logs.append('Probability for state |'+statep+'⟩')
-                    hdf5_logs.append("")
-            save_complex_data = False
-        except NameError:
-            pass # Fine, no state discrimnation.
-        if len(hdf5_logs) == 0:
-            hdf5_logs = [
-                'fetched_data_arr', "FS",
-            ]
-        
-        # Ensure the keyed elements above are valid.
-        assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
-            "Error: non-even amount of keys and units provided. " + \
-            "Someone likely forgot a comma."
-        
-        # Stylistically rework underscored characters in the axes dict.
-        axes = stylise_axes(axes)
-        
-        # Create step lists
-        ext_keys = []
-        for ii in range(0,len(hdf5_steps),2):
-            ext_keys.append( get_dict_for_step_list(
-                step_entry_name   = hdf5_steps[ii],
-                step_entry_object = np.array( eval(hdf5_steps[ii]) ),
-                step_entry_unit   = hdf5_steps[ii+1],
-                axes = axes,
-                axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
-            ))
-        for jj in range(0,len(hdf5_singles),2):
-            ext_keys.append( get_dict_for_step_list(
-                step_entry_name   = hdf5_singles[jj],
-                step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
-                step_entry_unit   = hdf5_singles[jj+1],
-            ))
-        for qq in range(len(axes['y_scaler'])):
-            if (axes['y_scaler'])[qq] != 1.0:
-                ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
-            if (axes['y_offset'])[qq] != 0.0:
-                try:
-                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
-                except IndexError:
-                    # The user is likely stepping a multiplexed readout with seperate plot exports.
-                    if (axes['y_unit'])[qq] != 'default':
-                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
-                    else:
-                        print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
-                    ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
-        
-        # Create log lists
-        log_dict_list = []
-        for kk in range(0,len(hdf5_logs),2):
-            if len(hdf5_logs)/2 > 1:
-                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
-            log_dict_list.append( get_dict_for_log_list(
-                log_entry_name = hdf5_logs[kk],
-                unit           = hdf5_logs[kk+1],
-                log_is_complex = save_complex_data,
-                axes = axes
-            ))
-        
-        # Save data!
-        string_arr_to_return.append(save(
-            timestamp = get_timestamp_string(),
-            ext_keys = ext_keys,
-            log_dict_list = log_dict_list,
-            
-            time_vector = time_vector,
-            fetched_data_arr = fetched_data_arr,
-            fetched_data_scale = axes['y_scaler'],
-            fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [ readout_freq_if_arr ],
-            
-            filepath_of_calling_script = os.path.realpath(__file__),
-            use_log_browser_database = use_log_browser_database,
-            
-            integration_window_start = integration_window_start,
-            integration_window_stop = integration_window_stop,
-            inner_loop_size = num_freqs,
-            outer_loop_size = num_biases,
-            
-            save_complex_data = save_complex_data,
-            source_code_of_executing_file = '', #get_sourcecode(__file__),
-            default_exported_log_file_name = default_exported_log_file_name,
-            append_to_log_name_before_timestamp = 'ro0_bias_outer' + with_or_without_bias_string,
-            append_to_log_name_after_timestamp  = '',
-            select_resonator_for_single_log_export = '',
-            
-            suppress_log_browser_export = suppress_log_browser_export,
-            force_matrix_reshape_flip_row_and_column = False,
-            log_browser_tag  = log_browser_tag,
-            log_browser_user = log_browser_user,
-            save_raw_time_data = save_raw_time_data,
-        ))
-    
-    return string_arr_to_return
- 
