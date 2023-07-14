@@ -234,7 +234,7 @@ def initialise_dc_bias(
         traversal_difference_in_voltage / safe_slew_rate
     
     # Should we print a status to the user?
-    if time_required_for_traversal > 3.0:
+    if time_required_for_traversal > 5.0:
         print(get_timestamp_string(pretty = True) + \
         ": Moving the DC bias from "+str(round(currently_set_dc_bias,3))+\
         " V to "+str(initial_dc_value_to_set)+" V at "+str(safe_slew_rate)+\
