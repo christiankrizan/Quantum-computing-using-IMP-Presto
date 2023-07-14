@@ -224,6 +224,7 @@ def save(
             fetched_data_arr = fetched_data_arr,
             fetched_data_offset = fetched_data_offset,
             fetched_data_scale = fetched_data_scale,
+            inner_loop_size = inner_loop_size,
         )
     
     else:
@@ -475,6 +476,7 @@ def post_process_time_trace_data(
     fetched_data_arr,
     fetched_data_offset,
     fetched_data_scale,
+    inner_loop_size,
     ):
     ''' Using the provided arguments,
         1. Demodulate the time trace data held within fetched_data_arr.
@@ -563,12 +565,21 @@ def post_process_time_trace_data(
         # For such sweeps, we need to know the total number of measurement
         # points that will be stored.
         if (len(_ro_freq_if) > 1):
+            
+            # Prepare vectors related to storing readout frequency-swept data.
             total_points_to_store = ((fetched_data_arr[:, 0, integration_indices]).shape)[0]
             processed_data_sweep_arr = np.zeros(total_points_to_store, dtype = np.complex128)
-            ## TODO: right now, it is assumed that all IF sweeps has the frequency
-            ## sweep done using the repeat argument (= outer loop).
-            ## I am currently unsure as to how this fact can be resolved in a good way.
-            inner_loop_size = int(total_points_to_store/len(_ro_freq_if))
+            
+            # Create a flag for keeping track of measurements where the
+            # IF frequency was swept in the inner loop of the measurement.
+            # And, check whether the inner or outer measurement loop iterable
+            # belonged to the resonator IF sweep.
+            resonator_if_sweep_on_inner_loop = False
+            probable_inner_loop_size = int(total_points_to_store/len(_ro_freq_if))
+            if probable_inner_loop_size != inner_loop_size:
+                # Detected that the resonator IF sweep was
+                # done on the inner measurement loop iterable.
+                resonator_if_sweep_on_inner_loop = True
         else:
             # This array is checked later to determine whether there
             # was an IF sweep.
@@ -592,10 +603,23 @@ def post_process_time_trace_data(
             else:
                 # Then this is an IF-sweep, and we may select smaller
                 # chunks for FFT'ing.
-                ## TODO: Right now, it is assumed that all IF sweeps
-                ## has the frequency sweep in the repeat (outer loop) of
-                ## the measurement. I am unsure of a good way to fix this fact.
-                arr_to_fft = fetched_data_arr[inner_loop_size*arr_jj:(inner_loop_size*arr_jj)+inner_loop_size, 0, integration_indices]
+                ## Here, we want to grab every entry that has the same
+                ## IF frequency. If the IF was swept as the inner measurement
+                ## loop iterable, then picking out the correct data is
+                ## a bit tricky, as you'll see.
+                if not resonator_if_sweep_on_inner_loop:
+                    # The resonator IF frequency was swept
+                    # in the outer measurement loop iterable.
+                    ## Grab a continuous set of "not-IF"-swept data,
+                    ## in chunks of arr_jj.
+                    arr_to_fft = fetched_data_arr[inner_loop_size*arr_jj:(inner_loop_size*arr_jj)+inner_loop_size, 0, integration_indices] ## TODO: fetched_data_arr contains 30.000 time trace datapoints. But arr_to_fft is suddenly 29.999 long (well, "wide" I guess). What happens?
+                else:
+                    # The resonator IF frequency was swept
+                    # in the inner measurement loop iterable.
+                    ## Grab a discontinuous set of "not-IF"-swept data,
+                    ## where every "inner_loop_size"-'d entry is a new
+                    ## set of data to collect.
+                    arr_to_fft = fetched_data_arr[arr_jj::inner_loop_size, 0, integration_indices]
             
             ## arr_to_fft is an object shaped (num_datapoints_in_measurement, len(integration_indices))
             ## So, that would be all (instrument-averaged) time traces,
@@ -641,20 +665,29 @@ def post_process_time_trace_data(
                 # grab all of the "1" datapoints in that FFT'd vector. Etc.
                 # At this point, we must thus figure out the spacing between
                 # every "1" in the sequence.
-                ## TODO since there was a large change to keep bias sweeps
-                ## on the *inner* loop of the measurements, this means
-                ## that the datapoints are structured:
-                ## [1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3]
-                ## The solution to this fact is very hacky as of now,
-                ## since it assumes that all IF sweeps performs said IF
-                ## sweep on the repeat (aka. outer) loop of the measurements.
-                ## TODO: I am unsure of how to best solve this issue.
-                '''for uu in range(0, total_points_to_store, len(_ro_freq_if)):
-                    print("Selecting point: "+str(arr_jj + uu))
-                    processed_data_sweep_arr[arr_jj + uu] = 2/(num_samples) * resp_fft[arr_jj + uu, 0]'''
-                for uu in range(0, inner_loop_size):
-                    ##processed_data_sweep_arr[arr_jj*inner_loop_size + uu] = 2/(num_samples) * resp_fft[arr_jj*inner_loop_size + uu, 0]
-                    processed_data_sweep_arr[arr_jj*inner_loop_size + uu] = 2/(num_samples) * resp_fft[uu, 0]
+                
+                ## If the IF frequency points were swept on the inner loop
+                ## of the measurement, then grabbing every point becomes
+                ## tricker, and in fact I've only found one way so far
+                ## that in fact also requires that we know the outer loop size.
+                
+                if not resonator_if_sweep_on_inner_loop:
+                    for uu in range(0, inner_loop_size):
+                        processed_data_sweep_arr[arr_jj*inner_loop_size + uu] = 2/(num_samples) * resp_fft[uu, 0]
+                else:
+                    # Here is a weird optimisation to get the outer loop size:
+                    # Earlier, we tried to find out the inner loop size
+                    # by dividing the total number of points to store
+                    # with the length of the resonator IF vector.
+                    # We then discovered that this number did not match
+                    # the user-provided inner loop size.
+                    # This fact then means that the "probable_inner_loop_size"
+                    # variable, is in fact the outer loop size.
+                    # And, this variable is used in the loop below,
+                    # since we know that probable_inner_loop_size is
+                    # actually the outer loop size.
+                    for uu in range(0, probable_inner_loop_size):
+                        processed_data_sweep_arr[arr_jj + uu*inner_loop_size] = 2/(num_samples) * resp_fft[uu, 0]
             
             # At this point, we may free up some memory.
             del resp_fft
