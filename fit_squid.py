@@ -13,7 +13,8 @@ from numpy import hanning as von_hann
 from math import isnan, sqrt, cos
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-from smoothener import filter_and_interpolate
+from fit_input_checker import verify_supported_input_argument_to_fit
+##from smoothener import filter_and_interpolate
 
 def plot_legal_bias_point_intervals(
     resonator_start_stop = [ [(0.0, 0.0), (0.0, 0.0)] ],
@@ -269,10 +270,133 @@ def tunable_coupler_frequency_function(
 
 
 
+def extract_coupling_factor_from_coupler_bias_sweep(
+    raw_data_or_path_to_data,
+    coupler_amp_arr = [],
+    i_renamed_the_coupler_amp_arr_to = '',
+    plot_for_this_many_seconds = 0.0
+    ):
+    ''' From supplied data or datapath, acquire the resonator or qubit
+        coupling factors.
+        
+        A failed fit (due to illegibly noisy input, for instance)
+        will return a NaN ±NaN result.
+        
+        The coupling factor is extracted using the canonical approach,
+        illustrated for instance Fig. (9) here:
+        https://journals.aps.org/prapplied/abstract/10.1103/PhysRevApplied.14.024070
+        
+        Let it be known that there are other methods.
+        
+        raw_data_or_path_to_data can have one of the following data structures:
+            > Folder   (string)
+            > Filepath (string)
+            > Raw data (list of numbers, or numpy array of numbers)
+            > List of filepaths ( list of (see "filepath" above) )
+            > List of raw data  ( list of (see "raw data" above) )
+    '''
+    
+    # What did the user provide?
+    verify = verify_supported_input_argument_to_fit(raw_data_or_path_to_data)
+    the_user_provided_a_folder           = verify[0]
+    the_user_provided_a_file             = verify[1]
+    the_user_provided_raw_data           = verify[2]
+    the_user_provided_a_list_of_files    = verify[3]
+    the_user_provided_a_list_of_raw_data = verify[4]
+    
+    # If the user provided a single filepath, convert that path
+    # into a list with only that path. Then do the list thing with everything.
+    list_of_h5_files_to_fit = []
+    if the_user_provided_a_file:
+        raw_data_or_path_to_data = [ raw_data_or_path_to_data ]
+        the_user_provided_a_file = False
+        the_user_provided_a_list_of_files = True
+    elif the_user_provided_a_folder:
+        root_path = raw_data_or_path_to_data
+        raw_data_or_path_to_data = []
+        for file_in_folder in os.listdir( root_path ):
+            raw_data_or_path_to_data.append( os.path.join(root_path,file_in_folder) )
+        the_user_provided_a_folder = False
+        the_user_provided_a_list_of_files = True
+    if the_user_provided_a_list_of_files:
+        # Ensure that only .hdf5 files (.h5) get added.
+        for file_item in raw_data_or_path_to_data:
+            if (file_item.endswith('.h5')) or (file_item.endswith('.hdf5')):
+                print("Found file: \""+str(file_item)+"\"")
+                list_of_h5_files_to_fit.append(file_item)
+    
+    # If the user provided raw data, or a list of raw data, then
+    # cast everything into a list anyhow.
+    if the_user_provided_raw_data:
+        raw_data_or_path_to_data = [ raw_data_or_path_to_data ]
+        the_user_provided_raw_data = False
+        the_user_provided_a_list_of_raw_data = True
+    
+    # At this point, we either have a good list of files to work with,
+    # or a list of raw data to work with.
+    list_of_fitted_values = []
+    for current_fit_item in raw_data_or_path_to_data:
+        
+        # Get data.
+        if the_user_provided_a_list_of_files:
+            # The user provided a filepath to data.
+            with h5py.File(os.path.abspath( current_fit_item ), 'r') as h5f:
+                extracted_data = h5f["processed_data"][()]
+                
+                if i_renamed_the_coupler_amp_arr_to == '':
+                    coupler_amp_arr_values = h5f[ "coupler_amp_arr" ][()]
+                else:
+                    coupler_amp_arr_values = h5f[i_renamed_the_coupler_amp_arr_to][()]
+        
+        else:
+            # Then the user provided the data raw.
+            
+            # Catch bad user inputs.
+            type_and_length_is_safe = False
+            try:
+                if len(coupler_amp_arr) != 0:
+                    type_and_length_is_safe = True
+            except TypeError:
+                pass
+            assert type_and_length_is_safe, "Error: the coupler bias sweep fitter was provided raw data to fit, but the data for the coupler DC bias array could not be used for fitting the data. The argument \"coupler_amp_arr\" was: "+str(coupler_amp_arr)
+            
+            # Assert fittable data.
+            assert len(coupler_amp_arr) == len((current_fit_item[0])[0]), "Error: the user-provided raw data does not have the same length as the provided coupler DC bias (array) data."
+            
+            # Accept cruel fate and move on.
+            extracted_data = current_fit_item
+            coupler_amp_arr_values = coupler_amp_arr
+        
+        # If complex data provided, convert all values to magnitude.
+        # Check "resonator 0" at Z-axis point 0.
+        if type(((extracted_data[0])[0])[0]) == np.complex128:
+            mag_vals_matrix = np.zeros_like(extracted_data, dtype = 'float64')
+            for res in range(len( extracted_data )):
+                for z_axis_val in range(len( extracted_data[res] )):
+                    for x_axis_val in range(len( (extracted_data[res])[z_axis_val] )):
+                        ((mag_vals_matrix[res])[z_axis_val])[x_axis_val] = (np.abs(((extracted_data[res])[z_axis_val])[x_axis_val])).astype('float64')
+        else:
+            mag_vals_matrix = extracted_data.astype('float64')
+        
+        # mag_vals_matrix now consists of the magnitude values,
+        # that made up the coupler bias sweep.
+        
+        # Report start!
+        if the_user_provided_a_list_of_files:
+            print("Performing coupler bias sweep fitting on " + current_fit_item + "...")
+        else:
+            print("Commencing coupler bias sweep fitting of provided raw data...")
+        
+        assert 1 == 0, str(mag_vals_matrix.shape)
+        
+    
+    assert 1 == 0, "Not implemented!"
 
 
 
-def fit_two_tone_spectroscopy_vs_coupler_bias(
+
+
+def fit_two_tone_spectroscopy_vs_coupler_bias_DEPRECATED(
     data_or_filepath_to_data,
     control_freq_arr = [],
     coupler_amp_arr  = [],
@@ -487,7 +611,7 @@ def fit_two_tone_spectroscopy_vs_coupler_bias(
     # We're done.
     return fitted_values
     
-def fit_coupler_bias_curve_from_avoided_two_level_crossings(
+def fit_coupler_bias_curve_from_avoided_two_level_crossings_DEPRECATED(
     frequencies,
     coupler_values,
     datapoints
@@ -614,7 +738,7 @@ def fit_coupler_bias_curve_from_avoided_two_level_crossings(
     assert 1 == 0, "Halted! Remember to add, that the fitter must also return the \"symmetry imbalance\" about the 0 FS bias axis. The user should be told how much static offset there is, i.e. how much bias really corresponds to a true zero."
     raise NotImplementedError("Halted! This function exists but has not yet been worked on.")
 
-def qubit_dispersive_shift_vs_coupler_flux_function(
+def qubit_dispersive_shift_vs_coupler_flux_function_DEPRECATED(
     x,
     x_scalar,
     x_offset,
@@ -626,6 +750,7 @@ def qubit_dispersive_shift_vs_coupler_flux_function(
     ''' Function to be fitted against.
         
         The formulas here follow (145) in Krantz2019,
+        Appl. Phys. Rev. 6, 021318 (2019); doi: 10.1063/1.5089550
         https://aip.scitation.org/doi/10.1063/1.5089550
     '''
     ## TODO DEBUG chi_disp_shift = -1 * (g_01 ** 2) / Delta * (1/(1+(Delta/anharmonicity)))

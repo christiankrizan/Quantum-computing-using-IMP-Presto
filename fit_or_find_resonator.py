@@ -13,9 +13,7 @@ from math import isnan
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from smoothener import filter_and_interpolate
-
-#  This fitting script follows the theory outlined by Keegan Mullins       ##
-#  See this thesis here: https://scholar.colorado.edu/downloads/q237ht07m  ##
+from fit_input_checker import verify_supported_input_argument_to_fit
 
 
 def find_power_where_resonator_becomes_linear(
@@ -231,6 +229,163 @@ def gompertz_curve(
     '''
     return asymptotic_plateau * (2.71828182846)**( -displacement*(2.71828182846)**( -growth_rate*x ) ) + y_offset
 
+
+def fit_resonator(
+    raw_data_or_path_to_data,
+    readout_pulse_freq_arr = [],
+    i_renamed_the_readout_pulse_freq_arr_to = '',
+    plot_for_this_many_seconds = 0.0,
+    ):
+    ''' This fitting function follows the theory outlined by Keegan Mullins
+        See this thesis here: https://scholar.colorado.edu/downloads/q237ht07m
+        
+        Perform a nice fit on the resonator spectroscopy readout.
+        
+        raw_data_or_path_to_data can have one of the following data structures:
+            > Folder   (string)
+            > Filepath (string)
+            > Raw data (list of numbers, or numpy array of numbers)
+            > List of filepaths ( list of (see "filepath" above) )
+            > List of raw data  ( list of (see "raw data" above) )
+    '''
+    
+    # Attempt to import the required libraries.
+    fit_import_worked = False
+    try:
+        import circle_fit
+        fit_import_worked = True
+    except ModuleNotFoundError:
+        pass
+    if not fit_import_worked:
+        raise ModuleNotFoundError("Error! This fitting function requires the package circle-fit.\nIf running pip, then try this: pip install circle-fit")
+    else:
+        del fit_import_worked
+    
+    # We've succesfully imported the required libraries.
+    
+    ## TODO: Solve the multiplexed sweep issue. All multiplexed sweeps
+    ##       where the x-axis is not identical for all qubits+resonators,
+    ##       will (likely?) have to be exported seperately.
+    ##       Meaning that this fitter will output some gibberish.
+    ##       Perhaps a "select resonator" function is necessary?
+    
+    # What did the user provide?
+    verify = verify_supported_input_argument_to_fit(raw_data_or_path_to_data)
+    the_user_provided_a_folder           = verify[0]
+    the_user_provided_a_file             = verify[1]
+    the_user_provided_raw_data           = verify[2]
+    the_user_provided_a_list_of_files    = verify[3]
+    the_user_provided_a_list_of_raw_data = verify[4]
+    
+    # The resonator spectroscopy could have been done with a
+    # multiplexed readout. Thus, we declare a list for storing what time sweeps
+    # were done for the different qubits.
+    readout_pulse_freq_arr_values = []
+    
+    # If the user provided a single filepath, convert that path
+    # into a list with only that path. Then do the list thing with everything.
+    list_of_h5_files_to_fit = []
+    if the_user_provided_a_file:
+        raw_data_or_path_to_data = [ raw_data_or_path_to_data ]
+        the_user_provided_a_file = False
+        the_user_provided_a_list_of_files = True
+    elif the_user_provided_a_folder:
+        root_path = raw_data_or_path_to_data
+        raw_data_or_path_to_data = []
+        for file_in_folder in os.listdir( root_path ):
+            raw_data_or_path_to_data.append( os.path.join(root_path,file_in_folder) )
+        the_user_provided_a_folder = False
+        the_user_provided_a_list_of_files = True
+    if the_user_provided_a_list_of_files:
+        # Ensure that only .hdf5 files (.h5) get added.
+        for file_item in raw_data_or_path_to_data:
+            if (file_item.endswith('.h5')) or (file_item.endswith('.hdf5')):
+                print("Found file: \""+str(file_item)+"\"")
+                list_of_h5_files_to_fit.append(file_item)
+    
+    # If the user provided raw data, or a list of raw data, then
+    # cast everything into a list anyhow.
+    if the_user_provided_raw_data:
+        raw_data_or_path_to_data = [ raw_data_or_path_to_data ]
+        the_user_provided_raw_data = False
+        the_user_provided_a_list_of_raw_data = True
+    
+    # At this point, we either have a good list of files to work with,
+    # or a list of raw data to work with.
+    list_of_fitted_values = []
+    for current_fit_item in raw_data_or_path_to_data:
+        
+        # Get data.
+        if the_user_provided_a_list_of_files:
+            
+            # The user provided a filepath to data.
+            with h5py.File(os.path.abspath( current_fit_item ), 'r') as h5f:
+                extracted_data = h5f["processed_data"][()]
+                
+                if i_renamed_the_readout_pulse_freq_arr_to == '':
+                    readout_pulse_freq_arr_values = h5f[ "readout_pulse_freq_arr" ][()]
+                else:
+                    readout_pulse_freq_arr_values = h5f[i_renamed_the_readout_pulse_freq_arr_to][()]
+                
+                # Note! Multiplexed functionality disabled for now. TODO
+        
+        else:
+            # Then the user provided the data raw.
+            
+            # Catch bad user inputs.
+            type_and_length_is_safe = False
+            try:
+                if len(readout_pulse_freq_arr) != 0:
+                    type_and_length_is_safe = True
+            except TypeError:
+                pass
+            assert type_and_length_is_safe, "Error: the resonator spectroscopy fitter was provided raw data to fit, but the data for the resonator pulse frequency array could not be used for fitting the data. The argument \"readout_pulse_freq_arr\" was: "+str(readout_pulse_freq_arr)
+            
+            # Assert fittable data.
+            assert len(readout_pulse_freq_arr) == len((current_fit_item[0])[0]), "Error: the user-provided raw data does not have the same length as the provided pulse frequency array data."
+            
+            # Accept cruel fate and move on.
+            extracted_data = current_fit_item
+            readout_pulse_freq_arr_values = readout_pulse_freq_arr
+        
+        ## At this point, we do not want to convert extracted data
+        ## values from their complex state.
+        found_type = type(((extracted_data[0])[0])[0])
+        if found_type == np.complex128:
+            cpx_vals_matrix = np.zeros_like(extracted_data, dtype = np.complex128)
+            for res in range(len( extracted_data )):
+                for z_axis_val in range(len( extracted_data[res] )):
+                    for x_axis_val in range(len( (extracted_data[res])[z_axis_val] )):
+                        ((cpx_vals_matrix[res])[z_axis_val])[x_axis_val] = (((extracted_data[res])[z_axis_val])[x_axis_val]).astype(np.complex128)
+        else:
+            raise TypeError("Halted! The measurement data file at \""+str(current_fit_item)+"\", does not contain *complex* measurement data. The fitting function that ran, requires that the measurement data is complex. Detected datatype: \""+str(found_type)+"\"")
+        
+        # cpx_vals_matrix now consists of data that can be fitted.
+        
+        # Report start!
+        if the_user_provided_a_list_of_files:
+            print("Performing resonator spectroscopy fitting on " + current_fit_item + "...")
+        else:
+            print("Commencing resonator spectroscopy fitting on the provided raw data...")
+        
+        # There may be multiple resonators involved (a multiplexed readout).
+        # Grab every trace (as in, a bias sweep will have many traces),
+        # fit the trace, and store the result as a tuple of (value, error).
+        fitted_values = [[]] * len(cpx_vals_matrix)
+        
+        for current_res_ii in range(len( cpx_vals_matrix )):
+            # Note! See above comment on multiplexed sweeps being disabled for now.
+            ## # Select current sweep values for this particular resonator.
+            ## curr_resonator_pulsed_freq_arr_values = resonator_pulsed_freq_arr_values[current_res_ii]
+            for current_z_axis_value in range(len( cpx_vals_matrix[current_res_ii] )):
+                
+                # Get current trace.
+                current_trace_to_fit = (cpx_vals_matrix[current_res_ii])[current_z_axis_value]
+                
+                # Try to fit current trace.
+                ##try:
+                
+                raise NotImplementedError("Halted! This function is not finished.")
 
 def fit_or_find_resonator_dip_or_lorentzian(
     data_or_filepath_to_data,
@@ -507,7 +662,6 @@ def fit_lorentzian(
         fit_curve = interpolated_filtered_datapoints
     
     return optimal_vals, fit_err, fit_curve
-    
     
 def lorentzian_function(
     x,
