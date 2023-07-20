@@ -1813,8 +1813,6 @@ def get_time_traces_for_g_e_f(
             phases_q     = bandsign(control_freq_if_12),
         )
         
-        raise NotImplementedError("Halted! Surely, this measurement cannot be complete? There is no IF argument provided below for the .save() call.")
-        
         ### Setup sampling window ###
         pls.set_store_ports(readout_sampling_port)
         pls.set_store_duration(sampling_duration)
@@ -2009,7 +2007,7 @@ def get_time_traces_for_g_e_f(
             fetched_data_arr = fetched_data_arr,
             fetched_data_scale = axes['y_scaler'],
             fetched_data_offset = axes['y_offset'],
-            resonator_freq_if_arrays_to_fft = [],
+            resonator_freq_if_arrays_to_fft = [ readout_freq_if ],
             
             filepath_of_calling_script = os.path.realpath(__file__),
             use_log_browser_database = use_log_browser_database,
