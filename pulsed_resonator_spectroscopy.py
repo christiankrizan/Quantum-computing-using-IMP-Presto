@@ -2572,7 +2572,7 @@ def find_f_ro2_sweep_coupler(
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s",
+            'repetition_rate', "s",
             'integration_window_start', "s",
             'integration_window_stop', "s",
             
