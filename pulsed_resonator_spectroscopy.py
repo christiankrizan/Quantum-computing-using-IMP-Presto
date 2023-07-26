@@ -2496,7 +2496,6 @@ def find_f_ro2_sweep_coupler(
             T += control_duration_01
             
             # Put the system into state |2>
-            pls.reset_phase(T, control_port)
             pls.output_pulse(T, control_pulse_pi_12)
             T += control_duration_12
             
@@ -2578,7 +2577,7 @@ def find_f_ro2_sweep_coupler(
             'integration_window_stop', "s",
             
             #'coupler_dc_port', "",
-            'added_delay_for_bias_tee', "s",
+            'settling_time_of_bias_tee', "s",
             
             'num_freqs', "",
             'num_averages', "",
