@@ -15,6 +15,12 @@ import time
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
+from phase_calculator import \
+    legalise_phase_array, \
+    reset_phase_counter, \
+    add_virtual_z, \
+    track_phase, \
+    bandsign
 from datetime import datetime
 from bias_calculator import \
     sanitise_dc_bias_arguments, \
@@ -22,6 +28,7 @@ from bias_calculator import \
     initialise_dc_bias, \
     destroy_dc_bias, \
     change_dc_bias
+from repetition_rate_calculator import get_repetition_rate_T
 from time_calculator import \
     check_if_integration_window_is_legal, \
     get_timestamp_string
@@ -342,7 +349,7 @@ def resonator_spectroscopy_ro0_over_iswap_duration(
     readout_freq_A,
     readout_amp_A,
     readout_freq_centre_B,
-    readout_freq_span_B
+    readout_freq_span_B,
     readout_amp_B,
     readout_duration,
     
@@ -1289,7 +1296,7 @@ def estimate_phi_ac(
             T += readout_duration
             
             # Is this the last iteration?
-            if ii == len(num_phases)-1:
+            if ii == len(control_phase_arr)-1:
                 # Increment the swept amplitude.
                 pls.next_scale(T, coupler_ac_port, group = 0)
                 T += 20e-9 # Add some time for changing the amplitude.
