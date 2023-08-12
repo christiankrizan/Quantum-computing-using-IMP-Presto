@@ -25,7 +25,7 @@ def force_system_restart_over_ssh(
     
     # Initiate remote reboot.
     print("The Presto was found dead at "+str(get_timestamp_string(pretty = True)) +\
-          ". Requiescat in frusta.\n\nRebooting...\n\n")
+          ". Requiescat in frusta.")
     
     # Check that the user has the required fabric package
     fabric_import_successful = False

@@ -4077,9 +4077,9 @@ def cz20_conditional_cross_ramsey(
             phases_q     = bandsign(readout_freq_if_B),
         )
         
-        ### Setup pulses:
-        ### "control_pulse_pi_01_A" and "control_pulse_pi_01_B"
-        ### "control_pulse_pi_01_A_half" and "control_pulse_pi_01_B_half"
+        ## Setup pulses:
+        ## "control_pulse_pi_01_A" and "control_pulse_pi_01_B"
+        ## "control_pulse_pi_01_A_half" and "control_pulse_pi_01_B_half"
         
         # Setup control_pulse_pi_01_A and _B pulse envelopes.
         control_ns_01 = int(round(control_duration_01 * pls.get_fs("dac")))  # Number of samples in the control template.
@@ -4113,7 +4113,8 @@ def cz20_conditional_cross_ramsey(
             envelope    = True,
         )
         
-        # Setup control pulse carrier tones, considering that there is a digital mixer
+        # Setup control_pulse_pi_01 carrier tones,
+        # considering the digital mixers.
         control_freq_if_01_A = control_freq_nco_A - control_freq_01_A
         control_freq_if_01_B = control_freq_nco_B - control_freq_01_B
         pls.setup_freq_lut(
@@ -4745,6 +4746,464 @@ def cz20_tune_frequency_until_pi_phase(
         
         # Clean up.
         del untuned_cz20_results
+        
+        # At this point, the local_accumulated_phase_correction TUPLE contains
+        # the requried local accumulated phase correction for the
+        # two qubits. Run the cross-Ramsey measurements.
+        tuned_conditional_cross_ramsey_results = []
+        for use_this_input_state in conditional_cross_ramsey_input_state_list:
+            
+            # Execute conditional cross-Ramsey, using the figured-out
+            # local accumulated phase corrections.
+            ## Perform this step within a connection handler loop,
+            ## to catch crashes.
+            success = False
+            tries = 0
+            while ((not success) and (tries <= 5)):
+                tries += 1
+                try:
+                    res_cz_cross_ramsey = cz20_conditional_cross_ramsey(
+                        ip_address = ip_address,
+                        ext_clk_present = ext_clk_present,
+                        
+                        readout_stimulus_port = readout_stimulus_port,
+                        readout_sampling_port = readout_sampling_port,
+                        readout_freq_nco = readout_freq_nco,
+                        readout_freq_A = readout_freq_A,
+                        readout_amp_A = readout_amp_A,
+                        readout_freq_B = readout_freq_B,
+                        readout_amp_B = readout_amp_B,
+                        readout_duration = readout_duration,
+                        
+                        sampling_duration = sampling_duration,
+                        readout_sampling_delay = readout_sampling_delay,
+                        repetition_rate = repetition_rate,
+                        integration_window_start = integration_window_start,
+                        integration_window_stop = integration_window_stop,
+                        
+                        control_port_A = control_port_A,
+                        control_freq_nco_A = control_freq_nco_A,
+                        control_freq_01_A = control_freq_01_A,
+                        control_amp_01_A = control_amp_01_A,
+                        control_port_B = control_port_B,
+                        control_freq_nco_B = control_freq_nco_B,
+                        control_freq_01_B = control_freq_01_B,
+                        control_amp_01_B = control_amp_01_B,
+                        control_duration_01 = control_duration_01,
+                        
+                        coupler_dc_port = coupler_dc_port,
+                        coupler_dc_bias = coupler_dc_bias,
+                        settling_time_of_bias_tee = settling_time_of_bias_tee,
+                        
+                        coupler_ac_port = coupler_ac_port,
+                        coupler_ac_freq_nco = coupler_ac_freq_nco,
+                        coupler_ac_freq_cz20 = current_cz20_frequency, ## Note!
+                        coupler_ac_amp_cz20 = coupler_ac_amp_cz20,
+                        coupler_ac_single_edge_time_cz20 = coupler_ac_single_edge_time_cz20,
+                        coupler_ac_plateau_duration_cz20 = coupler_ac_plateau_duration_cz20,
+                        
+                        num_averages = num_averages,
+                        
+                        num_phases = num_phases,
+                        phase_sweep_rad_min = phase_sweep_rad_min,
+                        phase_sweep_rad_max = phase_sweep_rad_max,
+                        
+                        phase_adjustment_after_cz20_A = local_accumulated_phase_correction[0], ## Note! This value is known now.
+                        phase_adjustment_after_cz20_B = local_accumulated_phase_correction[1], ## Note! This value is known now.
+                        
+                        prepare_input_state = use_this_input_state, ## Note!
+                        
+                        reset_dc_to_zero_when_finished = reset_dc_to_zero_when_finished,
+                        
+                        save_complex_data = save_complex_data,
+                        save_raw_time_data = save_raw_time_data,
+                        use_log_browser_database = use_log_browser_database,
+                        suppress_log_browser_export = suppress_log_browser_export_of_suboptimal_data,
+                        default_exported_log_file_name = 'default',
+                        log_browser_tag  = 'default',
+                        log_browser_user = 'default',
+                        axes =  {
+                            "x_name":   'default',
+                            "x_scaler": 1.0,
+                            "x_unit":   'default',
+                            "y_name":   'default',
+                            "y_scaler": [1.0, 1.0],
+                            "y_offset": [0.0, 0.0],
+                            "y_unit":   'default',
+                            "z_name":   'default',
+                            "z_scaler": 1.0,
+                            "z_unit":   'default',
+                        }
+                    )
+                    
+                    success = True # Done
+                except ConnectionRefusedError:
+                    if force_device_reboot_on_connection_error:
+                        force_system_restart_over_ssh("129.16.115.184")
+            assert success, "Halted! Unrecoverable crash detected."
+            
+            tuned_conditional_cross_ramsey_results.append( \
+                res_cz_cross_ramsey[0]
+            )
+        
+        ## We may not yet clear out local_accumulated_phase_correction.
+        ## DO NOT del local_accumulated_phase_correction
+        
+        # At this point, tuned_conditional_cross_ramsey_results contains
+        # the filepaths of the two conditional cross-Ramsey measurements.
+        # One with the CZ₂₀ gate turned on, and one with the CZ₂₀ gate off.
+        
+        # Let's fit cosines into the file, to see how much phase
+        # that the alleged CZ₂₀ gate actually adds.
+        current_added_phase_by_cz20, current_absolute_phase_offset_from_cz20_gate = fit_conditional_phase_offset(
+            raw_data_or_path_to_data_for_condition_OFF = tuned_conditional_cross_ramsey_results[0],
+            raw_data_or_path_to_data_for_condition_ON  = tuned_conditional_cross_ramsey_results[1],
+            conditional_qubit_is = conditional_qubit_is,
+            control_phase_arr = [],
+            i_renamed_the_control_phase_arr_to = '',
+            plot_for_this_many_seconds = 0.0,
+            verbose = False,
+        )
+        
+        for file_to_delete in tuned_conditional_cross_ramsey_results:
+            if suppress_log_browser_export_of_suboptimal_data:
+                # The recent data is irrelevant, remove it.
+                attempt = 0
+                max_attempts = 5
+                success = False
+                while (attempt < max_attempts) and (not success):
+                    try:
+                        os.remove(os.path.abspath(file_to_delete))
+                        success = True
+                    except FileNotFoundError:
+                        attempt += 1
+                        time.sleep(0.2)
+                if (not success):
+                    raise OSError("Error: could not delete data file "+str(os.path.abspath( file_to_delete ))+" after "+str(max_attempts)+" attempts. Halting.")
+        
+        # current_added_phase_by_cz20 contains how much phase was added
+        # by the current CZ₂₀ at this frequency. Append value to list.
+        cz20_added_phase_arr.append( current_added_phase_by_cz20 )
+        
+        # At this point, we may update our tracking variables whether
+        # the value was the currently best one.
+        if np.abs(current_added_phase_by_cz20 - np.pi) < added_phase_of_optimal_cz20_gate:
+            optimal_cz20_frequency = current_cz20_frequency
+            optimal_phase_adjustment_after_cz20_A = local_accumulated_phase_correction[0]
+            optimal_phase_adjustment_after_cz20_B = local_accumulated_phase_correction[1]
+            added_phase_of_optimal_cz20_gate = current_added_phase_by_cz20
+            absolute_phase_offset_from_cz20_gate = current_absolute_phase_offset_from_cz20_gate
+        
+        # Tock the clock, and show the user the time remaining.
+        tock = time.time() # Get a time estimate.
+        num_tick_tocks += 1
+        total_dur += (tock - tick)
+        average_duration_per_point = total_dur / num_tick_tocks
+        calc = (len(cz20_freq_arr)-num_tick_tocks)*average_duration_per_point
+        if (calc != 0.0):
+            # Print "true" time remaining.
+            show_user_time_remaining(calc)
+    
+    # At this point, we've finished building our arrays and are ready
+    # to send them off into a final plot.
+    ## The array cz20_added_phase_arr is our Y-axis.
+    ## Let's treat it before exporting. Remember to grab the "best" values too.
+    cz20_added_phase_arr = np.array(cz20_added_phase_arr)
+    
+    # Data to be stored.
+    hdf5_steps = [
+        'cz20_freq_arr', "Hz",
+    ]
+    hdf5_singles = [
+        'optimal_cz20_frequency', "Hz",
+        'optimal_phase_adjustment_after_cz20_A', "rad",
+        'optimal_phase_adjustment_after_cz20_B', "rad",
+        'added_phase_of_optimal_cz20_gate', "rad",
+        'absolute_phase_offset_from_cz20_gate', "rad",
+        
+        'readout_stimulus_port', "",
+        'readout_sampling_port', "",
+        'readout_freq_nco', "Hz",
+        'readout_freq_A', "Hz",
+        'readout_amp_A', "FS",
+        'readout_freq_B', "Hz",
+        'readout_amp_B', "FS",
+        'readout_duration', "s",
+        
+        'sampling_duration', "s",
+        'readout_sampling_delay', "s",
+        'repetition_rate', "s",
+        'integration_window_start', "s",
+        'integration_window_stop', "s",
+        
+        'control_port_A', "",
+        'control_freq_nco_A', "Hz",
+        'control_freq_01_A', "Hz",
+        'control_amp_01_A', "FS",
+        'control_port_B', "",
+        'control_freq_nco_B', "Hz",
+        'control_freq_01_B', "Hz",
+        'control_amp_01_B', "FS",
+        'control_duration_01', "s",
+        
+        #'coupler_dc_port', "",
+        'coupler_dc_bias', "V",
+        'settling_time_of_bias_tee', "s",
+        
+        'coupler_ac_port', "",
+        'coupler_ac_freq_nco', "Hz",
+        'coupler_ac_freq_cz20_centre', "Hz",
+        'coupler_ac_freq_cz20_span', "Hz",
+        'coupler_ac_amp_cz20', "FS",
+        'coupler_ac_single_edge_time_cz20', "s",
+        'coupler_ac_plateau_duration_cz20', "s",
+        
+        'num_freqs', "",
+        'num_averages', "",
+        
+        'num_phases', "",
+        'phase_sweep_rad_min', "rad",
+        'phase_sweep_rad_max', "rad",
+    ]
+    hdf5_logs = [
+        'cz20_added_phase_arr', "rad",
+    ]
+    
+    # Ensure the keyed elements above are valid.
+    assert ensure_all_keyed_elements_even(hdf5_steps, hdf5_singles, hdf5_logs), \
+        "Error: non-even amount of keys and units provided. " + \
+        "Someone likely forgot a comma."
+    
+    # Stylistically rework underscored characters in the axes dict.
+    axes = stylise_axes(axes)
+    
+    # Create step lists
+    ext_keys = []
+    for ii in range(0,len(hdf5_steps),2):
+        ext_keys.append( get_dict_for_step_list(
+            step_entry_name   = hdf5_steps[ii],
+            step_entry_object = np.array( eval(hdf5_steps[ii]) ),
+            step_entry_unit   = hdf5_steps[ii+1],
+            axes = axes,
+            axis_parameter = ('x' if (ii == 0) else 'z' if (ii == 2) else ''),
+        ))
+    for jj in range(0,len(hdf5_singles),2):
+        ext_keys.append( get_dict_for_step_list(
+            step_entry_name   = hdf5_singles[jj],
+            step_entry_object = np.array( [eval(hdf5_singles[jj])] ),
+            step_entry_unit   = hdf5_singles[jj+1],
+        ))
+    for qq in range(len(axes['y_scaler'])):
+        if (axes['y_scaler'])[qq] != 1.0:
+            ext_keys.append(dict(name='Y-axis scaler for Y'+str(qq+1), unit='', values=(axes['y_scaler'])[qq]))
+        if (axes['y_offset'])[qq] != 0.0:
+            try:
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[2*qq+1], values=(axes['y_offset'])[qq]))
+            except IndexError:
+                # The user is likely stepping a multiplexed readout with seperate plot exports.
+                if (axes['y_unit'])[qq] != 'default':
+                    print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+str(hdf5_logs[1])+").")
+                else:
+                    print("Warning: an IndexError occured when setting the ext_key unit for Y"+str(qq+1)+". Falling back to the first log_list entry's unit ("+(axes['y_unit'])[qq]+").")
+                ext_keys.append(dict(name='Y-axis offset for Y'+str(qq+1), unit=hdf5_logs[1], values=(axes['y_offset'])[qq]))
+    
+    # Create log lists
+    log_dict_list = []
+    for kk in range(0,len(hdf5_logs),2):
+        if (len(hdf5_logs)/2 > 1):
+            if not ( ('Probability for state |') in hdf5_logs[kk] ):
+                hdf5_logs[kk] += (' ('+str((kk+2)//2)+' of '+str(len(hdf5_logs)//2)+')')
+        log_dict_list.append( get_dict_for_log_list(
+            log_entry_name = hdf5_logs[kk],
+            unit           = hdf5_logs[kk+1],
+            log_is_complex = save_complex_data,
+            axes = axes
+        ))
+    
+    # Export the non-complex data (in a Log Browser compatible format).
+    string_arr_to_return = export_processed_data_to_file(
+        filepath_of_calling_script = os.path.realpath(__file__),
+        ext_keys = ext_keys,
+        log_dict_list = log_dict_list,
+        
+        processed_data = [np.array([cz20_added_phase_arr])],
+        fetched_data_scale = axes['y_scaler'],
+        fetched_data_offset = axes['y_offset'],
+        
+        #time_vector = time_vector,   # Nothing to export here.
+        #fetched_data_arr = [],       # Nothing to export here.
+        timestamp = get_timestamp_string(),
+        append_to_log_name_before_timestamp = '20_frequency_versus_added_phase',
+        append_to_log_name_after_timestamp = '',
+        use_log_browser_database = use_log_browser_database,
+        suppress_log_browser_export = suppress_log_browser_export,
+    )
+    
+    return string_arr_to_return
+
+def cz20_tune_frequency_until_pi_phase_fixed_phase_compensation(
+    ip_address,
+    ext_clk_present,
+    
+    readout_stimulus_port,
+    readout_sampling_port,
+    readout_freq_nco,
+    readout_freq_A,
+    readout_amp_A,
+    readout_freq_B,
+    readout_amp_B,
+    readout_duration,
+    
+    sampling_duration,
+    readout_sampling_delay,
+    repetition_rate,
+    integration_window_start,
+    integration_window_stop,
+    
+    control_port_A,
+    control_freq_nco_A,
+    control_freq_01_A,
+    control_amp_01_A,
+    control_port_B,
+    control_freq_nco_B,
+    control_freq_01_B,
+    control_amp_01_B,
+    control_duration_01,
+    
+    coupler_dc_port,
+    coupler_dc_bias,
+    settling_time_of_bias_tee,
+    
+    coupler_ac_port,
+    coupler_ac_freq_nco,
+    coupler_ac_freq_cz20_centre,
+    coupler_ac_freq_cz20_span,
+    coupler_ac_amp_cz20,
+    coupler_ac_single_edge_time_cz20,
+    coupler_ac_plateau_duration_cz20,
+    
+    num_freqs,
+    num_averages,
+    
+    phase_adjustment_after_cz20_A,
+    phase_adjustment_after_cz20_B,
+    
+    num_phases,
+    phase_sweep_rad_min = -2*np.pi,
+    phase_sweep_rad_max = +2*np.pi,
+    
+    reset_dc_to_zero_when_finished = True,
+    force_device_reboot_on_connection_error = False,
+    
+    conditional_qubit_is = 'A',
+    
+    save_complex_data = True,
+    save_raw_time_data = False,
+    use_log_browser_database = True,
+    suppress_log_browser_export = False,
+    suppress_log_browser_export_of_suboptimal_data = True,
+    default_exported_log_file_name = 'default',
+    log_browser_tag  = 'default',
+    log_browser_user = 'default',
+    axes =  {
+        "x_name":   'default',
+        "x_scaler": 1.0,
+        "x_unit":   'default',
+        "y_name":   'default',
+        "y_scaler": [1.0, 1.0],
+        "y_offset": [0.0, 0.0],
+        "y_unit":   'default',
+        "z_name":   'default',
+        "z_scaler": 1.0,
+        "z_unit":   'default',
+        }
+    ):
+    ''' Tune the frequency of the CZ₂₀ gate until one qubit
+        can conditionally infer a π phase shift on another qubit.
+        
+        Given a frequency sweep:
+        - DO NOT tune the local accumulated phase of both qubits.
+        - Execute a cross-Ramsey measurement.
+        - Take the phase difference between the two qubits as a datapoint
+            in a plot showing CZ₂₀ gate frequency versus phase difference.
+        
+        conditional_qubit_is denotes which of the two available qubits
+        is the one which is flipped on/off for the CZ₂₀ gate to trigger.
+        Legal arguments are either 'A' or 'B'.
+        
+        repetition_rate is the time multiple at which every single
+        measurement is repeated at. Example: a repetition rate of 300 µs
+        means that single iteration of a measurement ("a shot") begins anew
+        every 300 µs. If the measurement itself cannot fit into a 300 µs
+        window, then the next iteration will happen at the next integer
+        multiple of 300 µs.
+    '''
+    
+    # For [list of frequencies]:
+    #     > Run cross-Ramsey.
+    #     > Perform cross-Ramsey fit to get the phase difference between the
+    #       two sinusoidals.
+    #     > Store the phase difference for the final plot.
+    # Make final plot: CZ₂₀ frequency on X-axis, Phase difference on Y-axis.
+    
+    ## Input sanitisation
+    
+    # Check that the user has denoted a legal qubit as the conditional qubit
+    # in the measurement.
+    assert ((conditional_qubit_is.lower() == 'a') or  \
+            (conditional_qubit_is.lower() == 'b')),   \
+        "Error! Illegal input argument. The conditional qubit may only be " + \
+        "either qubit 'A' or qubit 'B'."
+    
+    # Sanitisation for whether the user has a
+    # span engaged but only a single frequency.
+    if ((num_freqs == 1) and (coupler_ac_freq_cz20_span != 0.0)):
+        print("Note: single control frequency point requested, ignoring span parameter.")
+        coupler_ac_freq_cz20_span = 0
+    
+    # Prepare variables for keeping track of what time to print out.
+    num_tick_tocks = 0
+    total_dur = 0
+    
+    # Declare resonator frequency stepping array.
+    cz20_freq_start = coupler_ac_freq_cz20_centre - coupler_ac_freq_cz20_span/2
+    cz20_freq_stop  = coupler_ac_freq_cz20_centre + coupler_ac_freq_cz20_span/2
+    cz20_freq_arr   = np.linspace(cz20_freq_start, cz20_freq_stop, num_freqs)
+    
+    # Declare list that will be appended to, containing how much phase
+    # was actually added by the alleged CZ₂₀ gate.
+    cz20_added_phase_arr = []
+    
+    # As we go along, we will eventually find the best values.
+    # Make some variables that we can update once we stumble into
+    # better values.
+    optimal_cz20_frequency = 0.0
+    optimal_phase_adjustment_after_cz20_A = 0.0
+    optimal_phase_adjustment_after_cz20_B = 0.0
+    absolute_phase_offset_from_cz20_gate = 0.0
+    
+    # Initialise the added_phase_of_optimal_cz20_gate variable
+    # to something really large. It will be used later to gauge which
+    # frequency was the one that yielded the closest value to +π rad phase.
+    added_phase_of_optimal_cz20_gate = 313
+    
+    # Go through the frequency list, and the input state list.
+    conditional_cross_ramsey_input_state_list = ['0+', '1+'] if (conditional_qubit_is == 'A') else ['+0', '+1']
+    for current_cz20_frequency in cz20_freq_arr:
+        
+        # Get a time estimate for printing "time remaining" to the user.
+        tick = time.time()
+        
+        ## Execute a CZ₂₀ conditional cross-Ramsey for states |0+⟩ and |1+⟩!
+        
+        # First, we ignore the local accumulated phase correction
+        # for both qubits at the current CZ₂₀ frequency, and simply
+        # accept what the user is providing.
+        
+        # Make the local_accumulated_phase_correction object.
+        local_accumulated_phase_correction = \
+            phase_adjustment_after_cz20_A, \
+            phase_adjustment_after_cz20_B
         
         # At this point, the local_accumulated_phase_correction TUPLE contains
         # the requried local accumulated phase correction for the
