@@ -260,3 +260,300 @@ def plot_confusion_matrix(
         
         # Show plot!
         plt.show()
+
+def plot_logic_table(
+    filepaths_to_plot,
+    name_of_key_that_described_q1,
+    name_of_key_that_described_q2,
+    name_of_key_that_described_the_gates_attempted,
+    names_of_gates_in_key_for_gates_attempted = ['iSWAP','CZ','Decomposed SWAP'],
+    names_of_input_states_for_the_single_qubits = ['0','1','+','-','i','-i'],
+    states_to_analyse = ['00','01','02','10','11','12','20','21','22'],
+    attempt_to_fix_string_input_argument = True,
+    figure_size_tuple = (12,40),
+    export_filepath = '',
+    plot_output = False,
+    ):
+    ''' For the input .hdf5 file, plot matrices showing a quantum
+        logic table of sorts.
+        
+        figure_size_tuple is a tuple, somehow defining the dimensions of the
+        output plot in yankeedoodleland units.
+    '''
+    
+    # We require some API tools from the Labber API.
+    import Labber
+    
+    def get_stepchannelvalue(StepChannels, name):
+        for i, item in enumerate(StepChannels):
+            if item['name'] == name:
+                return item['values']
+        return np.nan
+    
+    # User syntax repair
+    if attempt_to_fix_string_input_argument:
+        if isinstance(filepaths_to_plot, str):
+            filepaths_to_plot = os.path.abspath(filepaths_to_plot)
+            filepaths_to_plot = [filepaths_to_plot]
+    
+    # For all entries!
+    for item in filepaths_to_plot:
+        
+        # Skip this file? (Reset flag from below)
+        skip = False
+        
+        # Get current path
+        filepath_to_file_with_probability_data_to_plot = item
+        
+        # Ensure that the filepath received can be processed.
+        if type(filepath_to_file_with_probability_data_to_plot) == list:
+            filepath_to_file_with_probability_data_to_plot = "".join(filepath_to_file_with_probability_data_to_plot)
+        
+        ## TODO: We may change our stance on how many states
+        ##       that have to be plotted. The best way would be
+        ##       to open the file, and see how many P( |00> ), P( |01> )...
+        ##       there are in the file.
+        
+        # Gather data to plot.
+        hfile = Labber.LogFile(filepath_to_file_with_probability_data_to_plot)
+        
+        # Build data file axes.
+        stepchannels = hfile.getStepChannels()
+        q1_axis = get_stepchannelvalue(
+            stepchannels,
+            name_of_key_that_described_q1
+        )
+        q2_axis = get_stepchannelvalue(
+            stepchannels,
+            name_of_key_that_described_q2
+        )
+        gate_sweep_axis = get_stepchannelvalue(
+            stepchannels,
+            name_of_key_that_described_the_gates_attempted
+        )
+        
+        # Assert that the axes are legal.
+        for axes_to_check in [q1_axis, q2_axis, gate_sweep_axis]:
+            # Check whether a bad argument was passed; this would likely
+            # result in a NaN argument.
+            try:
+                if np.isnan(axes_to_check):
+                    raise TypeError("Error! One value axis passed a NaN value" + \
+                        " from the Labber API. Check your input arguments!" + \
+                        " Perhaps you wrote a \'\' or similar?")
+            except ValueError:
+                # We expect that matrices fetched from Labber
+                # are normally multi-entried. "This is fine."
+                # However, we'll hate Labber's data structures for
+                # this odd bs. of Pythonic try-except tango.
+                pass
+            
+            # Check length.
+            if len(axes_to_check) <= 0:
+                raise TypeError("Error! The axis "+str(axes_to_check) + \
+                    " has zero length. Check your input arguments.")
+            
+            # Again.
+            if len(names_of_gates_in_key_for_gates_attempted) == 0:
+                raise TypeError("Error! No names provided for the "+\
+                    "two-qubit gates that you swept.")
+            elif len(gate_sweep_axis) != len(names_of_gates_in_key_for_gates_attempted):
+                raise TypeError("Error! The argument bearing the names of" + \
+                    " the two-qubit gates being analysed, has a length "+\
+                    "that does not match the length of the swept key in "+\
+                    "the Labber log file. Perhaps you erroneously used "+\
+                    "the default names in this function, but in reality "+\
+                    "made a smaller gate sweep in Labber? Or, you have "+\
+                    "perhaps provided the wrong key name for the swept "+\
+                    "parameter in your measurement that describes which "+\
+                    "two-qubit gate you are currently analysing?")
+            
+            # And again.
+            if len(names_of_input_states_for_the_single_qubits) == 0:
+                raise TypeError("Error! No names provided for the "+\
+                    "single-qubit input states that you swept.")
+            elif len(q1_axis) != len(names_of_input_states_for_the_single_qubits):
+                raise TypeError("Error! The argument bearing the names of" + \
+                    " the single-qubit input states being analysed, has a"+\
+                    " length that does not match the length of the axis in "+\
+                    "the Labber log file that holds the input states for "+\
+                    "qubit 1. Did you remember to provide the names for "+\
+                    "the single-qubit input states as an argument?")
+            elif len(q2_axis) != len(names_of_input_states_for_the_single_qubits):
+                raise TypeError("Error! The argument bearing the names of" + \
+                    " the single-qubit input states being analysed, has a"+\
+                    " length that does not match the length of the axis in "+\
+                    "the Labber log file that holds the input states for "+\
+                    "qubit 2. Did you remember to provide the names for "+\
+                    "the single-qubit input states as an argument?")
+        
+        # Make the matrices that will be output in the end.
+        # The matrix matrices_to_output has the format [[], [], [] ... []]
+        # ... where the number of empty matrices correspond to the number
+        # of gate types that you are trying to analyse.
+        matrices_to_output = [[]] * len(gate_sweep_axis)
+        
+        # We will set a flag here to keep track of whether we have a
+        # big_fat_matrix that holds the data for the entire measurement output.
+        big_fat_matrix_formed = False
+        
+        ## Fetch data! ##
+        ## At this point, the data structure will be weird from Labber's side.
+        ## We need to slice it up, according to the length of our axes.
+        for current_output_state in range(len(states_to_analyse)):
+            print("Analysing results for output state |"+\
+                str(states_to_analyse[current_output_state])+"⟩") # <-- Careful! Unseen character!
+            
+            # Fetch the current column of all of the matrices' output.
+            data = hfile.getData(name = 'State Discriminator - Average 2Qstate P'+str(states_to_analyse[current_output_state]))
+            
+            ## NOTE! Here, we may actually flatten the file.
+            ##       The data held in data, will then corresond to the
+            ##       entire P_xy column, for every matrix in the .hdf5 file.
+            flattened_data = data.flatten()
+            
+            # We may now form the big_fat_matrix,
+            # if it doesn't have the correct dimensions yet.
+            if not big_fat_matrix_formed:
+                
+                # big_fat_matrix will be
+                # flattened_data * "number of discretised states" in size.
+                total_number_of_matrices = int(len(flattened_data) / (len(q1_axis) * len(q2_axis)))
+                
+                # Find out how many different configurations of matrices
+                # that the user swept. I.e. parameters not related to
+                # the actual matrix forming, in a way.
+                number_of_configurations = int(total_number_of_matrices/len(gate_sweep_axis))
+                
+                # Print to the user.
+                print("Detected that the entire file contains "+\
+                    str(total_number_of_matrices)+" matrices, which " + \
+                    "would be "+str(len(gate_sweep_axis))+" gates analysed, "+\
+                    "for a total of "+str(number_of_configurations)+\
+                    " different configurations.")
+                
+                # Let's form big_fat_matrix.
+                big_fat_matrix = np.zeros((len(flattened_data),len(states_to_analyse)))
+                
+                # Set flag that the matrix has been formed.
+                big_fat_matrix_formed = True
+            
+            # We now have the big_fat_matrix, and may start filling up
+            # its columns. Which, would be flattened_data.
+            big_fat_matrix[:, current_output_state] = flattened_data
+        
+        # At this point, we have formed the entire big_fat_matrix that contains
+        # all of the population data for all matrices in the data file.
+        ## Remember: columns in big_fat_matrix correspond to P00, P01, P02...
+        print("Finished assembling matrices for every input- and output state.")
+        
+        ## For the different gate types, we assemble the output matrices
+        ## one by one.
+        matrix_of_matrices = [[]] * total_number_of_matrices
+        names_of_the_finished_matrices = []
+        iteration_counter = 0
+        for iteration in range(number_of_configurations):
+            for current_gate_worked_on in range(len(names_of_gates_in_key_for_gates_attempted)):
+                
+                # Get name of table.
+                name_of_current_matrix = \
+                    names_of_gates_in_key_for_gates_attempted[current_gate_worked_on] +" "+ str(iteration+1)
+                names_of_the_finished_matrices.append( name_of_current_matrix )
+                
+                # Insert data into this table. Select the
+                # (len(q1_axis) * len(q2_axis))_th number of rows from
+                # the big_fat_matrix.
+                number_of_input_states = int(len(q1_axis) * len(q2_axis))
+                row_index_start = 0 + (iteration_counter * number_of_input_states)
+                row_index_stop  = (number_of_input_states - 1) + (iteration_counter * number_of_input_states)
+                
+                # Cut out a portion of the big_fat_matrix and use it as the
+                # matrix you're looking for.
+                matrix_of_matrices[ iteration_counter ] = \
+                    big_fat_matrix[ row_index_start:(row_index_stop+1), :] # NOTE!! +1 here is crucial! Try it yourself in numpy to see why :)
+                
+                # Keep track of the number of iterations.
+                iteration_counter += 1
+        
+        # At this point, matrix of matrices contains all of the
+        # output matrices, one by one. And, names_of_the_finished_matrices
+        # contains their names.
+        
+        # Now, we plot them!
+        iteration_counter = 0
+        for matrix_to_plot in matrix_of_matrices:
+            
+            # Create the axes.
+            # These numbers here serve as indices when plotting below.
+            x_axis = np.arange(0.0, matrix_to_plot.shape[1], 1)
+            y_axis = np.arange(0.0, matrix_to_plot.shape[0], 1)
+            
+            # For the Y-axis, we need to create all combiations of
+            # input states from names_of_input_states_for_the_single_qubits.
+            x_axis_str = []
+            for iteration in states_to_analyse:
+                i = iteration[0]
+                j = iteration[1]
+                if len(iteration) != 2:
+                    raise ValueError("Halted! The plot function of this "+\
+                        "file cannot plot other output states than 2-qubit"+\
+                        " states. This fact should be fairly straight-"+\
+                        "forward to patch.")
+                if ((i == '-i') or (j == '-i')) or ((i == '-') and (j == 'i')) or ((i == 'i') and (j == '-')):
+                    x_axis_str.append( '|'+i+','+j+'⟩' )
+                else:
+                    x_axis_str.append( '|'+i+j+'⟩' )
+            # Remember to clean up!
+            del i
+            del j
+            
+            y_axis_str = []
+            for i in names_of_input_states_for_the_single_qubits:
+                for j in names_of_input_states_for_the_single_qubits:
+                    if ((i == '-i') or (j == '-i')) or ((i == '-') and (j == 'i')) or ((i == 'i') and (j == '-')):
+                        y_axis_str.append( '|'+i+','+j+'⟩' )
+                    else:
+                        y_axis_str.append( '|'+i+j+'⟩' )
+            
+            ## At this point, we have created the x- and y axes.
+            
+            # Set figure size
+            plt.figure(figsize = figure_size_tuple)
+            
+            # Better to plot the x axis along the top.
+            plt.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
+            
+            # Add numeric value to each box.
+            for (j,i),label in np.ndenumerate(matrix_to_plot):
+                if float(label) <= 0.45:
+                    plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white', fontsize=35-28)
+                else:
+                    plt.text( i, j, label, ha='center', va='center', weight='bold', fontsize = 35-26)
+            
+            # Pad x- and y-axes.
+            plt.tick_params(axis='x', which='major', pad=20)
+            plt.tick_params(axis='y', which='major', pad=20)
+            
+            # Make pixel palette.
+            plt.imshow(matrix_to_plot, interpolation='nearest')
+            plt.xticks(x_axis, x_axis_str, fontsize = 21-5)
+            plt.yticks(y_axis, y_axis_str, fontsize = 21-5)
+            
+            # Get title.
+            title = names_of_the_finished_matrices[ iteration_counter ]
+            plt.title( title, fontsize = 35-8, pad = 27)
+            
+            # Tight layout
+            plt.tight_layout()
+            
+            # Save plot!
+            if export_filepath != '':
+                print("Saving plot "+title+".png")
+                plt.savefig(export_filepath+title+".png")
+            
+            # Show plot?
+            if plot_output:
+                plt.show()
+            
+            # Increament iteration counter.
+            iteration_counter += 1
