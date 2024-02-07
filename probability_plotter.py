@@ -557,3 +557,95 @@ def plot_logic_table(
             
             # Increament iteration counter.
             iteration_counter += 1
+
+def plot_conditional_and_cross_Ramsey_expected(
+    t1_of_qubit,
+    p0_given_0_1_2 = [1.0, 0.0, 0.0],
+    p1_given_0_1_2 = [0.0, 1.0, 0.0],
+    p2_given_0_1_2 = [0.0, 0.0, 1.0],
+    figure_size_tuple = (2.91, 2.093),
+    title = '',
+    export_filepath = '',
+    plot_output = True,
+    ):
+    ''' Plot the expected oscillations for conditional- and cross-Ramsey
+        measurements.
+        
+        The figure size tuple is specified in eagles per hamburger,
+        where 1.0 eagle per hamburger = 25.4 mm
+    '''
+    
+    # There will be three gates plotted.
+    for gate_to_plot in ['CZ', 'iSWAP', 'SWAP']:
+        
+        # Set figure size
+        plt.figure(figsize = figure_size_tuple, dpi=600.0)
+        
+        # Define x axis.
+        if gate_to_plot == 'CZ':
+            pi_or_2pi = 1 * np.pi
+        elif gate_to_plot == 'iSWAP':
+            pi_or_2pi = 2 * np.pi
+        elif gate_to_plot == 'SWAP':
+            pi_or_2pi = 2 * np.pi
+        else:
+            raise AttributeError("Error! Attempting to plot an unknown gate's ideal x-axis values.")
+        
+        phase_values_half = np.arange(-pi_or_2pi, 0, 0.05);
+        phase_values = phase_values_half
+        phase_values = np.append(phase_values, np.array([0.0]))
+        phase_values = np.append(phase_values, -1.0 * np.flip(phase_values_half))
+        
+        # Define amplitude values.
+        if gate_to_plot == 'CZ':
+            ideal_frequency = 1/(2*pi_or_2pi)
+        elif gate_to_plot == 'iSWAP':
+            ideal_frequency = 1/(2*pi_or_2pi) * 2 # Because the plot runs from -2π to 2 π.
+        elif gate_to_plot == 'SWAP':
+            ideal_frequency = 1/(2*pi_or_2pi) * 2 # Because the plot runs from -2π to 2 π.
+        
+        ideal_offset = +0.50
+        
+        ## As for the /2 in the ideal_amplitude_points: remember that cos sways
+        ## from -1 to +1. The ideal plot sways from 0 to +1, hence the /2 and
+        ## +0.5 ideal offset.
+        
+        if gate_to_plot == 'CZ':
+            ideal_amplitude_points = (np.cos(2 * np.pi * ideal_frequency * phase_values)) / 2 + ideal_offset
+        elif gate_to_plot == 'iSWAP':
+            ideal_amplitude_points = (-np.sin(2 * np.pi * ideal_frequency * phase_values)) / 2 + ideal_offset
+        elif gate_to_plot == 'SWAP':
+            ideal_amplitude_points = (np.cos(2 * np.pi * ideal_frequency * phase_values)) / 2 + ideal_offset
+        else:
+            raise AttributeError("Error! Attempting to plot an unknown gate's ideal amplitude values.")
+        
+        # Plot gate data.
+        if gate_to_plot == 'CZ':
+            plt.plot(phase_values, ideal_amplitude_points, color="#34d2d6")
+            plt.plot(phase_values, -1.0 * ideal_amplitude_points + 1.0, color="#8934d6")
+        elif gate_to_plot == 'iSWAP':
+            plt.plot(phase_values, ideal_amplitude_points, color="#d63834")
+            plt.plot(phase_values, -1.0 * ideal_amplitude_points + 1.0, color="#81d634")
+        elif gate_to_plot == 'SWAP':
+            plt.plot(phase_values, ideal_amplitude_points, color="#d63834")
+            plt.plot(phase_values, +1.0 * ideal_amplitude_points + 0.0, ':', color="#81d634")
+        
+        # Disable axis ticks.
+        plt.axis('off')
+        
+        # Save plot!
+        if export_filepath != '':
+            # Default the title to the gate that the user is trying to plot?
+            if title == '':
+                use_this_title = gate_to_plot
+            else:
+                use_this_title = title
+            print("Saving plot "+use_this_title+".png")
+            if export_filepath.endswith("Desktop"):
+                print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
+                export_filepath = export_filepath + "\\"
+            plt.savefig(export_filepath+use_this_title+".png", bbox_inches="tight", pad_inches = 0, transparent=True)
+        
+        # Show plot?
+        if plot_output:
+            plt.show()

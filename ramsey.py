@@ -382,6 +382,8 @@ def ramsey01_ro0(
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
             'repetition_rate', "s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
             
             'control_port', "",
             'control_amp_01', "FS",
@@ -1360,6 +1362,8 @@ def ramsey01_multiplexed_ro_DEPRECATED(
                 'sampling_duration', "s",
                 'readout_sampling_delay', "s",
                 'repetition_delay', "s",
+                'integration_window_start', "s",
+                'integration_window_stop', "s",
                 
                 'control_port_A', "",
                 'control_amp_01_A', "FS",
@@ -1375,7 +1379,7 @@ def ramsey01_multiplexed_ro_DEPRECATED(
                 
                 #'coupler_dc_port', "",
                 'coupler_dc_bias', "FS",
-                'added_delay_for_bias_tee', "s",
+                'settling_time_of_bias_tee', "s",
                 
                 'num_freqs', "",
                 'num_averages', "",
@@ -2341,7 +2345,9 @@ def ramsey01_echo_r0(
             
             'sampling_duration', "s",
             'readout_sampling_delay', "s",
-            'repetition_delay', "s",
+            'repetition_rate', "s",
+            'integration_window_start', "s",
+            'integration_window_stop', "s",
             
             'control_port', "",
             'control_amp_01', "FS",
@@ -2353,7 +2359,7 @@ def ramsey01_echo_r0(
             
             #'coupler_dc_port', "",
             'coupler_dc_bias', "V",
-            'added_delay_for_bias_tee', "s",
+            'settling_time_of_bias_tee', "s",
             
             'num_freqs', "",
             'num_averages', "",
