@@ -420,6 +420,7 @@ def extract_confusion_matrix_data_from_larger_file(
                 
                 # Set figure size
                 plt.figure(figsize = figure_size_tuple)
+                ##plt.figure(figsize = figure_size_tuple, dpi=600.0)
                 
                 # Better to plot the x axis along the top.
                 plt.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
@@ -442,6 +443,16 @@ def extract_confusion_matrix_data_from_larger_file(
                 
                 # Show plot!
                 plt.show()
+            
+            # Save plot?
+            if export_filepath != '':
+                if title == '':
+                    title = 'Confusion matrix'
+                print("Saving plot "+title+".png")
+                if export_filepath.endswith("Desktop"):
+                    print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
+                    export_filepath = export_filepath + "\\"
+                plt.savefig(export_filepath+title+".png")
             
             # Append to return vector.
             if len(filepaths_to_plot) > 1:
