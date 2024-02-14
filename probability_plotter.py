@@ -261,6 +261,197 @@ def plot_confusion_matrix(
         # Show plot!
         plt.show()
 
+def extract_confusion_matrix_data_from_larger_file(
+    filepaths_to_plot,
+    name_of_key_that_described_q1,
+    name_of_key_that_described_q2,
+    title = '',
+    attempt_to_fix_string_input_argument = True,
+    prepared_states = ['00','01','02','10','11','12','20','21','22'],
+    figure_size_tuple = (15,14),
+    export_filepath = '',
+    plot_output = False,
+    ):
+    ''' Given the filepath provided, extract the probability data.
+        
+        The format will be a matrix, x-axis is Measured state |0⟩, |1⟩, |2⟩,
+        and the y-axis is Prepared state |00⟩, |01⟩, |02⟩ ... |21⟩, |22⟩.
+    '''
+    
+    # We require some API tools from the Labber API.
+    import Labber
+    
+    def get_stepchannelvalue(StepChannels, name):
+        for i, item in enumerate(StepChannels):
+            if item['name'] == name:
+                return item['values']
+        return np.nan
+    
+    # Before doing anything too advanced, figure out what the
+    # interval is for the possible prepared states.
+    minimum_possible_measured_state = 1048576
+    maximum_possible_measured_state = 0
+    number_of_qubits_detected = 0
+    for current_item in prepared_states:
+        counter = 0
+        for i in current_item:
+            # Is this state a lower state than the current
+            # minimum_possible_state?
+            if int(i) < minimum_possible_measured_state:
+                print("Found new lowest possible state: |"+i+"⟩")
+                minimum_possible_measured_state = int(i)
+            # Is this state a higher state than the current
+            # maximum_possible_state?
+            if int(i) > maximum_possible_measured_state:
+                print("Found new highest possible measured state: |"+i+"⟩")
+                maximum_possible_measured_state = int(i)
+            counter += 1
+            if counter > number_of_qubits_detected:
+                number_of_qubits_detected = counter
+                print("Found one more qubit to analyse! The current number of qubits is "+str(number_of_qubits_detected))
+    
+    # Verify that all to-be-analysed measured states, contain the
+    # correct number of qubits.
+    for all_items in prepared_states:
+        assert len(all_items) == number_of_qubits_detected, "Error! Detected that the requested measured state "+str(all_items)+" does not contain the expected number of qubits, which was detected to be "+str(number_of_qubits_detected)+"."
+    
+    ## The variables minimum_possible_measured_state, and
+    ## maximum_possible_measured_state, contain the min and max values
+    ## for the X axis, in the final confusion matrix plot.
+    
+    # User syntax repair
+    if attempt_to_fix_string_input_argument:
+        if isinstance(filepaths_to_plot, str):
+            filepaths_to_plot = os.path.abspath(filepaths_to_plot)
+            filepaths_to_plot = [filepaths_to_plot]
+    
+    # For all entries!
+    return_vector = []
+    for item in filepaths_to_plot:
+        
+        # Get current path
+        filepath_to_file_with_probability_data_to_plot = item
+        
+        # Ensure that the filepath received can be processed.
+        if type(filepath_to_file_with_probability_data_to_plot) == list:
+            filepath_to_file_with_probability_data_to_plot = "".join(filepath_to_file_with_probability_data_to_plot)
+        
+        # Get confusion matrix data.
+        with h5py.File(filepath_to_file_with_probability_data_to_plot, 'r') as h5f:
+            
+            # Gather data to plot.
+            hfile = Labber.LogFile(filepath_to_file_with_probability_data_to_plot)
+            
+            # Build data file axes.
+            stepchannels = hfile.getStepChannels()
+            q1_axis = get_stepchannelvalue(
+                stepchannels,
+                name_of_key_that_described_q1
+            )
+            q2_axis = get_stepchannelvalue(
+                stepchannels,
+                name_of_key_that_described_q2
+            )
+            
+            # Assert that the axes are legal.
+            for axes_to_check in [q1_axis, q2_axis]:
+                # Check whether a bad argument was passed; this would likely
+                # result in a NaN argument.
+                try:
+                    if np.isnan(axes_to_check):
+                        raise TypeError("Error! One value axis passed a NaN value" + \
+                            " from the Labber API. Check your input arguments!" + \
+                            " Perhaps you wrote a \'\' or similar?")
+                except ValueError:
+                    # We expect that matrices fetched from Labber
+                    # are normally multi-entried. "This is fine."
+                    # However, we'll hate Labber's data structures for
+                    # this odd bs. of Pythonic try-except tango.
+                    pass
+                
+                # Check length.
+                if len(axes_to_check) <= 0:
+                    raise TypeError("Error! The axis "+str(axes_to_check) + \
+                        " has zero length. Check your input arguments.")
+            
+            # Construct output matrix.
+            '''aranged_measured_axis = \
+                np.arange(minimum_possible_measured_state, \
+                maximum_possible_measured_state+1)
+            measured_axis = []
+            for measured_state_yo in aranged_measured_axis:
+                measured_axis += ['Measured |'+str(measured_state_yo)+'⟩']'''
+            
+            # For constructing the Measured axis, we are only
+            # interested in the prepared values.
+            measured_axis = []
+            for measured_state_yo in prepared_states:
+                measured_axis += ['Measured |'+str(measured_state_yo)+'⟩']
+            
+            # Prepare canvas of numbers.
+            canvas = np.zeros([len(prepared_states),len(measured_axis)])
+            
+            ## Fetch data! ##
+            ## At this point, the data structure will be weird from Labber's side.
+            ## We need to slice it up, according to the length of our axes.
+            ## We will progress through the data column-wise.
+            counter_for_columns_in_output_canvas = 0
+            for measured_state_yo in prepared_states:
+                # Get the next column of the output canvas.
+                print('Analysing data from measured state |'+str(measured_state_yo)+'⟩')
+                data = hfile.getData(name = 'State Discriminator - Average 2Qstate P'+str(measured_state_yo))
+                column = data.flatten()
+                
+                # Put the column in the canvas. Increment counter.
+                canvas[:, counter_for_columns_in_output_canvas] = column
+                counter_for_columns_in_output_canvas += 1
+            
+            # At this point, we've acquired the confusion matrix.
+            # Time to plot?
+            if plot_output:
+            
+                # Make X and Y axes.
+                x_axis = np.arange(0.0, canvas.shape[1], 1)
+                y_axis = np.arange(0.0, canvas.shape[0], 1)
+                x_axis_str = measured_axis
+                y_axis_str = []
+                for item in range(len(y_axis)):
+                    y_axis_str.append('Prepared |'+prepared_states[item]+'⟩')
+                
+                # Set figure size
+                plt.figure(figsize = figure_size_tuple)
+                
+                # Better to plot the x axis along the top.
+                plt.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
+                
+                # Add numeric value to each box.
+                for (j,i),label in np.ndenumerate(canvas):
+                    if float(label) <= 0.45:
+                        plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white', fontsize=35)
+                    else:
+                        plt.text( i, j, label, ha='center', va='center', weight='bold', fontsize=35)
+                
+                # Make pixel palette.
+                plt.imshow(canvas, interpolation='nearest')
+                plt.xticks(x_axis, x_axis_str, fontsize = 21)
+                plt.yticks(y_axis, y_axis_str, fontsize = 21)
+                if title == '':
+                    plt.title("Confusion matrix", fontsize = 35, pad = 20)
+                else:
+                    plt.title(title, fontsize = 35, pad = 20)
+                
+                # Show plot!
+                plt.show()
+            
+            # Append to return vector.
+            if len(filepaths_to_plot) > 1:
+                return_vector += [canvas]
+            else:
+                return_vector = canvas
+    
+    # Return result.
+    return return_vector
+
 def plot_logic_table(
     filepaths_to_plot,
     name_of_key_that_described_q1,
@@ -560,10 +751,11 @@ def plot_logic_table(
 
 def plot_conditional_and_cross_Ramsey_expected(
     t1_of_qubit,
+    duration_of_gates,
     p0_given_0_1_2 = [1.0, 0.0, 0.0],
     p1_given_0_1_2 = [0.0, 1.0, 0.0],
     p2_given_0_1_2 = [0.0, 0.0, 1.0],
-    figure_size_tuple = (2.91, 2.093),
+    figure_size_tuple = (2.654, 1.887),
     title = '',
     export_filepath = '',
     plot_output = True,
@@ -573,6 +765,11 @@ def plot_conditional_and_cross_Ramsey_expected(
         
         The figure size tuple is specified in eagles per hamburger,
         where 1.0 eagle per hamburger = 25.4 mm
+        
+        t1_of_qubit is provided in seconds. The exported filename
+        will still attempt to list this number in µs.
+        
+        duration_of_gates is provided in seconds.
     '''
     
     # There will be three gates plotted.
@@ -581,7 +778,7 @@ def plot_conditional_and_cross_Ramsey_expected(
         # Set figure size
         plt.figure(figsize = figure_size_tuple, dpi=600.0)
         
-        # Define x axis.
+        # Define x-axis.
         if gate_to_plot == 'CZ':
             pi_or_2pi = 1 * np.pi
         elif gate_to_plot == 'iSWAP':
@@ -595,6 +792,11 @@ def plot_conditional_and_cross_Ramsey_expected(
         phase_values = phase_values_half
         phase_values = np.append(phase_values, np.array([0.0]))
         phase_values = np.append(phase_values, -1.0 * np.flip(phase_values_half))
+        
+        # Define axis limits.
+        ax = plt.gca()
+        ax.set_xlim([-pi_or_2pi, pi_or_2pi])
+        ax.set_ylim([0.0, 1.0])
         
         # Define amplitude values.
         if gate_to_plot == 'CZ':
@@ -621,14 +823,29 @@ def plot_conditional_and_cross_Ramsey_expected(
         
         # Plot gate data.
         if gate_to_plot == 'CZ':
-            plt.plot(phase_values, ideal_amplitude_points, color="#34d2d6")
-            plt.plot(phase_values, -1.0 * ideal_amplitude_points + 1.0, color="#8934d6")
+            dur = duration_of_gates[0]
+            if t1_of_qubit > 0.0:
+                plt.plot(phase_values, (ideal_amplitude_points) * np.e**(-dur/t1_of_qubit), ':', color="#34d2d6")
+                plt.plot(phase_values, (-1.0 * ideal_amplitude_points + 1.0) * np.e**(-dur/t1_of_qubit), ':', color="#8934d6")
+            else:
+                plt.plot(phase_values, (ideal_amplitude_points), color="#34d2d6")
+                plt.plot(phase_values, (-1.0 * ideal_amplitude_points + 1.0), color="#8934d6")
         elif gate_to_plot == 'iSWAP':
-            plt.plot(phase_values, ideal_amplitude_points, color="#d63834")
-            plt.plot(phase_values, -1.0 * ideal_amplitude_points + 1.0, color="#81d634")
+            dur = duration_of_gates[1]
+            if t1_of_qubit > 0.0:
+                plt.plot(phase_values, (ideal_amplitude_points) * np.e**(-dur/t1_of_qubit), ':', color="#d63834")
+                plt.plot(phase_values, (-1.0 * ideal_amplitude_points + 1.0) * np.e**(-dur/t1_of_qubit), ':', color="#81d634")
+            else:
+                plt.plot(phase_values, (ideal_amplitude_points), color="#d63834")
+                plt.plot(phase_values, (-1.0 * ideal_amplitude_points + 1.0), color="#81d634")
         elif gate_to_plot == 'SWAP':
-            plt.plot(phase_values, ideal_amplitude_points, color="#d63834")
-            plt.plot(phase_values, +1.0 * ideal_amplitude_points + 0.0, ':', color="#81d634")
+            dur = duration_of_gates[2]
+            if t1_of_qubit > 0.0:
+                plt.plot(phase_values, (ideal_amplitude_points) * np.e**(-dur/t1_of_qubit), ':', color="#d63834")
+                plt.plot(phase_values, (+1.0 * ideal_amplitude_points + 0.0) * np.e**(-dur/t1_of_qubit), ':', color="#81d634")
+            else:
+                plt.plot(phase_values, (ideal_amplitude_points), color="#d63834")
+                plt.plot(phase_values, (+1.0 * ideal_amplitude_points + 0.0), ':', color="#81d634")
         
         # Disable axis ticks.
         plt.axis('off')
@@ -644,7 +861,8 @@ def plot_conditional_and_cross_Ramsey_expected(
             if export_filepath.endswith("Desktop"):
                 print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
                 export_filepath = export_filepath + "\\"
-            plt.savefig(export_filepath+use_this_title+".png", bbox_inches="tight", pad_inches = 0, transparent=True)
+            t1_of_qubit_formatted = str(int(t1_of_qubit*1e6))
+            plt.savefig(export_filepath+use_this_title+"_"+str(t1_of_qubit_formatted)+"µs"+".png", bbox_inches="tight", pad_inches = 0, transparent=True)
         
         # Show plot?
         if plot_output:
