@@ -13,6 +13,9 @@ import json
 import shutil
 import numpy as np
 from numpy import hanning as von_hann
+from math import isnan
+from scipy.optimize import lsq_linear
+import matplotlib.pyplot as plt
 
 def initiate_discriminator_settings_file(
     initial_resonator_qubit_pair = 0
@@ -567,7 +570,238 @@ def construct_state_from_quadrature_voltage(
     '''
     raise NotImplementedError("Halted! This function is not finished.")
     
+def post_process_data_given_confusion_matrix(
+    filepaths_to_plot,
+    confusion_matrix,
+    maximum_number_of_qubits_contained_in_file = 5, # Number selected arbitrarily!
+    select_file_entry_to_extract = '',
+    attempt_to_fix_string_input_argument = True,
+    ):
+    ''' Given a known confusion matrix, perform least-square minimisation
+        between some assumed input and the measured data given the
+        density matrix.
+        
+        The motivation of accounting for the confusion matrix like so,
+        is to avoid matrix inversion, which makes off-diagonal elements
+        very large (since these are typically just a few percent in size
+        in the confusion matrix).
+        
+        Method: fit for this thing
+        |  [y0,y1] = [conf00, conf01, conf10, conf11] · [x0,x1]  |^2 = 0
+        
+        ... and return [x0, x1]. This vector is the vector in which
+        the difference between the measured data and the guessed original
+        is the smallest.
+        
+        confusion_matrix should be given as a numpy array. If measurement
+        error mitigation is performed on two states, and two qubits, then
+        the confusion matrix must by definition be a (states^qubits) large
+        matrix. 3 states, 2 qubits, would require a 3^2 = 9x9 matrix.
+        Its axes would be Measured 2q state |00>, |01> ... |21>, |22> on the
+        x-axis, and Prepared 2q state |00>, |01> ... |21>, |22> on the y-axis.
+    '''
     
+    ## Input checking!
+    
+    # Check the density matrix.
+    try:
+        assert (confusion_matrix.shape[0] == confusion_matrix.shape[1]), "Error! The confusion matrix must be symmetric, by definition."
+    except AttributeError:
+        raise AttributeError("The user-provided confusion matrix did not match expectations. Did you provide a numpy array?")
+    except IndexError:
+        raise IndexError("The user-provided confusion matrix seems to not be a matrix. Check your arguments.")
+    for curr in range(len(confusion_matrix)):
+        row = confusion_matrix[curr]
+        row_sum = 0
+        for col in row:
+            row_sum += col
+        assert row_sum == 1.0, "Error! Confusion matrix row "+str(curr)+" (counting from 0) sums to "+str(row_sum)+", which is not 100 % probability. Not possible."
+    
+    ## Extract the data ##
+    
+    # We require some API tools from the Labber API.
+    import Labber
+    
+    def get_stepchannelvalue(StepChannels, name):
+        for i, item in enumerate(StepChannels):
+            if item['name'] == name:
+                return item['values']
+        return np.nan
+    
+    # User syntax repair
+    if attempt_to_fix_string_input_argument:
+        if isinstance(filepaths_to_plot, str):
+            filepaths_to_plot = os.path.abspath(filepaths_to_plot)
+            filepaths_to_plot = [filepaths_to_plot]
+    
+    # For all entries!
+    output_vector = []
+    for item in filepaths_to_plot:
+        
+        # Get current path
+        filepath_to_file_with_probability_data_to_plot = item
+        
+        # Ensure that the filepath received can be processed.
+        if type(filepath_to_file_with_probability_data_to_plot) == list:
+            filepath_to_file_with_probability_data_to_plot = "".join(filepath_to_file_with_probability_data_to_plot)
+        
+        # Get trace data.
+        with h5py.File(filepath_to_file_with_probability_data_to_plot, 'r') as h5f:
+            
+            # Gather data to plot.
+            hfile = Labber.LogFile(filepath_to_file_with_probability_data_to_plot)
+            
+            # Figure out how many qubits are present in the data.
+            ## This is done by looking for the longst-available ground state
+            ## vector.
+            bit_vector = ''
+            number_of_qubits = 0
+            for i in range(maximum_number_of_qubits_contained_in_file):
+                bit_vector += '0'
+                try:
+                    data = hfile.getData(name = 'State Discriminator - Average 2Qstate P'+bit_vector)
+                    number_of_qubits = len(bit_vector)
+                    break
+                except: # Eww, Labber is not well-written IMO.
+                    # This trace didn't exist, it seems.
+                    # But how would we know? Labber doesn't tell the difference.
+                    pass
+            assert number_of_qubits > 0, "Halted! The input data doesn't contain readout information for an all-ground-state vector (like P( |000> )). Or, the analysed data contains information for more than "+str(maximum_number_of_qubits_contained_in_file)+" qubits. In that case, increase the argument \"maximum_number_of_qubits_contained_in_file\"."
+            if number_of_qubits == 1:
+                print("Detected that the measurement executed on 1 qubit.")
+            else:
+                print("Detected that the measurement executed on "+str(number_of_qubits)+" qubits.")
+            
+            # Now, we know the number of qubits read out.
+            # How many states are treated in the measurement?
+            ## Check the size of the confusion matrix.
+            ## We already checked that the confusion matrix is legal, see above.
+            number_of_states = round(len(confusion_matrix) ** (1/number_of_qubits))
+            
+            # We now know all state vectors that we need to get from
+            # the input file. Get them.
+            big_ass_y_vector = []
+            
+            # We'll need the x-axis, let's get it here already.
+            x_axis = (hfile.getStepChannels())[0]['values']
+            
+            def basis_conversion(number, basis):
+                signum = '-' if (number < 0) else ''
+                number = abs(number)
+                if number < basis:
+                    return str(number)
+                s = ''
+                while number != 0:
+                    s = str(number % basis) + s
+                    number = number // basis
+                return (signum + s)
+            
+            # Extract.
+            for row in range(len(confusion_matrix)):
+                
+                # Get the current to-be-checked state, as an int.
+                state_in_number = int(basis_conversion(row, number_of_states))
+                
+                # state_in_number must be zero-padded.
+                s_vector = str(state_in_number).zfill(number_of_qubits)
+                
+                # Get data.
+                data = hfile.getData(name = 'State Discriminator - Average 2Qstate P'+str(s_vector))
+                
+                # Select specific entry in the data?
+                if not select_file_entry_to_extract == '':
+                    raise NotImplementedError("Halted! Selecting specific entries is currently not supported.")
+                else:
+                    # Then store every entry.
+                    
+                    # Add to big_ass_y_vector
+                    ## This will, for instance, add the |00> entry for
+                    ## every single trace in the data.
+                    big_ass_y_vector += [data]
+            
+            ## The data structure of big_ass_y_vector right now is: (example)
+            ## [P00, P01 ... P21, P22] ... where P00 is a matrix list of:
+            ##     [row0, row1 ... row40] ... where rowX is a trace of P00.
+            ##        In total there will be Y number of rows, where Y is
+            ##        the combined number of all measurement iteration
+            ##        combinations. Like, [CZ_off, CZ_on] * [Dummy0 ... Dummy7]
+            
+            # Convert to multi-dimensional numpy array.
+            big_ass_y_vector = np.array(big_ass_y_vector)
+        
+        ## Fit the data ##
+        
+        # For this, we need to define the output.
+        big_ass_x_vector = np.zeros_like(big_ass_y_vector)
+        
+        # 1. The {P00, P01 .. P21, P22}-side, trace-side, and point-side,
+        #       together form a cube in parameter space. The y-vectors
+        #       that will be fitted, are the x-axes of the
+        #       {trace,point}-coordinate in parameter space.
+        # 2. We select a new trace, and begin collecting P00..P22 data.
+        #       this data is the y-vector for that particular point of
+        #       every single trace.
+        # 3. Perform the fit that minimises
+        #       | "some unknown input" · [Confusion matrix] | ^2 = 0,
+        #       which gets you the x vector that was "the closest" to
+        #       giving that y you had, based in the confusion matrix.
+        # 4. Go to the next point. Repeat until every single datapoint has
+        #       been massaged and stuffed into the x-vector.
+        
+        ## For all traces, for all points...
+        ## IMPORTANT: doing big_ass_y_vector[:][0][0] -> returns all individual
+        ##            points of the selected trace for some darn reason.
+        ##            But individual index addressing does not!
+        ##            Hence this hoop jumping here with the indices.
+        number_of_two_qubit_states = len(big_ass_y_vector) ##  <--  Hoop.
+        for all_traces in range(len(big_ass_y_vector[0][:])):
+            for all_points in range(len(big_ass_y_vector[0][0][:])):
+                
+                # Construct y-vector, i.e. P00..P22 for this datapoint.
+                y_vector = []
+                for iii in range(number_of_two_qubit_states):
+                    y_vector.append(big_ass_y_vector[iii][all_traces][all_points])
+                y_vector = np.array(y_vector)
+                
+                # Use the confusion matrix to fit the data! Thus, get x.
+                x_vector = fit_to_confusion_matrix(y_vector, confusion_matrix)
+                
+                # At this point, we have the confusion-adjusted vector x.
+                # This data can go into our big_ass_x_vector cube.
+                for jjj in range(number_of_two_qubit_states):
+                    big_ass_x_vector[jjj][all_traces][all_points] = x_vector[jjj]
+        
+        ## Output result ##
+        print("TODO! Grabbing a single trace for now!")
+        assert 1 == 0, big_ass_x_vector[2][2]
+        assert 1 == 0, big_ass_x_vector[1][3]
+        
+        output_vector += [big_ass_x_vector]
+    
+    return output_vector
+
+def fit_to_confusion_matrix(y_vector, confusion_matrix):
+    ''' Given some vector of P( |00> ) ... P( |11> ) data,
+        use a confusion matrix to extract the most likely
+        actual, non-confused output x_vector.
+    '''
+    
+    # Let's provide an initial guess for the x_vector.
+    x_vector = y_vector
+    
+    # Fit! Using least-square linear fitting.
+    '''  This fitting attempts to find x for 0.5 * |Ax - b|^2 = "minimum"  '''
+    success = lsq_linear(
+        A = confusion_matrix,
+        b = y_vector,
+    )
+    
+    # Extract x-vector and return.
+    return success['x']
+
+
+
+
 def get_file_path_of_discrimination_json():
     ''' Get name, file path for discriminator script.
     '''
