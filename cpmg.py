@@ -94,7 +94,11 @@ def cpmg_known_number_of_pi_pulses_and_delay(
     ):
     ''' Perform CPMG spectroscopy.
         
-        Similar to T₂-echo sequences. CPMG:
+        CPMG is the Carr-Purcell-Meiboom-Gill method.
+        Imagine a T₂-echo measurement, but with a lot of additional refocusing
+        pulses.
+        
+        Process:
             - Perform π/2 pulse.
             --  Perform t/2 delay (where t is some delay time).
             - Perform a sequence of π pulses.
@@ -331,8 +335,9 @@ def cpmg_known_number_of_pi_pulses_and_delay(
             T += control_duration_01
             
             ## Here, we grab the time for this current instance of the
-            ## CPMG sequence.
-            total_cpmg_duration += (T - T_begin)
+            ## CPMG sequence. The "duration" is the total time that
+            ## the qubit is idling.
+            total_cpmg_duration += ((T - T_begin) - (number_of_pi_pulses+2)*control_duration_01)
             
             # Commence readout
             pls.reset_phase(T, readout_stimulus_port)
