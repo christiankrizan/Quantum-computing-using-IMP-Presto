@@ -1,0 +1,8 @@
+############################################################################
+ The following people have made code contributions to the Indecorum project 
+############################################################################
+
+Janka Biznárová, find her at https://orcid.org/0000-0002-8887-8816
+- Created an initial attempt at fitting resonator spectroscopies
+  using the circlefit packages.
+- Created the code basis for which the fit_t1_t2_t2echo.py file was built upon.
