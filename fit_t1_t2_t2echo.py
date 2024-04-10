@@ -100,9 +100,6 @@ def fit_triple_decoherence_data_run(
     if type(no_entries) == type(None):
         no_entries = f.getNumberOfEntries()
     
-    # The user provides a complex rotation, and the duration of the experiment.
-    rotation = complex_rotation_in_degrees  * np.pi/180
-    
     def prettify_decoherence_string(input_string):
         return (input_string.replace('1','₁')).replace('2','₂')
     
@@ -138,9 +135,12 @@ def fit_triple_decoherence_data_run(
         if not (len(np.real(d1)) == points):
             raise AttributeError("Error! The length of the very first trace and the second trace in the datafile differs. Check your input data. All traces have to be of the same x-axis length as the first trace.")
     
-    # Declare arrays for storing decoherence times.
-    T_dec = []
+    # Declare arrays for storing decoherence times. Also, we must keep track
+    # of files that have the same length as the original input file.
+    T_dec       = []
     error_T_dec = []
+    T_dec_full       = []
+    error_T_dec_full = []
     
     # Declare iteration counter.
     counter = 0
@@ -159,7 +159,14 @@ def fit_triple_decoherence_data_run(
     else:
         raise AttributeError("Error! Somehow, the argument 'select_T1_T2_T2e' became illegal. Good job. The argument was: "+str(select_T1_T2_T2e))
     
-    for i in range (0+entry_offset,no_entries,3):
+    # For all traces stored in the input file, stepped in steps of 3:
+    for i in range(0 + entry_offset, no_entries, 3):
+        
+        # Put 'NaN' into the T_dec_full entry for this fit, until
+        # further notice. Note that T_dec_full will be len(file) / 3 long!
+        T_dec_full.append( np.nan )
+        error_T_dec_full.append( np.nan )
+        
         # Fetch trace, store in plot handle.
         (delay,complex_datapoint) = f.getTraceXY(select_resonator,0,i)
         readoutY = np.abs(complex_datapoint)
@@ -188,8 +195,14 @@ def fit_triple_decoherence_data_run(
                     initial_guess_T_dec = a1[np.abs(readoutY - pop_likely_for_T_dec).argmin()]
                     
                     # Fit data given p0 as initial guessing values.
+                    fit_failure = False
                     if select_T1_T2_T2e == 'T1':
-                        p, p_cov = optimize.curve_fit(T1_func, a1, readoutY, p0 = [initial_guess_A, initial_guess_T_dec, initial_guess_offset])
+                        try:
+                            p, p_cov = optimize.curve_fit(T1_func, a1, readoutY, p0 = [initial_guess_A, initial_guess_T_dec, initial_guess_offset])
+                        except RuntimeError:
+                            # Fit failure.
+                            print("WARNING: Fit failure at iteration "+str(i)+", skipping.")
+                            fit_failure = True
                     elif select_T1_T2_T2e == 'T2':
                         
                         # Guess the phase of the Ramsey oscillations.
@@ -207,31 +220,52 @@ def fit_triple_decoherence_data_run(
                         frequency_guess = fq_axis[1 + np.argmax( np.abs(fft[1:] ))]
                         
                         # Fit!
-                        p, p_cov = optimize.curve_fit(T2_func, a1, readoutY, p0 = [initial_guess_A, initial_guess_T_dec, initial_guess_offset, frequency_guess, starting_phase])
+                        try:
+                            p, p_cov = optimize.curve_fit(T2_func, a1, readoutY, p0 = [initial_guess_A, initial_guess_T_dec, initial_guess_offset, frequency_guess, starting_phase])
+                        except RuntimeError:
+                            # Fit failure.
+                            print("WARNING: Fit failure at iteration "+str(i)+", skipping.")
+                            fit_failure = True
                     elif select_T1_T2_T2e == 'T2e':
-                        p, p_cov = optimize.curve_fit(T2echo_func, a1, readoutY, p0 = [initial_guess_A, initial_guess_T_dec, initial_guess_offset])
+                        try:
+                            p, p_cov = optimize.curve_fit(T2echo_func, a1, readoutY, p0 = [initial_guess_A, initial_guess_T_dec, initial_guess_offset])
+                        except RuntimeError:
+                            # Fit failure.
+                            print("WARNING: Fit failure at iteration "+str(i)+", skipping.")
+                            fit_failure = True
                     else:
                         raise AttributeError("Error! Somehow, the argument 'select_T1_T2_T2e' became illegal. Good job. The argument was: "+str(select_T1_T2_T2e))
                     
                     # Calculate fit error.
-                    p_err = np.sqrt(np.diag(p_cov))
-                    T_dec_error_perc = p_err[1]/p[1] * 100
+                    if not fit_failure:
+                        p_err = np.sqrt(np.diag(p_cov))
+                        T_dec_error_perc = p_err[1]/p[1] * 100
                     
                     # Append datapoint?
-                    if abs(T_dec_error_perc) <= maximum_tolerable_error_in_percent:
+                    if (abs(T_dec_error_perc) <= maximum_tolerable_error_in_percent) and (not fit_failure):
+                        
+                        # Set flag.
+                        t2_or_t2e_legal = True
                         
                         # Is T2 > 2 * T1?
                         if (len(known_T1_distribution) > 0) and ((select_T1_T2_T2e == 'T2') or (select_T1_T2_T2e == 'T2e')):
-                            if p[1] > 2*known_T1_distribution[len(T_dec)]:
-                                assert 1 == 0, 'T2 bigger than 2 T1 !!' # TODO
-                                print("T₂ (or T₂-echo) of iteration "+str(i)+" was larger than 2·T₁ for this entry. Skipping.")
+                            if not (np.isnan(known_T1_distribution[counter])):
+                                if p[1] > 2*known_T1_distribution[counter]:
+                                    print("WARNING! T₂ (or T₂-echo) of iteration "+str(i)+" was larger than 2·T₁ for this entry. Skipping.")
+                                    t2_or_t2e_legal = False
                         
-                        print('Iteration: ', i, ' '+prettify_decoherence_string(select_T1_T2_T2e)+' value is: ', p[1], ' with error: ', p_err[1], ' and percentage: ', T_dec_error_perc )
-                        error_T_dec.append(p_err[1])
-                        T_dec.append(p[1])
-                        
-                        # Append current time of measurement, counting from its very start.
-                        measurement_time.append( (timestamp_list[i] - timestamp_list[0])/3600 )
+                        if t2_or_t2e_legal:
+                            # Append succesful fit and report.
+                            print('Iteration: ', i, ' '+prettify_decoherence_string(select_T1_T2_T2e)+' value is: ', p[1], ' with error: ', p_err[1], ' and percentage: ', T_dec_error_perc )
+                            T_dec.append(p[1])
+                            error_T_dec.append(p_err[1])
+                            
+                            # Also append this fit to the 'total' matrices
+                            T_dec_full[counter] = p[1]
+                            error_T_dec_full[counter] = p_err[1]
+                            
+                            # Append current time of measurement, counting from its very start.
+                            measurement_time.append( (timestamp_list[i] - timestamp_list[0])/3600 )
                     else:
                         print("Error too large in iteration "+str(i)+", skipping.")
                 
@@ -257,20 +291,26 @@ def fit_triple_decoherence_data_run(
     T_dec_plots = plt.figure(figsize = [23.5,10.0])
     ax1 = T_dec_plots.add_subplot(111,  label="1")
     ax1.errorbar(measurement_time, T_dec, error_T_dec, color=use_this_colour, marker = 'o', fmt='o',markersize = 12, capsize = 15, label='Q'+str(select_resonator+1))
-    ax1.set_ylabel('$T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ [µs]', fontsize=37)
+    ax1.set_ylabel('$T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ [µs]', fontsize = 37)
     ax1.set_xlabel('Time [h]', fontsize = 37)
     
     # Add legend.
     plt.legend(fontsize=30, loc='upper right')
     
     # Set axis limits and font sizes.
-    plt.xlim(measurement_time[0]-2,measurement_time[-1]+2)
+    ##plt.xlim(measurement_time[0]-2,measurement_time[-1]+2) # Might generate different-length x-axes between measurements. Beware.
+    # Force x-axis limits. Since different measurements may end at different
+    # times, we round the last datapoint to the nearest hour up. And, ±2 hours.
+    plt.xlim(-2, np.ceil((timestamp_list[-1] - timestamp_list[0])/3600)+2)
+    
+    # ... continue as normal.
     plt.xticks(fontsize = 31)
-    plt.ylim(0,200)
+    plt.ylim(0,220)
     plt.yticks(fontsize = 31)
     
     plt.title('$T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ time scatter', fontsize=36)
     plt.savefig(filepath.replace('.hdf5','') + '_Q'+str(select_resonator+1)+'_'+select_T1_T2_T2e+'_time' + ".png", bbox_inches = 'tight', transparent = set_transparent)
+    print("Total duration for time scatter data: "+str((timestamp_list[-1] - timestamp_list[0])/3600) + " hours. The start of the trace is at UNIX time: "+str(timestamp_list[0]))
     
     ## Decoherence time histogram ##
     
@@ -291,8 +331,8 @@ def fit_triple_decoherence_data_run(
     plt.hist(T_dec, bins = bins_calculated, alpha=0.5, color=use_this_colour, label= prettify_decoherence_string(select_T1_T2_T2e)+' = ' + str(mean_T_dec) + ' ±' + str(std_T_dec) + ' µs', rwidth = 0.9)
     
     plt.title('Q'+str(select_resonator+1) +' $T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ histogram', fontsize=36)
-    plt.ylabel('Counts', fontsize=37)
-    plt.xlabel('$T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ [µs]', fontsize=37)
+    plt.ylabel('Counts', fontsize = 37)
+    plt.xlabel('$T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ [µs]', fontsize = 37)
     plt.grid(linestyle='--',linewidth=0.5)
     
     plt.xticks(fontsize = 31)
@@ -305,4 +345,4 @@ def fit_triple_decoherence_data_run(
     plt.savefig(filepath.replace('.hdf5','') + '_Q'+str(select_resonator+1)+'_'+select_T1_T2_T2e+'_histogram' + ".png", bbox_inches = 'tight')
     plt.show()
     
-    return T_dec
+    return (T_dec, T_dec_full)

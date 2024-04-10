@@ -102,7 +102,7 @@ def barplot(
             runsum = 0.0
             for item in processed_data:
                 runsum += item
-            assert runsum == 1.0, "Halted! The total probability of the loaded file does not equal 100% - but "+str(runsum)
+            assert ((runsum >= 0.9999999999) and (runsum <= 1.0000000001)), "Halted! The total probability of the loaded file does not equal 100% - but "+str(runsum)
             
             # Get involved distributions
             data = {}
@@ -269,6 +269,7 @@ def extract_confusion_matrix_data_from_larger_file(
     attempt_to_fix_string_input_argument = True,
     prepared_states = ['00','01','02','10','11','12','20','21','22'],
     figure_size_tuple = (15,14),
+    round_data_to_decimal_places = 0,
     export_filepath = '',
     plot_output = False,
     ):
@@ -336,6 +337,10 @@ def extract_confusion_matrix_data_from_larger_file(
         if type(filepath_to_file_with_probability_data_to_plot) == list:
             filepath_to_file_with_probability_data_to_plot = "".join(filepath_to_file_with_probability_data_to_plot)
         
+        # Send warning that the data is being truncated / rounded?
+        if round_data_to_decimal_places != 0:
+            print("WARNING: the argument round_data_to_decimal_places was set to "+str(round_data_to_decimal_places)+", your confusion matrix is thus rounded to some decimal position accuracy. Typically, you should set round_data_to_decimal_places to 0 unless the plot itself becomes too messy to read.")
+        
         # Get confusion matrix data.
         with h5py.File(filepath_to_file_with_probability_data_to_plot, 'r') as h5f:
             
@@ -386,7 +391,8 @@ def extract_confusion_matrix_data_from_larger_file(
             # interested in the prepared values.
             measured_axis = []
             for measured_state_yo in prepared_states:
-                measured_axis += ['Measured |'+str(measured_state_yo)+'⟩']
+                #measured_axis += ['Measured |'+str(measured_state_yo)+'⟩']
+                measured_axis += ['|'+str(measured_state_yo)+'⟩']
             
             # Prepare canvas of numbers.
             canvas = np.zeros([len(prepared_states),len(measured_axis)])
@@ -402,13 +408,18 @@ def extract_confusion_matrix_data_from_larger_file(
                 data = hfile.getData(name = 'State Discriminator - Average 2Qstate P'+str(measured_state_yo))
                 column = data.flatten()
                 
+                # Round the data to some number of decimal places?
+                if round_data_to_decimal_places != 0:
+                    for ll in range(len(column)):
+                        column[ll] = round(column[ll], round_data_to_decimal_places)
+                
                 # Put the column in the canvas. Increment counter.
                 canvas[:, counter_for_columns_in_output_canvas] = column
                 counter_for_columns_in_output_canvas += 1
             
             # At this point, we've acquired the confusion matrix.
             # Time to plot?
-            if plot_output:
+            if plot_output or (export_filepath != ''):
             
                 # Make X and Y axes.
                 x_axis = np.arange(0.0, canvas.shape[1], 1)
@@ -416,43 +427,47 @@ def extract_confusion_matrix_data_from_larger_file(
                 x_axis_str = measured_axis
                 y_axis_str = []
                 for item in range(len(y_axis)):
-                    y_axis_str.append('Prepared |'+prepared_states[item]+'⟩')
+                    y_axis_str.append('|'+prepared_states[item]+'⟩')
+                    #y_axis_str.append('Prepared |'+prepared_states[item]+'⟩')
                 
                 # Set figure size
-                plt.figure(figsize = figure_size_tuple)
-                ##plt.figure(figsize = figure_size_tuple, dpi=600.0)
+                ##plt.figure(figsize = figure_size_tuple)
+                plt.figure(figsize = figure_size_tuple, dpi=600.0)
                 
                 # Better to plot the x axis along the top.
                 plt.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
                 
                 # Add numeric value to each box.
                 for (j,i),label in np.ndenumerate(canvas):
-                    if float(label) <= 0.45:
-                        plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white', fontsize=35)
+                    # if (float(label) < 0.15) or (float(label) >= 0.60):
+                    if (float(label) <= 0.65):
+                        plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white', fontsize=18)
                     else:
-                        plt.text( i, j, label, ha='center', va='center', weight='bold', fontsize=35)
+                        plt.text( i, j, label, ha='center', va='center', weight='bold', fontsize=18)
                 
                 # Make pixel palette.
-                plt.imshow(canvas, interpolation='nearest')
-                plt.xticks(x_axis, x_axis_str, fontsize = 21)
-                plt.yticks(y_axis, y_axis_str, fontsize = 21)
+                ##plt.imshow(canvas, interpolation='nearest')
+                plt.imshow(canvas, interpolation='nearest', cmap = 'magma')
+                plt.xticks(x_axis, x_axis_str, fontsize = 20)
+                plt.yticks(y_axis, y_axis_str, fontsize = 20)
                 if title == '':
-                    plt.title("Confusion matrix", fontsize = 35, pad = 20)
+                    plt.title("Confusion matrix, CZ & iSWAP", fontsize = 35, pad = 20)
                 else:
                     plt.title(title, fontsize = 35, pad = 20)
                 
-                # Show plot!
-                plt.show()
-            
-            # Save plot?
-            if export_filepath != '':
-                if title == '':
-                    title = 'Confusion matrix'
-                print("Saving plot "+title+".png")
-                if export_filepath.endswith("Desktop"):
-                    print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
-                    export_filepath = export_filepath + "\\"
-                plt.savefig(export_filepath+title+".png")
+                # Show plot?
+                if plot_output:
+                    plt.show()
+                
+                # Save plot?
+                if export_filepath != '':
+                    if title == '':
+                        title = 'Confusion matrix'
+                    print("Saving plot "+title+".png")
+                    if export_filepath.endswith("Desktop"):
+                        print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
+                        export_filepath = export_filepath + "\\"
+                    plt.savefig(export_filepath+title+".png")
             
             # Append to return vector.
             if len(filepaths_to_plot) > 1:
@@ -725,8 +740,14 @@ def plot_logic_table(
             # Better to plot the x axis along the top.
             plt.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
             
+            # Make rounded edition to plot more nicely.
+            rounded_matrix_to_plot = matrix_to_plot.copy()
+            for rows in range(len(matrix_to_plot[:])):
+                for cols in range(len(matrix_to_plot[0,:])):
+                    rounded_matrix_to_plot[rows,cols] = np.round(matrix_to_plot[rows,cols],3)
+            
             # Add numeric value to each box.
-            for (j,i),label in np.ndenumerate(matrix_to_plot):
+            for (j,i),label in np.ndenumerate(rounded_matrix_to_plot):
                 if float(label) <= 0.45:
                     plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white', fontsize=35-28)
                 else:
@@ -737,7 +758,8 @@ def plot_logic_table(
             plt.tick_params(axis='y', which='major', pad=20)
             
             # Make pixel palette.
-            plt.imshow(matrix_to_plot, interpolation='nearest')
+            ##plt.imshow(matrix_to_plot, interpolation='nearest')
+            plt.imshow(rounded_matrix_to_plot, interpolation='nearest')
             plt.xticks(x_axis, x_axis_str, fontsize = 21-5)
             plt.yticks(y_axis, y_axis_str, fontsize = 21-5)
             
@@ -759,13 +781,13 @@ def plot_logic_table(
             
             # Increament iteration counter.
             iteration_counter += 1
+    
+    # Return numbers.
+    return matrix_of_matrices
 
 def plot_conditional_and_cross_Ramsey_expected(
     t1_of_qubit,
     duration_of_gates,
-    p0_given_0_1_2 = [1.0, 0.0, 0.0],
-    p1_given_0_1_2 = [0.0, 1.0, 0.0],
-    p2_given_0_1_2 = [0.0, 0.0, 1.0],
     figure_size_tuple = (2.654, 1.887),
     title = '',
     export_filepath = '',
@@ -878,3 +900,113 @@ def plot_conditional_and_cross_Ramsey_expected(
         # Show plot?
         if plot_output:
             plt.show()
+
+def plot_assignment_fidelity_vs_amplitude(
+    amplitude_sweep_matrix,
+    matrix_of_assignment_fidelities_vs_amplitude_sweep,
+    export_filepath = '',
+    figure_size_tuple = (23.5,10),
+    set_transparent = False,
+    ):
+    ''' Given a matrix (that can be one row only) containing assignment
+        fidelities of some dataset, and given an matrix of amplitudes swept,
+        plot!
+        
+        TODO: in the future, this function should instead read input files.
+    '''
+    
+    """ Here is a set of example data. """
+    
+    amplitude_sweep_matrix = [
+        np.append(np.linspace(37e-3, 85e-3, 17),np.array([87e-3])),
+        np.append(np.linspace(12e-3, 60e-3, 17),np.array([62e-3]))
+    ]
+    
+    matrix_of_assignment_fidelities_vs_amplitude_sweep = [np.array([
+        0.7926666666666666,
+        0.7893333333333333,
+        0.8162083333333333,
+        0.8120833333333334,
+        0.8145416666666667,
+        0.8395833333333333,
+        0.8505833333333334,
+        0.8445833333333334,
+        0.822,
+        0.820125,
+        0.8040416666666667,
+        0.8537916666666666,
+        0.7787083333333333,
+        0.8392083333333333,
+        0.8668333333333333,
+        0.8792916666666667,
+        0.8186666666666667,
+        0.8117916666666667]),np.array([
+        0.712625,
+        0.758625,
+        0.798625,
+        0.8185833333333333,
+        0.8387083333333333,
+        0.8587916666666666,
+        0.8694583333333333,
+        0.8142916666666666,
+        0.885125,
+        0.8603333333333333,
+        0.8654583333333333,
+        0.8873333333333333,
+        0.874,
+        0.8837916666666666,
+        0.8764583333333333,
+        0.8667916666666666,
+        0.8749583333333333,
+        0.8680416666666667])
+    ]
+    
+    # Create figure.
+    plt.figure(figsize = figure_size_tuple, dpi = 600.0)
+    plt.grid(linestyle='--', linewidth = 0.5)
+    
+    # Axis and figure size dimension management.
+    plt.ylabel('Assignment fidelity [-]', fontsize = 37)
+    plt.yticks(fontsize = 31)
+    
+    plt.xlabel('Readout IF amplitude [mV]', fontsize = 37)
+    plt.xticks(fontsize = 31)
+    
+    # For every row,
+    colour_table = ["#d63834","#81d634","#34d2d6","#8934d6"]
+    
+    ## TODO fix dynamic legend.
+    
+    
+    for idx in range(len(matrix_of_assignment_fidelities_vs_amplitude_sweep)):
+        
+        # Append to plot:
+        if idx < 4:
+            plt.plot(amplitude_sweep_matrix[idx] * 1000, matrix_of_assignment_fidelities_vs_amplitude_sweep[idx], 'o', markersize = 20, color = colour_table[idx], label=f'Resonator {idx+1}')
+        else:
+            plt.plot(amplitude_sweep_matrix[idx] * 1000, matrix_of_assignment_fidelities_vs_amplitude_sweep[idx], 'o')
+    
+    # Legend and title.
+    plt.legend(fontsize = 24)
+    plt.title('RO amplitude optimisation', fontsize = 36)
+    
+    # Set axes.
+    ##plt.xlim() No need.
+    plt.ylim(0.65, 1.0)
+    plt.xticks(fontsize = 31)
+    plt.yticks(fontsize = 31)
+    
+    # Export?
+    if export_filepath != '':
+        if not (export_filepath[-1] == '\\'):
+            export_filepath += '\\'
+        print("Exporting to: "+str(export_filepath))
+        plt.savefig(export_filepath + 'Readout amplitude optimisation' + ".png", bbox_inches = 'tight', transparent = set_transparent)
+    
+    # Show plot.
+    plt.show()
+    
+    # No return.
+    ##return
+    
+    
