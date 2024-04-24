@@ -261,6 +261,59 @@ def plot_confusion_matrix(
         # Show plot!
         plt.show()
 
+def plot_diff_1q_2q_confusion_matrix(
+    qb_A_confusion_matrix,
+    qb_B_confusion_matrix,
+    qb_AB_confusion_matrix,
+    figure_size_tuple = (15,12),
+    ):
+    ''' Take two one-qubit confusion matrices.
+        From this data, construct an expected two-qubit confusion matrix.
+        Then, given a two-qubit confusion matrix, compare the difference.
+        Finally, plot.
+    '''
+    
+    # Type casting.
+    if type(qb_A_confusion_matrix) != np.ndarray:
+        qb_A_confusion_matrix = np.array(qb_A_confusion_matrix)
+    if type(qb_B_confusion_matrix) != np.ndarray:
+        qb_B_confusion_matrix = np.array(qb_B_confusion_matrix)
+    if type(qb_AB_confusion_matrix) != np.ndarray:
+        qb_AB_confusion_matrix = np.array(qb_AB_confusion_matrix)
+    
+    # Assert square dimensions.
+    for mat in [qb_A_confusion_matrix, qb_B_confusion_matrix, qb_AB_confusion_matrix]:
+        if mat.shape[0] != mat.shape[1]:
+            raise TypeError("The provided matrices are not square, and are thus not valid confusion matrices.")
+    
+    # Assert that the single-qubit confusion matrices
+    # feature identical dimensions.
+    if (qb_A_confusion_matrix.shape[0] != qb_B_confusion_matrix.shape[0]) or (qb_A_confusion_matrix.shape[1] != qb_B_confusion_matrix.shape[1]):
+        raise TypeError( \
+            "The provided single-qubit matrices do not have the same"+\
+            "dimensions ("+\
+            str(qb_A_confusion_matrix.shape[0])+"x"+\
+            str(qb_A_confusion_matrix.shape[1])+\
+            " vs. "+\
+            str(qb_B_confusion_matrix.shape[0])+"x"+\
+            str(qb_B_confusion_matrix.shape[0])+")")
+    if qb_B_confusion_matrix.shape[0] != qb_B_confusion_matrix.shape[1]:
+        raise TypeError("The provided matrices are not square, and are thus not valid confusion matrices.")
+    
+    # Assert assert that the AB confusion matrix can be constructed from
+    # the single-qubit confusion matrix, dimension-wise.
+    if (qb_A_confusion_matrix.shape[0])**2 != qb_AB_confusion_matrix.shape[0]:
+        raise TypeError("The provided single-qubit matrices would not "+\
+        "combine into a two-qubit matrix with the same dimensions as the "+\
+        "two-qubit matrix.")
+    
+    # Construct two-qubit confusion matrix.
+    ## TODO:
+    ## USE SINGLE-QB MARTICES TO MAKE 2Q MATRIX.
+    ## SUBTRACT 2Q MATRIX.
+    ## PLOT.
+    ## RETURN RESULTING MATRIX.
+
 def extract_confusion_matrix_data_from_larger_file(
     filepaths_to_plot,
     name_of_key_that_described_q1,
@@ -815,9 +868,11 @@ def plot_conditional_and_cross_Ramsey_expected(
         if gate_to_plot == 'CZ':
             pi_or_2pi = 1 * np.pi
         elif gate_to_plot == 'iSWAP':
-            pi_or_2pi = 2 * np.pi
+            pi_or_2pi = 1 * np.pi # Override to ±1π radians for now.
+            ##pi_or_2pi = 2 * np.pi
         elif gate_to_plot == 'SWAP':
-            pi_or_2pi = 2 * np.pi
+            pi_or_2pi = 1 * np.pi # Override to ±1π radians for now.
+            ##pi_or_2pi = 2 * np.pi
         else:
             raise AttributeError("Error! Attempting to plot an unknown gate's ideal x-axis values.")
         
@@ -835,9 +890,11 @@ def plot_conditional_and_cross_Ramsey_expected(
         if gate_to_plot == 'CZ':
             ideal_frequency = 1/(2*pi_or_2pi)
         elif gate_to_plot == 'iSWAP':
-            ideal_frequency = 1/(2*pi_or_2pi) * 2 # Because the plot runs from -2π to 2 π.
+            ideal_frequency = 1/(2*pi_or_2pi) # Override to ±1π radians for now.
+            #ideal_frequency = 1/(2*pi_or_2pi) * 2 # Because the plot runs from -2π to 2 π.
         elif gate_to_plot == 'SWAP':
-            ideal_frequency = 1/(2*pi_or_2pi) * 2 # Because the plot runs from -2π to 2 π.
+            ideal_frequency = 1/(2*pi_or_2pi) # Override to ±1π radians for now.
+            #ideal_frequency = 1/(2*pi_or_2pi) * 2 # Because the plot runs from -2π to 2 π.
         
         ideal_offset = +0.50
         
