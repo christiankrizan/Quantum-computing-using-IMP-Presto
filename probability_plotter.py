@@ -367,6 +367,7 @@ def plot_diff_1q_2q_confusion_matrix(
         
         # Set figure size
         plt.figure(figsize = figure_size_tuple)
+        ##plt.figure(figsize = figure_size_tuple, dpi=150.0)
         ##plt.figure(figsize = figure_size_tuple, dpi=600.0)
         
         # Better to plot the x axis along the top.
@@ -374,7 +375,6 @@ def plot_diff_1q_2q_confusion_matrix(
         
         # Add numeric value to each box.
         for (j,i),label in np.ndenumerate(canvas):
-            # if (float(label) < 0.15) or (float(label) >= 0.60):
             if (float(label) <= -0.2):
                 plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white', fontsize=18)
             else:
@@ -390,10 +390,6 @@ def plot_diff_1q_2q_confusion_matrix(
         else:
             plt.title(title, fontsize = 35, pad = 20)
         
-        # Show plot?
-        if plot_output:
-            plt.show()
-        
         # Save plot?
         if export_filepath != '':
             if title == '':
@@ -403,6 +399,10 @@ def plot_diff_1q_2q_confusion_matrix(
                 print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
                 export_filepath = export_filepath + "\\"
             plt.savefig(export_filepath+title+".png")
+        
+        # Show plot?
+        if plot_output:
+            plt.show()
         
     # Return result.
     return diff_matrix
