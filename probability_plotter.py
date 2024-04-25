@@ -265,12 +265,26 @@ def plot_diff_1q_2q_confusion_matrix(
     qb_A_confusion_matrix,
     qb_B_confusion_matrix,
     qb_AB_confusion_matrix,
-    figure_size_tuple = (15,12),
+    title = '',
+    prepared_states = ['00','01','02','10','11','12','20','21','22'],
+    figure_size_tuple = (15,14),
+    round_data_to_decimal_places = 0,
+    export_filepath = '',
+    plot_output = False,
     ):
     ''' Take two one-qubit confusion matrices.
         From this data, construct an expected two-qubit confusion matrix.
         Then, given a two-qubit confusion matrix, compare the difference.
         Finally, plot.
+        
+        It is assumed that:
+        - Confusion matrix ROWS    signify the prepared state.
+        - Confusion matrix COLUMNS signify the measured state.
+        
+        In the returned difference matrix, a POSITIVE difference means that
+        the real-life measured value, was bigger than the calculated value.
+        Whereas a NEGATIVE difference, means that the real-life measured value,
+        was smaller than the calculated value.
     '''
     
     # Type casting.
@@ -308,9 +322,93 @@ def plot_diff_1q_2q_confusion_matrix(
         "two-qubit matrix.")
     
     # Construct two-qubit confusion matrix.
+    ## ROWS: Prepared state.
+    ## COLS: Measured state.
+    from time import sleep as snooz # TODO
+    constructed_matrix = np.zeros_like(qb_AB_confusion_matrix)
+    for row_A in range(qb_A_confusion_matrix.shape[0]):
+        for row_B in range(qb_B_confusion_matrix.shape[0]):
+            for col_A in range(qb_A_confusion_matrix.shape[1]):
+                for col_B in range(qb_B_confusion_matrix.shape[1]):        
+                    index_row = (qb_A_confusion_matrix.shape[0])*row_A + row_B
+                    index_col = (qb_A_confusion_matrix.shape[1])*col_A + col_B
+                    val = qb_A_confusion_matrix[row_A,col_A] * qb_B_confusion_matrix[row_B,col_B]
+                    constructed_matrix[index_row,index_col] = val
+    
+    # Get difference between matrices.
+    diff_matrix = qb_AB_confusion_matrix - constructed_matrix
+    
+    # Round the data to some number of decimal places?
+    if round_data_to_decimal_places != 0:
+        
+        # Send warning that the data is being truncated / rounded?
+        print("WARNING: the argument round_data_to_decimal_places was set to "+str(round_data_to_decimal_places)+", your confusion matrix is thus rounded to some decimal position accuracy. Typically, you should set round_data_to_decimal_places to 0 unless the plot itself becomes too messy to read.")
+        
+        # Round.
+        diff_matrix = np.round(diff_matrix, round_data_to_decimal_places)
+    
+    # Plot?
+    if plot_output or (export_filepath != ''):
+        
+        # Prepare canvas.
+        canvas = diff_matrix
+        
+        # Make X and Y axes.
+        x_axis = np.arange(0.0, canvas.shape[1], 1)
+        y_axis = np.arange(0.0, canvas.shape[0], 1)
+        x_axis_str = []
+        y_axis_str = []
+        for item in range(len(x_axis)):
+            x_axis_str.append('|'+prepared_states[item]+'⟩')
+            ## It's fine to use 'prepared_states' here
+            ## since the matrices were asserted to be square.
+        for item in range(len(y_axis)):
+            y_axis_str.append('|'+prepared_states[item]+'⟩')
+        
+        # Set figure size
+        plt.figure(figsize = figure_size_tuple)
+        ##plt.figure(figsize = figure_size_tuple, dpi=600.0)
+        
+        # Better to plot the x axis along the top.
+        plt.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
+        
+        # Add numeric value to each box.
+        for (j,i),label in np.ndenumerate(canvas):
+            # if (float(label) < 0.15) or (float(label) >= 0.60):
+            if (float(label) <= -0.2):
+                plt.text( i, j, label, ha='center', va='center', weight='bold', color = 'white', fontsize=18)
+            else:
+                plt.text( i, j, label, ha='center', va='center', weight='bold', fontsize=18)
+        
+        # Make pixel palette.
+        ##plt.imshow(canvas, interpolation='nearest')
+        plt.imshow(canvas, interpolation='nearest', cmap = 'magma')
+        plt.xticks(x_axis, x_axis_str, fontsize = 20)
+        plt.yticks(y_axis, y_axis_str, fontsize = 20)
+        if title == '':
+            plt.title("Measured 2-qb confusion matrix\nminus calculated 2-qb confusion matrix", fontsize = 35, pad = 20)
+        else:
+            plt.title(title, fontsize = 35, pad = 20)
+        
+        # Show plot?
+        if plot_output:
+            plt.show()
+        
+        # Save plot?
+        if export_filepath != '':
+            if title == '':
+                title = 'Confusion matrix difference'
+            print("Saving plot "+title+".png")
+            if export_filepath.endswith("Desktop"):
+                print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
+                export_filepath = export_filepath + "\\"
+            plt.savefig(export_filepath+title+".png")
+        
+    # Return result.
+    return diff_matrix
+    
     ## TODO:
-    ## USE SINGLE-QB MARTICES TO MAKE 2Q MATRIX.
-    ## SUBTRACT 2Q MATRIX.
+    
     ## PLOT.
     ## RETURN RESULTING MATRIX.
 
