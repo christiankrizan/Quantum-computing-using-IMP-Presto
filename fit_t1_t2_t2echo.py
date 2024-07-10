@@ -320,8 +320,8 @@ def fit_triple_decoherence_data_run(
     # for getting a decent number of bins.
     
     no_entries = len(T_dec)
-    mean_T_dec = round(np.mean(T_dec),2) #np.around(np.mean(T_dec),0)
-    std_T_dec  = round(np.std(T_dec),2)  #np.around(np.std(T_dec),0)
+    mean_T_dec = int(round(np.mean(T_dec),0)) ###round(np.mean(T_dec),2) #np.around(np.mean(T_dec),0)
+    std_T_dec  = int(round(np.std(T_dec),0)) ###round(np.std(T_dec),2)  #np.around(np.std(T_dec),0)
     third_moment_skewness_of_ditribution = moment(T_dec, moment = 3) # Get the assymetry of the distribution
     sigma_g1 = np.sqrt( (6*(no_entries - 2))/((no_entries + 1)*(no_entries + 3)) )
     doane_correction_factor_Ke = np.log2(1 + np.abs(third_moment_skewness_of_ditribution)/sigma_g1)
@@ -330,9 +330,20 @@ def fit_triple_decoherence_data_run(
     T_dec_histogram_plot = plt.figure(figsize = [10.75,10.0])
     plt.hist(T_dec, bins = bins_calculated, alpha=0.5, color=use_this_colour, label= prettify_decoherence_string(select_T1_T2_T2e)+' = ' + str(mean_T_dec) + ' ±' + str(std_T_dec) + ' µs', rwidth = 0.9)
     
-    plt.title('Q'+str(select_resonator+1) +' $T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ histogram', fontsize=36)
+    stringus_dingus = ' $T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$'
+    # Add start to T_2^* data?
+    if '$T_{2}$' in stringus_dingus:
+        stringus_dingus = stringus_dingus.replace('$T_{2}$','${T_{2}}^{*}$')
+    plt.title('Q'+str(select_resonator+1) + stringus_dingus + ' histogram', fontsize=36)
     plt.ylabel('Counts', fontsize = 37)
-    plt.xlabel('$T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ [µs]', fontsize = 37)
+    
+    # Rudimentary check whether the histogram
+    # will plot with decimals on the Y axis.
+    low_limit_for_y  = round(((plt.gca()).get_ylim())[0],0)
+    high_limit_for_y = round(((plt.gca()).get_ylim())[1],0)
+    (plt.gca()).set_ylim((low_limit_for_y,high_limit_for_y))
+    
+    plt.xlabel(stringus_dingus + ' [µs]', fontsize = 37)
     plt.grid(linestyle='--',linewidth=0.5)
     
     plt.xticks(fontsize = 31)
