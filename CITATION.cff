@@ -18,24 +18,25 @@ identifiers:
 repository-code: >-
   https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto
 abstract: >-
-  The code repository contains quantum computer interface
-  code, that tunes up quantum gates using the IMP Presto AWG
-  lock-in amplifier. The code accurately represents that
-  which the original repository author uses himself for
-  superconducting quantum computing experiments. 
+  This repository contains quantum computer interface code,
+  that configures quantum processor operations using the
+  IMP Presto AWG lock-in amplifier. This repository
+  includes post-processing and fitting code that does not
+  depend on using this particular device, but may take any
+  data from superconducting quantum computing experiments.
 keywords:
   - Quantum computing
 license: CC-BY-NC-SA-4.0
-commit: 708693b
-version: Indev 2024-02-15
-date-released: '2024-02-15'
+commit: d48218f
+version: Indev 2024-09-06
+date-released: '2024-09-06'
 preferred-citation:
   type: software
   authors:
   - family-names: 'Križan'
     given-names: 'Christian'
     orcid: 'https://orcid.org/0000-0002-5059-7998'
-  month: 2
+  month: 9
   title: 'Indecorum'
   license: 'CC-BY-NC-SA-4.0'
   license-url: 'https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/blob/master/LICENSE'
@@ -43,6 +44,6 @@ preferred-citation:
   format: 'Citation File Format'
   institution:
     name: 'Chalmers University of Technology'
-  version: 'Indev 2024-02-15'
+  version: 'Indev 2024-09-06'
   year: 2024
   url: 'https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto'
