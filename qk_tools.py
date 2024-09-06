@@ -280,7 +280,7 @@ def indecorum_parse(
                 # we might look at curr_moment[-1] -> would give a false
                 # positive multiplexable operation, if a readout was done
                 # after a barrier (because, the barrier resets the index).
-                # Because, the current and the [-1] ( aka. LASt and ONLY )
+                # Because, the current and the [-1] ( aka. LAST and ONLY )
                 # operations in curr_moment would both be the very same
                 # single 'measure' operation.
                 if curr_moment_index != 0:
@@ -312,7 +312,7 @@ def indecorum_parse(
     # at the very end. In case there are barriers at the very end of
     # the quantum circuit, it will be caught and removed soon.
     barrier_moments.append(curr_moment)
-    
+    print("TODO:\n"+str(curr_moment))
     # Append final (total) duration to the end.
     barrier_moments.append( [['total_duration', time_counters, qubit_indices, np.max(time_counters)]] )
     
