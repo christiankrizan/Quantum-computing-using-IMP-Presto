@@ -136,3 +136,37 @@ def track_phase(
     #return (2*np.pi * frequency_of_cosinusoidal * current_time + current_phase) % np.pi
     #return (2*np.pi * frequency_of_cosinusoidal * current_time) % (2*np.pi) + current_phase
     return (2*np.pi * frequency_of_cosinusoidal * current_time + np.pi) % (2*np.pi) + current_phase
+
+def reshape_plot_of_added_phases(
+    filepath_to_data_in_plot
+    ):
+    ''' In plots that show the phase added by some controlled-phase gate,
+        like a CZ₂₀ gate, it's very possible that the "added" phase
+        between two compared examples, is -0.116 = +6.4 radians.
+        Then, the plot would loop around, creating funny discontinuous shapes.
+        
+        To make a nicer plot, we may scan for discontinuities, and sew together
+        the data more nicely into a continuous line.
+    '''
+    
+    # 1. Get file, extract data.
+    # 2. Scan for discontinuities.
+    # 3. Adjust discontinuities.
+    # 4. Export new plot.
+    
+    ## Get data.
+    with h5py.File(os.path.abspath( filepath_to_data_in_plot ), 'r') as h5f:
+        extracted_data = h5f["processed_data"][()]
+        
+        if i_renamed_the_control_phase_arr_to == '':
+            try:
+                control_phase_arr_values = h5f[ "control_phase_arr" ][()]
+            except KeyError:
+                if verbose:
+                    print("Control phase array not found. But, coupler phase array found.")
+                control_phase_arr_values = h5f[ "coupler_phase_arr" ][()]
+        else:
+            control_phase_arr_values = h5f[i_renamed_the_control_phase_arr_to][()]
+    
+    
+    raise NotImplementedError("Halted! Not finished.")
