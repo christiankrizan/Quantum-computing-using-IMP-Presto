@@ -1060,7 +1060,7 @@ def plot_assignment_fidelity_vs_amplitude(
     amplitude_sweep_matrix,
     matrix_of_assignment_fidelities_vs_amplitude_sweep,
     export_filepath = '',
-    figure_size_tuple = (23.5,10),
+    figure_size_tuple = (7,3),
     set_transparent = False,
     ):
     ''' Given a matrix (that can be one row only) containing assignment
@@ -1117,15 +1117,15 @@ def plot_assignment_fidelity_vs_amplitude(
     ]
     
     # Create figure.
-    plt.figure(figsize = figure_size_tuple, dpi = 600.0)
+    plt.figure(figsize = figure_size_tuple, dpi = 300.0)
     plt.grid(linestyle='--', linewidth = 0.5)
     
     # Axis and figure size dimension management.
-    plt.ylabel('Assignment fidelity [-]', fontsize = 37)
-    plt.yticks(fontsize = 31)
+    plt.ylabel('Assignment fidelity [-]', fontsize = 15)
+    plt.yticks(fontsize = 13)
     
-    plt.xlabel('Readout IF amplitude [mV]', fontsize = 37)
-    plt.xticks(fontsize = 31)
+    plt.xlabel('Readout IF amplitude [mV]', fontsize = 15)
+    plt.xticks(fontsize = 13)
     
     # For every row,
     colour_table = ["#d63834","#81d634","#34d2d6","#8934d6"]
@@ -1137,19 +1137,17 @@ def plot_assignment_fidelity_vs_amplitude(
         
         # Append to plot:
         if idx < 4:
-            plt.plot(amplitude_sweep_matrix[idx] * 1000, matrix_of_assignment_fidelities_vs_amplitude_sweep[idx], 'o', markersize = 20, color = colour_table[idx], label=f'Resonator {idx+1}')
+            plt.plot(amplitude_sweep_matrix[idx] * 1000, matrix_of_assignment_fidelities_vs_amplitude_sweep[idx], 'o', markersize = 7, color = colour_table[idx], label=f'Resonator {idx+1}')
         else:
             plt.plot(amplitude_sweep_matrix[idx] * 1000, matrix_of_assignment_fidelities_vs_amplitude_sweep[idx], 'o')
     
     # Legend and title.
-    plt.legend(fontsize = 24)
-    plt.title('RO amplitude optimisation', fontsize = 36)
+    plt.legend(fontsize = 12)
+    ##plt.title('RO amplitude optimisation', fontsize = 19, pad = 20)
     
-    # Set axes.
+    # Set axis limits.
     ##plt.xlim() No need.
     plt.ylim(0.65, 1.0)
-    plt.xticks(fontsize = 31)
-    plt.yticks(fontsize = 31)
     
     # Export?
     if export_filepath != '':
