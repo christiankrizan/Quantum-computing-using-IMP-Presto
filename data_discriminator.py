@@ -11,6 +11,7 @@ import time
 import h5py
 import json
 import shutil
+import random
 import numpy as np
 from numpy import hanning as von_hann
 from math import isnan
@@ -573,9 +574,16 @@ def construct_state_from_quadrature_voltage(
 def post_process_data_given_confusion_matrix(
     filepaths_to_plot,
     confusion_matrix,
+    plot_output_export_path = '',
+    figure_size_tuple = (2.654, 1.887),
+    title = '',
+    plot_output = False,
+    hdf5_export_path = '',
     maximum_number_of_qubits_contained_in_file = 5, # Number selected arbitrarily!
-    select_file_entry_to_extract = '',
+    select_file_entry_to_extract = [],
     attempt_to_fix_string_input_argument = True,
+    sum_states_of_vectors_in_order_to_select_single_qubit_probabilities = [],
+    captivorum_colore_utere = False,
     ):
     ''' Given a known confusion matrix, perform least-square minimisation
         between some assumed input and the measured data given the
@@ -599,6 +607,25 @@ def post_process_data_given_confusion_matrix(
         matrix. 3 states, 2 qubits, would require a 3^2 = 9x9 matrix.
         Its axes would be Measured 2q state |00>, |01> ... |21>, |22> on the
         x-axis, and Prepared 2q state |00>, |01> ... |21>, |22> on the y-axis.
+        
+        select_file_entry_to_extract: array-like object showing indices
+        of the traces that are to be extracted (selected).
+        
+        sum_states_of_vectors_in_order_to_select_single_qubit_probabilities
+        allows the user to check the single-qubit probability, by supplying
+        the two-qubit states that when taken together adds up to the
+        probability of the single qubit.
+        Example: if the user wants to see the probability of qubit 1 being
+        in |1>, while the state probability of the other qubit(s) is
+        irrelevant, then the user can provide here ['10','11','12']
+        for instance. Whether qubit 2 was in |0>, |1> or |2> is irrelevant,
+        the user currently only wants to know the state probability of Q1 = |1>
+        
+        captivorum_colore_utere:
+        If True, then plot in cyan/purple for ±π radian x-axis plots,
+        like CZ conditional-Ramsey plots, and red/green for ±2π rad x-axis
+        plots, like iSWAP and SWAP cross-Ramsey plots.
+        Used for the 2024 iSWAP, SWAP, CZ paper by Christian Križan et al.
     '''
     
     ## Input checking!
@@ -615,7 +642,7 @@ def post_process_data_given_confusion_matrix(
         row_sum = 0
         for col in row:
             row_sum += col
-        assert row_sum == 1.0, "Error! Confusion matrix row "+str(curr)+" (counting from 0) sums to "+str(row_sum)+", which is not 100 % probability. Not possible."
+        assert ((row_sum >= 0.99999999) and (row_sum <= 1.00000001)), "Error! Confusion matrix row "+str(curr)+" (counting from 0) sums to "+str(row_sum)+", which is not 100 % probability. Not possible."
     
     ## Extract the data ##
     
@@ -682,7 +709,7 @@ def post_process_data_given_confusion_matrix(
             # the input file. Get them.
             big_ass_y_vector = []
             
-            # We'll need the x-axis, let's get it here already.
+            # We'll need the x-axis for later, let's get it here.
             x_axis = (hfile.getStepChannels())[0]['values']
             
             def basis_conversion(number, basis):
@@ -697,6 +724,7 @@ def post_process_data_given_confusion_matrix(
                 return (signum + s)
             
             # Extract.
+            all_investigated_states = []
             for row in range(len(confusion_matrix)):
                 
                 # Get the current to-be-checked state, as an int.
@@ -705,12 +733,19 @@ def post_process_data_given_confusion_matrix(
                 # state_in_number must be zero-padded.
                 s_vector = str(state_in_number).zfill(number_of_qubits)
                 
+                ## Save the s_vector for later, it is used when plotting.
+                all_investigated_states += [s_vector]
+                
                 # Get data.
                 data = hfile.getData(name = 'State Discriminator - Average 2Qstate P'+str(s_vector))
                 
-                # Select specific entry in the data?
-                if not select_file_entry_to_extract == '':
-                    raise NotImplementedError("Halted! Selecting specific entries is currently not supported.")
+                # Select specific row entries in the data?
+                if not select_file_entry_to_extract == []:
+                    # Go through the array-like object and save the sought-for data
+                    sought_for_data = []
+                    for item_to_keep in select_file_entry_to_extract:
+                        sought_for_data += [data[item_to_keep]]
+                    big_ass_y_vector += [np.array(sought_for_data)]
                 else:
                     # Then store every entry.
                     
@@ -771,13 +806,217 @@ def post_process_data_given_confusion_matrix(
                 for jjj in range(number_of_two_qubit_states):
                     big_ass_x_vector[jjj][all_traces][all_points] = x_vector[jjj]
         
-        ## Output result ##
-        print("TODO! Grabbing a single trace for now!")
-        assert 1 == 0, big_ass_x_vector[2][2]
-        assert 1 == 0, big_ass_x_vector[1][3]
+        # Is the user looking for a single qubit's state?
+        if sum_states_of_vectors_in_order_to_select_single_qubit_probabilities != []:
+            # The user is looking for a single qubit's state.
+            
+            # Check which indices of the big_ass_x_vector correspond to
+            # the user-selected states.
+            indices_to_sum = []
+            for kk in range(len(sum_states_of_vectors_in_order_to_select_single_qubit_probabilities)):
+                for ll in range(len(all_investigated_states)):
+                    if (all_investigated_states[ll] == sum_states_of_vectors_in_order_to_select_single_qubit_probabilities[kk]):
+                        indices_to_sum += [ll]
+            
+            # We now know which indices in the big_ass_x_vector corresponds
+            # to the user-selected states. These indices are stored in
+            # indices_to_sum. We'll define a separate vector for single-qubit
+            # states.
+            not_equally_big_ass_single_qubit_vector = np.zeros_like( big_ass_x_vector[0] )
+            
+            # This vector must now be filled up.
+            for idx in indices_to_sum:
+                not_equally_big_ass_single_qubit_vector = not_equally_big_ass_single_qubit_vector + big_ass_x_vector[idx]
+            
+            # The data structure not_equally_big_ass_single_qubit_vector
+            # now contains the single-qubit information, as was selected
+            # by the user.
         
+        ## Output result ##
+        
+        # Plot?
+        if plot_output or plot_output_export_path:
+            
+            # For all traces to be plotted:
+            for trace_number in range(len(big_ass_x_vector[0])):
+                
+                # For all states investigated:
+                for probability_investigated in range(len(big_ass_x_vector)):
+                    
+                    # What state is being checked right now?
+                    state_investigated = all_investigated_states[probability_investigated]
+                
+                    # Get current trace.
+                    trace = big_ass_x_vector[probability_investigated][trace_number]
+                    
+                    # Set figure size.
+                    plt.figure(figsize = figure_size_tuple, dpi=600.0)
+                    
+                    # Define axis limits.
+                    ax = plt.gca()
+                    ax.set_xlim([x_axis[0], x_axis[-1]])
+                    ax.set_ylim([0.0, 1.0])
+                    
+                    # Title?
+                    if title != None:
+                        if title == '':
+                            title_to_plot = "P( |"+str(state_investigated)+"⟩ )"
+                            use_this_title = ''
+                        else:
+                            title_to_plot  = title
+                            use_this_title = title
+                        plt.title(title_to_plot)
+                    else:
+                        # Then, no title for now.
+                        # It will be added to the save file, if relevant.
+                        use_this_title = ''
+                    
+                    # Choose colour for the plot.
+                    if captivorum_colore_utere:
+                        if abs(x_axis[0]) < (np.pi+0.1):
+                            if ((trace_number % 2) == 0):
+                                use_this_colour = "#34d2d6"
+                            else:
+                                use_this_colour = "#8934d6"
+                        else:
+                            figure_size_tuple = (2.654 * 2, 1.887)
+                            if ((trace_number % 2) == 0):
+                                use_this_colour = "#d63834"
+                            else:
+                                use_this_colour = "#81d634"
+                    else:
+                        # Select random colour.
+                        use_this_colour = '#'+((hex(random.randint(0,256*256*256-1))).replace('0x','')).zfill(6)
+                    
+                    # Disable axis ticks.
+                    plt.axis('off')
+                    
+                    # Enter data into the plot!
+                    ##plt.plot(x_axis, trace, ':', color=use_this_colour)
+                    ##plt.grid(visible=True, axis='both', color="#626262", linestyle='-', linewidth=5)
+                    plt.scatter(x_axis, trace, s=10, color=use_this_colour)
+                    
+                    # Explicitly print the plotted data?
+                    if captivorum_colore_utere:
+                        print("PLOTTING THE FOLLOWING DATA:")
+                        print(str(trace))
+                    
+                    # Save plot?
+                    if plot_output_export_path != '':
+                        use_this_title += 'trace'+str(trace_number)+'_P'+str(state_investigated)
+                        print("Saving plot "+use_this_title+".png")
+                        if plot_output_export_path.endswith("Desktop"):
+                            print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
+                            plot_output_export_path = plot_output_export_path + "\\"
+                        plt.savefig(plot_output_export_path+use_this_title+".png", bbox_inches="tight", pad_inches = 0, transparent=True)
+                    
+                    # Plot?
+                    if plot_output:
+                        plt.show()
+                
+                ## As a bonus, let's check if the user wants single-qubit data too.
+                ## Remember that the number of traces will be the same.
+                ## Thus we can check the variable trace_number here too.
+                if sum_states_of_vectors_in_order_to_select_single_qubit_probabilities != []:
+                    # The user wants to see the single-qubit data too.
+                    trace = not_equally_big_ass_single_qubit_vector[trace_number]
+                    
+                    # Set figure size.
+                    plt.figure(figsize = figure_size_tuple, dpi=600.0)
+                    
+                    # Define axis limits.
+                    ax = plt.gca()
+                    ax.set_xlim([x_axis[0], x_axis[-1]])
+                    ax.set_ylim([0.0, 1.0])
+                    
+                    ## Here, we must figure out which qubit and what
+                    ## probability the user is looking for.
+                    state_character_matrix = []
+                    for item in sum_states_of_vectors_in_order_to_select_single_qubit_probabilities:
+                        state_character_matrix += [([*item])]
+                    for all_rows in range(len(state_character_matrix)):
+                        for all_cols in range(len(state_character_matrix[0])):
+                            state_character_matrix[all_rows][all_cols] = int(state_character_matrix[all_rows][all_cols])
+                    # Cast to numpy array. Check which column only has the same number (i.e. state)
+                    state_character_matrix = np.array(state_character_matrix)
+                    comparison_table = (state_character_matrix == state_character_matrix[0,:])
+                    column_found = False
+                    single_qubit_checked = 0
+                    single_qubit_state = 0
+                    for column_checked in range(len(comparison_table[0,:])):
+                        if np.all(comparison_table[:,column_checked] == True):
+                            # Done, this column shows the qubit and the
+                            # state which is permanent throughout.
+                            if not column_found:
+                                column_found = True
+                                single_qubit_checked = column_checked+1
+                                single_qubit_state = state_character_matrix[0,column_checked]
+                            else:
+                                raise AttributeError("Error! The user provided some combination of multi-qubit states, that when put together, does not equal a single qubit's state probability.")
+                    if not column_found:
+                        raise AttributeError("Error! The user provided some combination of multi-qubit states, that when put together, does not equal a single qubit's state probability.")
+                    ## At this point, we know which qubit the user selected,
+                    ## And which state's probability is being checked on it.
+                    
+                    # Title?
+                    if title != None:
+                        if title == '':
+                            title_to_plot = "P( Q"+str(single_qubit_checked)+" = |"+str(single_qubit_state)+"⟩ )"
+                            use_this_title = ''
+                        else:
+                            title_to_plot  = title
+                            use_this_title = title
+                        plt.title(title_to_plot)
+                    else:
+                        # Then, no title for now.
+                        # It will be added to the save file, if relevant.
+                        use_this_title = ''
+                    
+                    # Choose colour for the plot.
+                    if captivorum_colore_utere:
+                        if abs(x_axis[0]) < (np.pi+0.1):
+                            if ((trace_number % 2) == 0):
+                                use_this_colour = "#34d2d6"
+                            else:
+                                use_this_colour = "#8934d6"
+                        else:
+                            if ((trace_number % 2) == 0):
+                                use_this_colour = "#d63834"
+                            else:
+                                use_this_colour = "#81d634"
+                    else:
+                        # Select random colour.
+                        use_this_colour = '#'+((hex(random.randint(0,256*256*256-1))).replace('0x','')).zfill(6)
+                    
+                    # Disable axis ticks.
+                    plt.axis('off')
+                    
+                    # Enter data into the plot!
+                    plt.plot(x_axis, trace, color=use_this_colour)
+                    
+                    # Save plot?
+                    if plot_output_export_path != '':
+                        use_this_title += 'trace'+str(trace_number)+'_Q'+str(single_qubit_checked)+'_P'+str(single_qubit_state)
+                        print("Saving plot "+use_this_title+".png")
+                        if plot_output_export_path.endswith("Desktop"):
+                            print("You tried to name the export plot \"Desktop\", this is probably an error. Attempting to correct.")
+                            plot_output_export_path = plot_output_export_path + "\\"
+                        plt.savefig(plot_output_export_path+use_this_title+".png", bbox_inches="tight", pad_inches = 0, transparent=True)
+                    
+                    # Plot?
+                    if plot_output:
+                        plt.show()
+            
+            
+            
+        # Save into new .hdf5 file?
+        if hdf5_export_path != '':
+            raise NotImplementedError("Halted! Exporting the data into a Log Browser compatible .hdf5 file has not been implemented.")
+        
+        # Store in larger multi-dimensional matrix for outputting.
         output_vector += [big_ass_x_vector]
     
+    # Return
     return output_vector
 
 def fit_to_confusion_matrix(y_vector, confusion_matrix):
@@ -790,7 +1029,8 @@ def fit_to_confusion_matrix(y_vector, confusion_matrix):
     x_vector = y_vector
     
     # Fit! Using least-square linear fitting.
-    '''  This fitting attempts to find x for 0.5 * |Ax - b|^2 = "minimum"  '''
+    '''  This fitting attempts to find x for 0.5 * |Ax - b|^2 = "minimum"
+    '''
     success = lsq_linear(
         A = confusion_matrix,
         b = y_vector,
