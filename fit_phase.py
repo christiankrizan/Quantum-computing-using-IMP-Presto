@@ -158,6 +158,14 @@ def fit_phase_offset(
                     ##    oscillating_data = current_trace_to_fit
                     ##)
                     
+                    # Adjust from negative to positive amplitude.
+                    if optimal_vals_x[1] < 0:
+                        optimal_vals_x[1] = optimal_vals_x[1] * -1
+                        # Adjust phase.
+                        optimal_vals_x[3] = optimal_vals_x[3] - np.pi
+                        if optimal_vals_x[3] <= -(2*np.pi):
+                            optimal_vals_x[3] = optimal_vals_x[3] + (2*np.pi)
+                    
                     # Grab fitted values.
                     phase_offset = optimal_vals_x[3]
                     fit_error = fit_err_x[3]
@@ -299,7 +307,7 @@ def cosine_function(
     ):
     ''' Function to be fitted against.
     '''
-    return np.abs(amplitude) * np.cos(2*np.pi*(1/period) * t + phase) + y_offset
+    return amplitude * np.cos(2*np.pi*(1/period) * t + phase) + y_offset
 
 def fit_phase(phases, oscillating_data):
     ''' Grab submitted data and perform a fit to find the phase offset
@@ -344,6 +352,14 @@ def fit_phase(phases, oscillating_data):
         ydata = y,
         p0    = (y_offset, amplitude, period, starting_phase)
     )
+    
+    # Adjust from negative to positive amplitude.
+    if optimal_vals[1] < 0:
+        optimal_vals[1] = optimal_vals[1] * -1
+        # Adjust phase.
+        optimal_vals[3] = optimal_vals[3] - np.pi
+        if optimal_vals[3] <= -(2*np.pi):
+            optimal_vals[3] = optimal_vals[3] + (2*np.pi)
     
     # covariance_mtx_of_opt_vals is the covariance matrix of optimal_vals.
     # These values are optimised for minimising (residuals)^2 of
