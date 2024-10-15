@@ -6,6 +6,7 @@
 #############################################################################################
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 def get_maximum_fidelity_for_x_gate(
         qubit_T1,
@@ -72,8 +73,9 @@ def get_maximum_fidelity_for_2q_gate(
     qubit2_T_phi = 1 / ((1 / qubit2_T2_asterisk) - (1 / (2*qubit2_T1)))
     gamma1_phi = 1 / qubit1_T_phi
     gamma2_phi = 1 / qubit2_T_phi
-    print(gamma1_phi)
-    print(gamma2_phi)
+    if verbose:
+        print(gamma1_phi)
+        print(gamma2_phi)
     gamma_phi_avg = (gamma1_phi + gamma2_phi) / 2
     if verbose:
         print("Gamma_{phi c} was averaged to be " + str(gamma_phi_avg))
@@ -99,3 +101,121 @@ def get_maximum_fidelity_for_2q_gate(
     
     # Done!
     return fidelity_2q_gate
+
+def plot_maximum_fidelity_for_2q_gate(
+        qubit1_T1,
+        qubit2_T1,
+        qubit1_T2_asterisk,
+        qubit2_T2_asterisk,
+        time_axis,
+        verbose = False,
+        plot_for_this_many_seconds = 0.0
+    ):
+    ''' Plot the maximum 2q-gate fidelity as a function of gate time.
+    '''
+    
+    # Let's prepare Y values.
+    y_vector = []
+    
+    # Fill this Y vector.
+    for item in time_axis:
+        y_vector.append(
+            get_maximum_fidelity_for_2q_gate(
+                qubit1_T1 = qubit1_T1,
+                qubit2_T1 = qubit2_T1,
+                qubit1_T2_asterisk = qubit1_T2_asterisk,
+                qubit2_T2_asterisk = qubit2_T2_asterisk,
+                two_qubit_gate_time = item,
+                verbose = verbose
+            )
+        )
+    
+    # Plot!
+    plt.figure(figsize=(10, 6))
+    plt.plot(time_axis, y_vector, marker='o', linestyle='-', color="#034da3")
+    plt.title('Two-qubit gate maximum fidelity')
+    plt.ylabel('Gate fidelity [-]')
+    plt.xlabel('Gate time [s]')
+    plt.grid(True)
+    plt.show()
+    
+    # If inserting a positive time for which we want to plot for,
+    # then plot for that duration of time. If given a negative
+    # time, then instead block the plotted display.
+    if plot_for_this_many_seconds > 0.0:
+        plt.show(block=False)
+        plt.pause(plot_for_this_many_seconds)
+        plt.close()
+    else:
+        plt.show(block=True)
+
+def plot_maximum_fidelity_for_1q_and_2q_gates(
+        qubit1_T1,
+        qubit2_T1,
+        qubit1_T2_asterisk,
+        qubit2_T2_asterisk,
+        time_axis,
+        verbose = False,
+        plot_for_this_many_seconds = 0.0
+    ):
+    ''' Plot the maximum 1q-gate and 2q-gate fidelities,
+        as a function of gate time.
+    '''
+    # Let's prepare Y values.
+    y_vector_1q_A = []
+    y_vector_1q_B = []
+    y_vector_2q = []
+    
+    # Fill these Y vectors.
+    for item in time_axis:
+        y_vector_1q_A.append(
+            get_maximum_fidelity_for_x_gate(
+                qubit_T1 = qubit1_T1,
+                qubit_T2_asterisk = qubit1_T2_asterisk,
+                gate_time = item,
+                verbose = verbose
+            )
+        )
+        y_vector_1q_B.append(
+            get_maximum_fidelity_for_x_gate(
+                qubit_T1 = qubit2_T1,
+                qubit_T2_asterisk = qubit2_T2_asterisk,
+                gate_time = item,
+                verbose = verbose
+            )
+        )
+        y_vector_2q.append(
+            get_maximum_fidelity_for_2q_gate(
+                qubit1_T1 = qubit1_T1,
+                qubit2_T1 = qubit2_T1,
+                qubit1_T2_asterisk = qubit1_T2_asterisk,
+                qubit2_T2_asterisk = qubit2_T2_asterisk,
+                two_qubit_gate_time = item,
+                verbose = verbose
+            )
+        )
+    
+    # Plot!
+    plt.figure(figsize=(10, 6))
+    plt.plot(time_axis, y_vector_1q_A, marker='o', linestyle='-', color="#000000", label = 'X gate on QB1')
+    plt.plot(time_axis, y_vector_1q_B, marker='o', linestyle='-', color="#ef1620", label = 'X gate on QB2')
+    plt.plot(time_axis, y_vector_2q, marker='o', linestyle='-', color="#034da3", label = '2-qubit gates')
+    plt.title('Gate fidelity versus gate time', fontsize=22)
+    plt.ylabel('Gate fidelity [-]', fontsize=22)
+    plt.xlabel('Gate time [s]', fontsize=22)
+    plt.grid(True)
+    plt.legend(fontsize=20)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.show()
+    
+    # If inserting a positive time for which we want to plot for,
+    # then plot for that duration of time. If given a negative
+    # time, then instead block the plotted display.
+    if plot_for_this_many_seconds > 0.0:
+        plt.show(block=False)
+        plt.pause(plot_for_this_many_seconds)
+        plt.close()
+    else:
+        plt.show(block=True)
+    
