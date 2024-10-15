@@ -268,7 +268,108 @@ def tunable_coupler_frequency_function(
     '''
     return np.abs(freq_of_untuned_coupler) * np.sqrt( np.abs( np.cos( np.pi * (static_flux_offset + phi)/phi_0 ) ) )
 
-
+def plot_coupler_bias_curve(
+        phi_0,
+        freq_of_untuned_coupler,
+        static_flux_offset,
+        x_axis_interval_to_plot = [-3.1415926535897932, +3.1415926535897932],
+        these_are_known_resonator_freqs = [],
+        these_are_known_qubit_freqs = [],
+        draw_line_at_this_flux_bias_phi_0 = -1000,
+    ):
+    ''' Plot (2) from McKay et al. 2016,
+        https://journals.aps.org/prapplied/abstract/10.1103/PhysRevApplied.6.064007
+        
+        And, highlight the points where you know you have resonators
+        and qubits, if such numbers are supplied.
+        
+        And, put a line showing where you have decided to bias the coupler,
+        if such data is provided.
+    '''
+    
+    # Create x axis.
+    x_axis = np.linspace(x_axis_interval_to_plot[0], x_axis_interval_to_plot[1], 313)
+    
+    # Get the Y values, given the selected x axis.
+    y_values = []
+    for item in x_axis:
+        y_values.append(
+            tunable_coupler_frequency_function(
+                phi = item,
+                phi_0 = phi_0,
+                freq_of_untuned_coupler = freq_of_untuned_coupler,
+                static_flux_offset = static_flux_offset,
+            )
+        )
+    
+    # Plot the function!
+    plt.plot(x_axis, y_values, color="#034da3")
+    ##plt.plot(control_amp_values, fit_curve, color="#ef1620")
+    
+    # Draw some line corresponding to where you have biased the coupler?
+    if draw_line_at_this_flux_bias_phi_0 != -1000:
+        # Yes. Then we must convert the requested flux bias value
+        # into current.
+        selected_bias_in_ampere = (draw_line_at_this_flux_bias_phi_0) * phi_0 - static_flux_offset
+        plt.axvline(x=selected_bias_in_ampere, color='orange', linestyle='--', label='Selected bias')
+    
+    # Draw known resonator frequencies?
+    if len(these_are_known_resonator_freqs) != 0:
+        # Draw these as dots.
+        indices_to_draw_x = []
+        indices_to_draw_y = []
+        for current_freq_to_draw in these_are_known_resonator_freqs:
+            ## Start with the beginning of the x-axis.
+            for jj in range(len(y_values)-1):
+                # Was the checked value bigger than the dot that we
+                # are supposed to mark?
+                if (current_freq_to_draw <= y_values[jj]) and (current_freq_to_draw >= y_values[jj+1]):
+                    ## It is bigger (or equal). There will be a dot here if
+                    ## the next value is bigger (or equal).
+                    indices_to_draw_x.append(x_axis[jj])
+                    indices_to_draw_y.append(current_freq_to_draw)
+                elif (current_freq_to_draw >= y_values[jj]) and (current_freq_to_draw <= y_values[jj+1]):
+                    ## It is bigger (or equal). There will be a dot here if
+                    ## the next value is bigger (or equal).
+                    indices_to_draw_x.append(x_axis[jj])
+                    indices_to_draw_y.append(current_freq_to_draw)
+        # Now draw the markers themselves.
+        plt.scatter(indices_to_draw_x, indices_to_draw_y, color="#ef1620", marker='o', label='Resonators')
+        
+    # Draw known resonator frequencies?
+    if len(these_are_known_resonator_freqs) != 0:
+        # Draw these as dots.
+        indices_to_draw_x = []
+        indices_to_draw_y = []
+        for current_freq_to_draw in these_are_known_qubit_freqs:
+            ## Start with the beginning of the x-axis.
+            for jj in range(len(y_values)-1):
+                # Was the checked value bigger than the dot that we
+                # are supposed to mark?
+                if (current_freq_to_draw <= y_values[jj]) and (current_freq_to_draw >= y_values[jj+1]):
+                    ## It is bigger (or equal). There will be a dot here if
+                    ## the next value is bigger (or equal).
+                    indices_to_draw_x.append(x_axis[jj])
+                    indices_to_draw_y.append(current_freq_to_draw)
+                elif (current_freq_to_draw >= y_values[jj]) and (current_freq_to_draw <= y_values[jj+1]):
+                    ## It is bigger (or equal). There will be a dot here if
+                    ## the next value is bigger (or equal).
+                    indices_to_draw_x.append(x_axis[jj])
+                    indices_to_draw_y.append(current_freq_to_draw)
+        # Now draw the markers themselves.
+        plt.scatter(indices_to_draw_x, indices_to_draw_y, color="#000000", marker='o', label='Qubits')
+    
+    # Prepare the plot.
+    plt.title('Coupler frequency vs. bias', fontsize=22)
+    plt.ylabel('Frequency [Hz]', fontsize=22)
+    plt.xlabel('Bias current [A]', fontsize=22)
+    plt.grid(True)
+    plt.legend(fontsize=20)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    
+    # Show the plot!
+    plt.show()
 
 def extract_coupling_factor_from_coupler_bias_sweep(
     raw_data_or_path_to_data,
