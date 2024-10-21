@@ -195,6 +195,46 @@ def plot_maximum_fidelity_for_1q_and_2q_gates(
             )
         )
     
+    ## Adjust the time axis to the nearest
+    ## exponent of 3 (milli, mikro, nano, etc.)
+    max_val = max(time_axis)
+    if max_val >= 1: # No rescaling.
+        scale_factor = 1
+        unit = ""
+    elif max_val >= 1e-3:   # Values in seconds or milliseconds
+        scale_factor = 1e3  # Convert seconds to milliseconds
+        unit = "m"
+    elif max_val >= 1e-6:   # Values in microseconds
+        scale_factor = 1e6  # Convert seconds to microseconds
+        unit = "µ"
+    elif max_val >= 1e-9:   # Values in nanoseconds
+        scale_factor = 1e9  # Convert seconds to nanoseconds
+        unit = "n"
+    elif max_val >= 1e-12:  # Values in picoseconds
+        scale_factor = 1e12 # Convert seconds to picoseconds
+        unit = "p"
+    elif max_val >= 1e-15:  # Values in femtoseconds
+        scale_factor = 1e15 # Convert seconds to femtoseconds
+        unit = "f"
+    elif max_val >= 1e-18:  # Values in attoseconds
+        scale_factor = 1e18 # Convert seconds to attoseconds
+        unit = "a"
+    elif max_val >= 1e-21:  # Values in zeptoseconds
+        scale_factor = 1e21 # Convert seconds to zeptoseconds
+        unit = "z"
+    elif max_val >= 1e-24:  # Values in yoctoseconds
+        scale_factor = 1e24 # Convert seconds to yoctoseconds
+        unit = "y"
+    elif max_val >= 1e-27:  # Values in rontoseconds
+        scale_factor = 1e27 # Convert seconds to rontoseconds
+        unit = "r"
+    elif max_val >= 1e-30:  # Values in quectoseconds
+        scale_factor = 1e30 # Convert seconds to quectoseconds
+        unit = "q"
+    
+    # Scale!
+    time_axis = [t * scale_factor for t in time_axis]
+    
     # Plot!
     plt.figure(figsize=(10, 6))
     plt.plot(time_axis, y_vector_1q_A, marker='o', linestyle='-', color="#000000", label = 'X gate on QB1')
@@ -202,7 +242,7 @@ def plot_maximum_fidelity_for_1q_and_2q_gates(
     plt.plot(time_axis, y_vector_2q, marker='o', linestyle='-', color="#034da3", label = '2-qubit gates')
     plt.title('Gate fidelity versus gate time', fontsize=22)
     plt.ylabel('Gate fidelity [-]', fontsize=22)
-    plt.xlabel('Gate time [s]', fontsize=22)
+    plt.xlabel('Gate time ['+unit+'s]', fontsize=22)
     plt.grid(True)
     plt.legend(fontsize=20)
     plt.xticks(fontsize=14)
