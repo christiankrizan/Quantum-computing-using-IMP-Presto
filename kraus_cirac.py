@@ -219,13 +219,6 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     K_3_00 = K_3_01 = K_3_10 = K_3_11 = 0+0j
     K_4_00 = K_4_01 = K_4_10 = K_4_11 = 0+0j
     
-    ## TODO DEBUG!
-    ## TEMPORARY VALUES TODO!
-    #K_1 = np.array([[1+0j,0+0j],[0+0j,1+0j]])
-    #K_2 = np.array([[1+0j,0+0j],[0+0j,1+0j]])
-    #K_3 = np.array([[0-1j,0+0j],[0+0j,0+1j]])
-    #K_4 = np.array([[1+0j,0+0j],[0+0j,-1+0j]])
-    
     # Let's count how many attempts were needed.
     # Below, we will discard all legal solutions that are not in SU(2).
     attempts = 0
