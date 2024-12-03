@@ -148,7 +148,8 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     target_2q_gate,
     suspect_tx_exponent,
     suspect_ty_exponent,
-    suspect_tz_exponent
+    suspect_tz_exponent,
+    disregard_su2_requirement = False
     ):
     ''' Given a known 2-qubit (in)equivalency class, and given some known
         2-qubit gate that the user suspects is part of that (in)equivalency
@@ -161,7 +162,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
         can be transformed into the gate that the user suspects is part of
         that (in)equivalency class that is represented by t_x, t_y, t_z).
         While, also asserting that the single qubit gates K_1 ... K_4 belong
-        to SU(2).
+        to SU(2). Unless the flag disregard_su2_requirement is set, that is.
     '''
     
     # Create shorthand.
@@ -211,7 +212,8 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     # to make the local operations.
     ## Note that modifying this list, even though it's probably a good thing,
     ## will add a metric ass-tonne of computational complexity => time goes up!
-    legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j]
+    '''legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j]'''
+    legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j, 0.70710678118+0j, -0.70710678118+0j, 0.70710678118+0.70710678118j, 0.70710678118-0.70710678118j]
     
     # Define indices.
     K_1_00 = K_1_01 = K_1_10 = K_1_11 = 0+0j
@@ -236,7 +238,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                         K_1 = np.array([[K_1_00, K_1_01], [K_1_10, K_1_11]])
                         
                         # Is K_1 in SU(2)? Legality check!
-                        if check_if_gate_is_SU2(K_1):
+                        if (check_if_gate_is_SU2(K_1) or disregard_su2_requirement):
                             
                             ## Single-qubit gate K_2
                             for K_2_00 in legal_values:
@@ -248,7 +250,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                                             K_2 = np.array([[K_2_00, K_2_01], [K_2_10, K_2_11]])
                                             
                                             # Is K_2 in SU(2)? Legality check!
-                                            if check_if_gate_is_SU2(K_2):
+                                            if (check_if_gate_is_SU2(K_2) or disregard_su2_requirement):
                                             
                                                 ## Single-qubit gate K_3
                                                 for K_3_00 in legal_values:
@@ -260,7 +262,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                                                                 K_3 = np.array([[K_3_00, K_3_01], [K_3_10, K_3_11]])
                                                                 
                                                                 # Is K_3 in SU(2)? Legality check!
-                                                                if check_if_gate_is_SU2(K_3):
+                                                                if (check_if_gate_is_SU2(K_3) or disregard_su2_requirement):
                                                                 
                                                                     ## Single-qubit gate K_4
                                                                     for K_4_00 in legal_values:
@@ -272,7 +274,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                                                                                     K_4 = np.array([[K_4_00, K_4_01], [K_4_10, K_4_11]])
                                                                                     
                                                                                     # Is K_4 in SU(2)? Legality check!
-                                                                                    if check_if_gate_is_SU2(K_4):
+                                                                                    if (check_if_gate_is_SU2(K_4) or disregard_su2_requirement):
                                                                                     
                                                                                         # Verify!
                                                                                         test_happens_here = check_if_local_gates_work(
