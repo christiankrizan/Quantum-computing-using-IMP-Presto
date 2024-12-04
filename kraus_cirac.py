@@ -7,6 +7,7 @@
 
 import numpy as np
 from scipy.linalg import fractional_matrix_power
+from datetime import datetime
 
 def check_equivalency_class( t_x, t_y, t_z ):
     ''' Checks the user-provided exponents against a list of known
@@ -144,6 +145,182 @@ def check_if_common(
             return True
     return False
 
+def check_if_K_needs_sqrt(
+    single_qubit_gate
+    ):
+    ''' If the local operation needs some square-root magic, verify that
+        it is some known thing at least.
+    '''
+    
+    # Prepare suspicious gate flag.
+    suspicious = False
+    
+    # Define legal gates.
+    gate_v = np.array([[(1+1j)/2, (1-1j)/2],[(1-1j)/2, (1+1j)/2]])
+    gate_inv_v = np.array([[(1-1j)/2, (1+1j)/2],[(1+1j)/2, (1-1j)/2]])
+    gate_pseudo_h = np.array([[(1+0j)/np.sqrt(2), (1+0j)/np.sqrt(2)],[(-1+0j)/np.sqrt(2), (1+0j)/np.sqrt(2)]])
+    gate_inv_pseudo_h = np.array([[(1+0j)/np.sqrt(2), (-1+0j)/np.sqrt(2)],[(1+0j)/np.sqrt(2), (1+0j)/np.sqrt(2)]])
+    gate_hadamard = np.array([[(1+0j)/np.sqrt(2), (1+0j)/np.sqrt(2)],[(1+0j)/np.sqrt(2), (-1+0j)/np.sqrt(2)]])
+    gate_cycling = np.array([[(1-1j)/2, (-1-1j)/2],[(1-1j)/2, (+1+1j)/2]])
+    
+    ##gate_rot_x_0 = np.array([[np.cos(0/2), (0-1j)*np.sin(0/2)],[(0-1j)*np.sin(0/2), np.cos(0/2)]])
+    gate_rot_x_pi_div2 = np.array([[np.cos(np.pi/4), (0-1j)*np.sin(np.pi/4)],[(0-1j)*np.sin(np.pi/4), np.cos(np.pi/4)]])
+    gate_rot_x_pi = np.array([[np.cos(np.pi/2), (0-1j)*np.sin(np.pi/2)],[(0-1j)*np.sin(np.pi/2), np.cos(np.pi/2)]])
+    gate_rot_x_3pi_div2 = np.array([[np.cos(3*np.pi/4), (0-1j)*np.sin(3*np.pi/4)],[(0-1j)*np.sin(3*np.pi/4), np.cos(3*np.pi/4)]])
+    
+    ##gate_rot_y_0 = np.array([[np.cos(0/2),-np.sin(0/2)],[np.sin(0/2),np.cos(0/2)]])
+    gate_rot_y_pi_div2 = np.array([[np.cos(np.pi/4),-np.sin(np.pi/4)],[np.sin(np.pi/4),np.cos(np.pi/4)]])
+    gate_rot_y_pi = np.array([[np.cos(np.pi/2),-np.sin(np.pi/2)],[np.sin(np.pi/2),np.cos(np.pi/2)]])
+    gate_rot_y_3pi_div2 = np.array([[np.cos(3*np.pi/4),-np.sin(3*np.pi/4)],[np.sin(3*np.pi/4),np.cos(3*np.pi/4)]])
+    
+    ##gate_rot_z_0 = np.array([[1, 0],[0, 1]])
+    gate_rot_z_pi_div2 = np.array([[0.707106781-0.707106781j, 0+0j],[0+0j, 0.707106781+0.707106781j]])
+    gate_rot_z_pi = np.array([[0-1j, 0+0j],[0+0j, 0+1j]])
+    gate_rot_z_3pi_div2 = np.array([[-0.707106781-0.707106781j, 0+0j],[0+0j, -0.707106781+0.707106781j]])
+    
+    # Define illegal gates for checking later.
+    matrix_numbers_that_can_be_illegal = {
+        (1 + 1j) / 2,
+        (1 - 1j) / 2,
+        (1 + 0j) / np.sqrt(2),
+        (-1 + 0j) / np.sqrt(2),
+        (+1 + 1j) / 2,
+        (-1 - 1j) / 2,
+    }
+    
+    # Attempted sqrt(X)?
+    if np.any(np.isclose(single_qubit_gate, gate_v)):
+        # Some value reminds us of a V gate.
+        if (np.all(np.isclose(single_qubit_gate, gate_v))):
+            # The gate was identified as a V gate.
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # Attempted inverse sqrt(X)?
+    if np.any(np.isclose(single_qubit_gate, gate_inv_v)):
+        # Some value reminds us of an inverse V gate.
+        if (np.all(np.isclose(single_qubit_gate, gate_inv_v))):
+            # The gate was identified as an inverse V gate.
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # Attempted sqrt(Y)?
+    if np.any(np.isclose(single_qubit_gate, gate_pseudo_h)):
+        # Some value reminds us of an h gate.
+        if (np.all(np.isclose(single_qubit_gate, gate_pseudo_h))):
+            # The gate was identified as an h gate.
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # Attempted inverse sqrt(Y)?
+    if np.any(np.isclose(single_qubit_gate, gate_inv_pseudo_h)):
+        # Some value reminds us of an inverse h gate.
+        if (np.all(np.isclose(single_qubit_gate, gate_inv_pseudo_h))):
+            # The gate was identified as an inverse h gate.
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # Attempted Hadamard?
+    if np.any(np.isclose(single_qubit_gate, gate_hadamard)):
+        # Some value reminds us of a hadamard gate.
+        if (np.all(np.isclose(single_qubit_gate, gate_hadamard))):
+            # The gate was identified as a hadamard gate.
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # Attempted cycling?
+    if np.any(np.isclose(single_qubit_gate, gate_cycling)):
+        # Some value reminds us of a cycling gate.
+        if (np.all(np.isclose(single_qubit_gate, gate_cycling))):
+            # The gate was identified as a cycling gate.
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # Rotation around X?
+    if np.any(np.isclose(single_qubit_gate, gate_rot_x_pi_div2)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_x_pi_div2))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    if np.any(np.isclose(single_qubit_gate, gate_rot_x_pi)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_x_pi))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    if np.any(np.isclose(single_qubit_gate, gate_rot_x_3pi_div2)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_x_3pi_div2))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # Rotation around Y?
+    if np.any(np.isclose(single_qubit_gate, gate_rot_y_pi_div2)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_y_pi_div2))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    if np.any(np.isclose(single_qubit_gate, gate_rot_y_pi)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_y_pi))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    if np.any(np.isclose(single_qubit_gate, gate_rot_y_3pi_div2)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_y_3pi_div2))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # Rotation around Z?
+    if np.any(np.isclose(single_qubit_gate, gate_rot_z_pi_div2)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_z_pi_div2))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    if np.any(np.isclose(single_qubit_gate, gate_rot_z_pi)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_z_pi))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    if np.any(np.isclose(single_qubit_gate, gate_rot_z_3pi_div2)):
+        if (np.all(np.isclose(single_qubit_gate, gate_rot_z_3pi_div2))):
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
+    
+    # In case nobody reported suspicion, check whether the gate is
+    # some combination of square root magic.
+    if (not suspicious):
+        
+        # Flatten the matrix and check if any element is in the
+        # set of illegal numbers. If so, return True, it is suspicious.
+        if (any(element in matrix_numbers_that_can_be_illegal for element in single_qubit_gate.flatten())):
+            return True
+    
+    # Finally, report suspicious gate?
+    return suspicious
+    
+
 def brute_force_local_gates_from_known_2q_equivalency_class(
     target_2q_gate,
     suspect_tx_exponent,
@@ -213,7 +390,8 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     ## Note that modifying this list, even though it's probably a good thing,
     ## will add a metric ass-tonne of computational complexity => time goes up!
     '''legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j]'''
-    legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j, 0.70710678118+0j, -0.70710678118+0j, 0.70710678118+0.70710678118j, 0.70710678118-0.70710678118j]
+    legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j, (1+1j)/2, (1-1j)/2, 0.70710678118+0j, -0.70710678118+0j, 0+0.70710678118j, 0-0.70710678118j, 0.70710678118+0.70710678118j, 0.70710678118-0.70710678118j, -0.70710678118+0.70710678118j, -0.70710678118-0.70710678118j]
+    #legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j, (1+1j)/2, (1-1j)/2, 0.70710678118+0j, -0.70710678118+0j]
     
     # Define indices.
     K_1_00 = K_1_01 = K_1_10 = K_1_11 = 0+0j
@@ -223,7 +401,11 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     
     # Let's count how many attempts were needed.
     # Below, we will discard all legal solutions that are not in SU(2).
+    ## Unless explicitly requested by the user.
     attempts = 0
+    
+    # Print timestamp.
+    print("Began at: "+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     
     # May God forgive me. If he still cares.
     ## Single-qubit gate K_1
@@ -237,8 +419,17 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                         # Construct local matrix K_1.
                         K_1 = np.array([[K_1_00, K_1_01], [K_1_10, K_1_11]])
                         
-                        # Is K_1 in SU(2)? Legality check!
-                        if (check_if_gate_is_SU2(K_1) or disregard_su2_requirement):
+                        # SU(2) fulfilled?
+                        K1_is_su2 = ((check_if_gate_is_SU2(K_1) or disregard_su2_requirement))
+                        
+                        # If it was, check its reasonability.
+                        if K1_is_su2:
+                            # Barrier for banning-off unknown combinations
+                            # of sqrt(X) and sqrt(Y) gates.
+                            K1_has_sqrt_issues = check_if_K_needs_sqrt(K_1)
+                        
+                        # Continue?
+                        if K1_is_su2 and (not K1_has_sqrt_issues):
                             
                             ## Single-qubit gate K_2
                             for K_2_00 in legal_values:
@@ -249,9 +440,18 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                                             # Construct local matrix K_2.
                                             K_2 = np.array([[K_2_00, K_2_01], [K_2_10, K_2_11]])
                                             
-                                            # Is K_2 in SU(2)? Legality check!
-                                            if (check_if_gate_is_SU2(K_2) or disregard_su2_requirement):
+                                            # SU(2) fulfilled?
+                                            K2_is_su2 = ((check_if_gate_is_SU2(K_2) or disregard_su2_requirement))
                                             
+                                            # If it was, check its reasonability.
+                                            if K2_is_su2:
+                                                # Barrier for banning-off unknown combinations
+                                                # of sqrt(X) and sqrt(Y) gates.
+                                                K2_has_sqrt_issues = check_if_K_needs_sqrt(K_2)
+                                            
+                                            # Continue?
+                                            if K2_is_su2 and (not K2_has_sqrt_issues):
+                                                
                                                 ## Single-qubit gate K_3
                                                 for K_3_00 in legal_values:
                                                     for K_3_11 in legal_values:
@@ -261,9 +461,18 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                                                                 # Construct local matrix K_3.
                                                                 K_3 = np.array([[K_3_00, K_3_01], [K_3_10, K_3_11]])
                                                                 
-                                                                # Is K_3 in SU(2)? Legality check!
-                                                                if (check_if_gate_is_SU2(K_3) or disregard_su2_requirement):
+                                                                # SU(2) fulfilled?
+                                                                K3_is_su2 = ((check_if_gate_is_SU2(K_3) or disregard_su2_requirement))
                                                                 
+                                                                # If it was, check its reasonability.
+                                                                if K3_is_su2:
+                                                                    # Barrier for banning-off unknown combinations
+                                                                    # of sqrt(X) and sqrt(Y) gates.
+                                                                    K3_has_sqrt_issues = check_if_K_needs_sqrt(K_3)
+                                                                
+                                                                # Continue?
+                                                                if K3_is_su2 and (not K3_has_sqrt_issues):
+                                                                    
                                                                     ## Single-qubit gate K_4
                                                                     for K_4_00 in legal_values:
                                                                         for K_4_11 in legal_values:
@@ -273,8 +482,17 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                                                                                     # Construct local matrix K_4.
                                                                                     K_4 = np.array([[K_4_00, K_4_01], [K_4_10, K_4_11]])
                                                                                     
-                                                                                    # Is K_4 in SU(2)? Legality check!
-                                                                                    if (check_if_gate_is_SU2(K_4) or disregard_su2_requirement):
+                                                                                    # SU(2) fulfilled?
+                                                                                    K4_is_su2 = ((check_if_gate_is_SU2(K_4) or disregard_su2_requirement))
+                                                                                    
+                                                                                    # If it was, check its reasonability.
+                                                                                    if K4_is_su2:
+                                                                                        # Barrier for banning-off unknown combinations
+                                                                                        # of sqrt(X) and sqrt(Y) gates.
+                                                                                        K4_has_sqrt_issues = check_if_K_needs_sqrt(K_4)
+                                                                                    
+                                                                                    # Continue?
+                                                                                    if K4_is_su2 and (not K4_has_sqrt_issues):
                                                                                     
                                                                                         # Verify!
                                                                                         test_happens_here = check_if_local_gates_work(
@@ -320,4 +538,8 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     # Report.
     if not success:
         print("Failure! Could not find local operations K_1 ... K_4, that transforms Can( t_x, t_y, t_z ) into the requested gate.")
+    
+    # Print timestamp.
+    print("Tested "+str(attempts)+" legal combinations. Finished at: "+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
     
