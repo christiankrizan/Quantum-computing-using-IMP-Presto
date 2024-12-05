@@ -537,9 +537,11 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     
     # Report.
     if not success:
-        print("Failure! Could not find local operations K_1 ... K_4, that transforms Can( t_x, t_y, t_z ) into the requested gate.")
+        print("Failure! Could not find local operations K_1 ... K_4, that transforms Can( t_x = "+str(t_x)+", t_y = "+str(t_y)+", t_z = "+str(t_z)+" ) into the requested gate.")
     
     # Print timestamp.
     print("Tested "+str(attempts)+" legal combinations. Finished at: "+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     
+    # Return.
+    return success
     
