@@ -517,3 +517,59 @@ def simulate_frequency_accuracy_of_model_from_RT_resistance(
     final_mean = np.mean(frequencies_calculated)
     final_std = frequencies_calculated_standard_deviation
     return (final_mean, final_std)
+
+def plot_trend_for_changing_superconducting_gap(
+    list_of_doubles_of_Delta_eV_and_Delta_std_eV,
+    no_junctions,
+    resistance,
+    resistance_measurement_error_std_deviation,
+    E_C_mean_in_Hz,
+    E_C_error_std_deviation_in_Hz,
+    Delta_mean_eV,
+    Delta_error_std_deviation_eV,
+    temperature_mean,
+    temperature_std_deviation,
+    difference_between_RT_and_cold_resistance_mean,
+    difference_between_RT_and_cold_resistance_std_dev,
+    ):
+    ''' Given a list of doubles, containing (Delta_mean, Delta_std),
+        calculate the resulting frequencies and their standard deviation.
+        Finally, plot.
+    '''
+    
+    # Get calculated frequencies.
+    output_values = []
+    inserted_std_values = []
+    for ii in range(len(list_of_doubles_of_Delta_eV_and_Delta_std_eV)):
+        inserted_std_values.append( list_of_doubles_of_Delta_eV_and_Delta_std_eV[ii][1] )
+        output_values.append(
+            simulate_frequency_accuracy_of_model_from_RT_resistance(
+                no_junctions = no_junctions,
+                resistance = resistance,
+                resistance_measurement_error_std_deviation = resistance_measurement_error_std_deviation,
+                E_C_mean_in_Hz = E_C_mean_in_Hz,
+                E_C_error_std_deviation_in_Hz = E_C_error_std_deviation_in_Hz,
+                Delta_mean_eV = list_of_doubles_of_Delta_eV_and_Delta_std_eV[ii][0],
+                Delta_error_std_deviation_eV = inserted_std_values[ii],
+                temperature_mean = temperature_mean,
+                temperature_std_deviation = temperature_std_deviation,
+                difference_between_RT_and_cold_resistance_mean = difference_between_RT_and_cold_resistance_mean,
+                difference_between_RT_and_cold_resistance_std_dev = difference_between_RT_and_cold_resistance_std_dev,
+                plot = False
+            )
+        )
+    
+    # Unpack data.
+    means, error_bars = zip(*output_values)
+    
+    # Plot!
+    plt.figure(figsize=(8, 5))
+    #plt.errorbar(range(len(means)), means, yerr=error_bars, fmt='o', linestyle='-', color='orange', label='Simulated frequency')
+    plt.plot(inserted_std_values, error_bars, marker='o', linestyle='-', color='orange')
+    plt.xlabel("std_dev of Δ [eV]")
+    plt.ylabel("Simulated frequency std_dev [Hz]")
+    plt.title("Improving accuracy of Δ")
+    #plt.legend()
+    plt.grid(True)
+    plt.show()
+    
