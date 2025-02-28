@@ -203,7 +203,7 @@ def calculate_RT_resistance_from_target_f01(
     difference_between_RT_and_cold_resistance = 1.1385,
     T = 0.010,
     R_N_initial_guess = 15000,
-    acceptable_frequency_offset = 250,
+    acceptable_frequency_offset = 200,
     verbose = True
     ):
     ''' Given a target |0⟩ → |1⟩ transition of a transmon,
@@ -1045,6 +1045,7 @@ def plot_active_manipulation(
     normalise_time = True,
     plot_no_junction_resistance_under_ohm = 0,
     fitter = 'none',
+    skip_initial_dip = False,
     colourise = False,
     ):
     ''' Plot soledly only the active manipulation.
@@ -1065,21 +1066,33 @@ def plot_active_manipulation(
             'third_order':  Attempt fit to R(t) = R_0 + alpha·t + beta·t^2 + delta·t^3
             'exponential':  Attempt fit to R(t) = R_0 + epsilon·e( t/t_0 · gamma)
             'power':        Attempt fit to R(t) = R_0 + A·t^B
+        
+        skip_initial_dip:
+            If false, look for the string "START_MANIPULATION" in column 3
+            of the .csv format.
     '''
     
     # Initially, let's define some functions for the fitting.
-    def second_order_func(t, t_0, R_0, alpha, beta):
-        return R_0 + (alpha * (t-t_0)) + (beta * (t-t_0)**2)
+    '''def second_order_func(t, t_0, R_0, alpha, beta):
+        return R_0 + (alpha * (t-t_0)) + (beta * (t-t_0)**2)'''
+    def second_order_func(t, alpha, beta):
+        return (alpha * t) + (beta * t**2)
     
-    def third_order_func(t, t_0, R_0, alpha, beta, delta):
-        return R_0 + (alpha * (t-t_0)) + (beta * (t-t_0)**2) + (delta * (t-t_0)**3)
+    '''def third_order_func(t, t_0, R_0, alpha, beta, delta):
+        return R_0 + (alpha * (t-t_0)) + (beta * (t-t_0)**2) + (delta * (t-t_0)**3)'''
+    def third_order_func(t, alpha, beta, delta):
+        return (alpha * t) + (beta * t**2) + (delta * t**3)
     
-    def exponential_func(t, t_0, R_0, epsilon, gamma, tau):
+    '''def exponential_func(t, t_0, R_0, epsilon, gamma, tau):
         ##return R_0 + epsilon * (np.e)**((t-t_0) * gamma)
-        return R_0 + epsilon * (1 - (np.e)**((t-t_0)/tau * -gamma))
+        return R_0 + epsilon * (1 - (np.e)**((t-t_0)/tau * -gamma))'''
+    def exponential_func(t, epsilon, gamma):
+        return epsilon * (1 - (np.e)**(t * -gamma))
     
-    def power_func(t, t_0, R_0, A, B):
-        return R_0 + A * ((t-t_0)**B)
+    '''def power_func(t, t_0, R_0, A, B):
+        return R_0 + A * ((t-t_0)**B)'''
+    def power_func(t, A, B):
+        return A * (t**B)
     
     
     def active_increase_fitter(
@@ -1122,34 +1135,38 @@ def plot_active_manipulation(
                 f     = second_order_func,
                 xdata = time,
                 ydata = resistances,
-                p0    = (t_0_guess, R_0_guess, alpha_guess, beta_guess)
+                p0    = (alpha_guess, beta_guess)
             )
+            """p0    = (t_0_guess, R_0_guess, alpha_guess, beta_guess)"""
         elif fitter == 'third_order':
             optimal_vals, covariance_mtx_of_opt_vals = curve_fit(
                 f     = third_order_func,
                 xdata = time,
                 ydata = resistances,
-                p0    = (t_0_guess, R_0_guess, alpha_guess, beta_guess, delta_guess)
+                p0    = (alpha_guess, beta_guess, delta_guess)
             )
+            """p0    = (t_0_guess, R_0_guess, alpha_guess, beta_guess, delta_guess)"""
         elif fitter == 'exponential':
             optimal_vals, covariance_mtx_of_opt_vals = curve_fit(
                 f     = exponential_func,
                 xdata = time,
                 ydata = resistances,
-                p0    = (t_0_guess, R_0_guess, epsilon_guess, gamma_guess, tau_guess)
+                p0    = (epsilon_guess, gamma_guess, tau_guess)
             )
+            """p0    = (t_0_guess, R_0_guess, epsilon_guess, gamma_guess, tau_guess)"""
         elif fitter == 'power':
             optimal_vals, covariance_mtx_of_opt_vals = curve_fit(
                 f     = power_func,
                 xdata = time,
                 ydata = resistances,
-                p0    = (t_0_guess, R_0_guess, A_guess, B_guess)
+                p0    = (A_guess, B_guess)
             )
+            """p0    = (t_0_guess, R_0_guess, A_guess, B_guess)"""
         else:
             raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
         
         # Extract parameters.
-        optimal_t_0    = optimal_vals[0]
+        """optimal_t_0    = optimal_vals[0]
         optimal_R_0    = optimal_vals[1]
         if fitter == 'second_order':
             optimal_alpha = optimal_vals[2]
@@ -1166,11 +1183,32 @@ def plot_active_manipulation(
             optimal_A = optimal_vals[2]
             optimal_B = optimal_vals[3]
         else:
+            raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))"""
+        
+        # Updated version without R_0 and without t_0, to try and force
+        # the error bar down on the fits. because, it's larger than
+        # the fitted parameter, which is a sign that the number of parameters
+        # is too big.
+        if fitter == 'second_order':
+            optimal_alpha = optimal_vals[0]
+            optimal_beta  = optimal_vals[1]
+        elif fitter == 'third_order':
+            optimal_alpha = optimal_vals[0]
+            optimal_beta  = optimal_vals[1]
+            optimal_delta = optimal_vals[2]
+        elif fitter == 'exponential':
+            optimal_epsilon = optimal_vals[0]
+            optimal_gamma   = optimal_vals[1]
+            optimal_tau     = optimal_vals[2]
+        elif fitter == 'power':
+            optimal_A = optimal_vals[0]
+            optimal_B = optimal_vals[1]
+        else:
             raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
         
         # Get the fit errors.
         fit_err = np.sqrt(np.diag(covariance_mtx_of_opt_vals))
-        err_t_0 = fit_err[0]
+        """err_t_0 = fit_err[0]
         err_R_0 = fit_err[1]
         if fitter == 'second_order':
             err_alpha = fit_err[2]
@@ -1187,43 +1225,61 @@ def plot_active_manipulation(
             err_A = fit_err[2]
             err_B = fit_err[3]
         else:
+            raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))"""
+        # See comment above regarding the error bars being larger than
+        # the fitted parameters if R_0 and t_0 is included.
+        if fitter == 'second_order':
+            err_alpha = fit_err[0]
+            err_beta  = fit_err[1]
+        elif fitter == 'third_order':
+            err_alpha = fit_err[0]
+            err_beta  = fit_err[1]
+            err_delta = fit_err[2]
+        elif fitter == 'exponential':
+            err_epsilon = fit_err[0]
+            err_gamma   = fit_err[1]
+            err_tau     = fit_err[2]
+        elif fitter == 'power':
+            err_A = fit_err[0]
+            err_B = fit_err[1]
+        else:
             raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
         
         # Get a fit curve!
         if fitter == 'second_order':
             fitted_curve = second_order_func(
                 t     = times,
-                t_0   = optimal_t_0,
-                R_0   = optimal_R_0,
                 alpha = optimal_alpha,
                 beta  = optimal_beta
             )
+            """t_0   = optimal_t_0,
+                R_0   = optimal_R_0,"""
         elif fitter == 'third_order':
             fitted_curve = third_order_func(
                 t     = times,
-                t_0   = optimal_t_0,
-                R_0   = optimal_R_0,
                 alpha = optimal_alpha,
                 beta  = optimal_beta,
                 delta = optimal_delta
             )
+            """t_0   = optimal_t_0,
+                R_0   = optimal_R_0,"""
         elif fitter == 'exponential':
             fitted_curve = exponential_func(
                 t       = times,
-                t_0     = optimal_t_0,
-                R_0     = optimal_R_0,
                 epsilon = optimal_epsilon,
                 gamma   = optimal_gamma,
                 tau     = optimal_tau
             )
+            """t_0     = optimal_t_0,
+                R_0     = optimal_R_0,"""
         elif fitter == 'power':
             fitted_curve = exponential_func(
                 t   = times,
-                t_0 = optimal_t_0,
-                R_0 = optimal_R_0,
                 A   = optimal_A,
                 B   = optimal_B,
             )
+            """t_0 = optimal_t_0,
+                R_0 = optimal_R_0,"""
         else:
             raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
         
@@ -1264,6 +1320,10 @@ def plot_active_manipulation(
         ## to some initial time.
         time_0 = -1 # [s] -- Which would be 23:59:59 on December 31st 1969
         
+        # Check whether to begin to store data from this file, i.e., whether
+        # the user is requesting to skip the initial resistance dip.
+        do_not_save_data_yet = skip_initial_dip
+        
         # Open file.
         with open(os.path.abspath(filepath_item), newline='') as csvfile:
             reader = csv.reader(csvfile, delimiter=';')
@@ -1273,47 +1333,60 @@ def plot_active_manipulation(
             for i in range(len(rows)):
                 if i % 6 == 3:
                     
-                    # Every sixth row +3 contains a resistance value
-                    current_resistance = float(rows[i][1])
+                    if do_not_save_data_yet:
+                        if 'START_MANIPULATION' in str(rows[i+1][2]):
+                            # Then signal that we may commence.
+                            do_not_save_data_yet = False
                     
-                    # Get the SI prefix for this data.
-                    ## TODO append more options, like MOhm.
-                    if '[kOhm]' in str(rows[i][0]):
-                        si_unit_prefix_scaler = 1000
-                    else:
-                        si_unit_prefix_scaler = 1
+                    # The reason this if-if case is written this way,
+                    # is to catch the data in the same data storage event
+                    # in the file, that also contained the START_* keyword.
+                    # Which, could have been the zeroth data storage event.
                     
-                    # Scale to Ohm
-                    current_resistance *= si_unit_prefix_scaler
-                    
-                    # Update the lowest resistance found!
-                    if (current_resistance < lowest_non_short_resistance_in_set) and (current_resistance > obvious_short):
-                        lowest_non_short_resistance_in_set = current_resistance
-                        if lowest_non_short_resistance_in_set < lowest_non_short_resistance_of_all:
-                            lowest_non_short_resistance_of_all = lowest_non_short_resistance_in_set
-                    
-                    # Plot junction? (i.e., plot broken junctions?)
-                    if current_resistance > plot_no_junction_resistance_under_ohm:
+                    if (not do_not_save_data_yet):
+                        ## In that case, continue!
                         
-                        # Super, append junction and continue.
-                        resistances.append(current_resistance)
+                        # Every sixth row +3 contains a resistance value
+                        current_resistance = float(rows[i][1])
                         
-                        # Every sixth row +4 contains a time value
-                        time_value = float(rows[i+1][1])
-                        ## Did we define the starting time?
-                        if time_0 == -1:
-                            time_0 = time_value
+                        # Get the SI prefix for this data.
+                        ## TODO append more options, like MOhm.
+                        if '[kOhm]' in str(rows[i][0]):
+                            si_unit_prefix_scaler = 1000
+                        else:
+                            si_unit_prefix_scaler = 1
                         
-                        # Calculate what number to be put as the time_value.
-                        ## UNIX time or seconds relative to start?
-                        if normalise_time:
-                            time_value -= time_0
-                        times.append(time_value)
+                        # Scale to Ohm
+                        current_resistance *= si_unit_prefix_scaler
                         
-                        ## The new format assumes that any and all times
-                        ## report the UNIX timestamp of the data itself.
-                        ## This way, there is less b/s here regarding
-                        ## relative offsets and hatmatilka.
+                        # Update the lowest resistance found!
+                        if (current_resistance < lowest_non_short_resistance_in_set) and (current_resistance > obvious_short):
+                            lowest_non_short_resistance_in_set = current_resistance
+                            if lowest_non_short_resistance_in_set < lowest_non_short_resistance_of_all:
+                                lowest_non_short_resistance_of_all = lowest_non_short_resistance_in_set
+                        
+                        # Plot junction? (i.e., plot broken junctions?)
+                        if current_resistance > plot_no_junction_resistance_under_ohm:
+                            
+                            # Super, append junction and continue.
+                            resistances.append(current_resistance)
+                            
+                            # Every sixth row +4 contains a time value
+                            time_value = float(rows[i+1][1])
+                            ## Did we define the starting time?
+                            if time_0 == -1:
+                                time_0 = time_value
+                            
+                            # Calculate what number to be put as the time_value.
+                            ## UNIX time or seconds relative to start?
+                            if normalise_time:
+                                time_value -= time_0
+                            times.append(time_value)
+                            
+                            ## The new format assumes that any and all times
+                            ## report the UNIX timestamp of the data itself.
+                            ## This way, there is less b/s here regarding
+                            ## relative offsets and hatmatilka.
         
         # Ensure lists are the same length
         min_length = min(len(times), len(resistances))
@@ -1392,39 +1465,57 @@ def plot_active_manipulation(
             fitted_values = (fit_results[1])[kk]
             fitted_errors = (fit_results[2])[kk]
             prefix = '?'
-            if   kk == 0:
+            
+            # See comment above regarding the error bars being larger
+            # than the fitted values if R_0 and t_0 are included.
+            """if   kk == 0:
                 prefix = 'R₀'
                 fit_label += prefix+': '+(f"{fitted_values:.3f} ±{fitted_errors:.3f}")+'\n'
             elif kk == 1:
                 prefix = 't₀'
                 fit_label += prefix+': '+(f"{fitted_values:.3f} ±{fitted_errors:.3f}")+'\n'
+            else:"""
+            if fitter == 'second_order':
+                """if   kk == 2:"""
+                if   kk == 0:
+                    prefix = 'α'
+                    """elif kk == 3:"""
+                elif kk == 1:
+                    prefix = 'β'
+            elif fitter == 'third_order':
+                """if   kk == 2:"""
+                if   kk == 0:
+                    prefix = 'α'
+                    """elif kk == 3:"""
+                elif kk == 1:
+                    prefix = 'β'
+                    """elif kk == 4:"""
+                elif kk == 2:
+                    prefix = 'δ'
+            elif fitter == 'exponential':
+                """if   kk == 2:"""
+                if   kk == 0:
+                    prefix = 'ε'
+                    """elif kk == 3:"""
+                elif kk == 1:
+                    prefix = 'γ'
+                    """elif kk == 4:"""
+                elif kk == 2:
+                    prefix = 'τ'
+            elif fitter == 'power':
+                """if   kk == 2:"""
+                if   kk == 0:
+                    prefix = 'A'
+                    """elif kk == 3:"""
+                elif kk == 1:
+                    prefix = 'B'
             else:
-                if fitter == 'second_order':
-                    if   kk == 2:
-                        prefix = 'α'
-                    elif kk == 3:
-                        prefix = 'β'
-                elif fitter == 'third_order':
-                    if   kk == 2:
-                        prefix = 'α'
-                    elif kk == 3:
-                        prefix = 'β'
-                    elif kk == 4:
-                        prefix = 'δ'
-                elif fitter == 'exponential':
-                    if   kk == 2:
-                        prefix = 'ε'
-                    elif kk == 3:
-                        prefix = 'γ'
-                    elif kk == 4:
-                        prefix = 'τ'
-                else:
-                    raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
-                
-                # Find a proper exponent of the number.
-                exponent       = np.floor(np.log10(np.abs( fitted_values )))
-                error_exponent = np.floor(np.log10(np.abs( fitted_errors )))
-                fit_label += prefix+': '+(f"{(fitted_values * (10**(-exponent))):.3f}·10^{exponent} ±{(fitted_errors * (10**(-error_exponent))):.3f}·10^{error_exponent}")+'\n'
+                raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
+            
+            # Find a proper exponent of the number.
+            exponent       = np.floor(np.log10(np.abs( fitted_values )))
+            error_exponent = np.floor(np.log10(np.abs( fitted_errors )))
+            fit_label += prefix+': '+(f"{(fitted_values * (10**(-exponent))):.3f}·10^{exponent} ±{(fitted_errors * (10**(-error_exponent))):.3f}·10^{error_exponent}")+'\n'
         if (not colourise):
             plt.figure(1) # Set figure 1 as active.
             plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors(jj))
@@ -1572,8 +1663,8 @@ def plot_active_vs_total_resistance_gain(
     colourise_counter = 0
     
     # TODO: acquire data.
-    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28]
-    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77]
+    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75]
+    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66]
     
     # Sort lists together based on the active gain list.
     sorted_active, sorted_total = zip(*sorted(zip(active_gain_percent, total_gain_percent)))
@@ -1607,10 +1698,10 @@ def plot_active_vs_total_resistance_gain(
     
     # Create figure for plotting.
     if colourise:
-        fig, ax = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
+        fig, ax = plt.subplots(figsize=(9, 10), facecolor=get_colourise(-2))
         #plt.figure(figsize=(10, 5), facecolor=get_colourise(-2))
     else:
-        fig, ax = plt.subplots(figsize=(10, 5))
+        fig, ax = plt.subplots(figsize=(9, 10))
         #plt.figure(figsize=(10, 5))
     
     # Let's fit the data and see what we get.
@@ -1737,5 +1828,5 @@ def plot_active_vs_total_resistance_gain(
         plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", color=get_colourise(-1), fontsize=25)
     
     # Show shits.
-    plt.legend()
+    plt.legend(fontsize=16)
     plt.show()
