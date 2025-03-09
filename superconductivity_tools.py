@@ -1151,7 +1151,7 @@ def plot_active_manipulation(
                 f     = exponential_func,
                 xdata = time,
                 ydata = resistances,
-                p0    = (epsilon_guess, gamma_guess, tau_guess)
+                p0    = (epsilon_guess, gamma_guess)
             )
             """p0    = (t_0_guess, R_0_guess, epsilon_guess, gamma_guess, tau_guess)"""
         elif fitter == 'power':
@@ -1306,6 +1306,9 @@ def plot_active_manipulation(
         fig2, ax2 = plt.subplots(figsize=(10, 5))
     
     # Go through the files and add them to the plot.
+    ## Also, store fit values for the return statement.
+    fitted_values_to_be_returned = []
+    fitted_errors_to_be_returned = []
     lowest_non_short_resistance_of_all = 1000000000
     for jj in range(len(filepath)):
         filepath_item = filepath[jj]
@@ -1461,6 +1464,12 @@ def plot_active_manipulation(
         
         # Plot the fit curve.
         fit_label = ''
+        
+        ## At this point, store the fit values and errors, for the return
+        ## statement that happens later.
+        fitted_values_to_be_returned.append(fit_results[1])
+        fitted_errors_to_be_returned.append(fit_results[2])
+        
         for kk in range(len(fit_results[1])):
             fitted_values = (fit_results[1])[kk]
             fitted_errors = (fit_results[2])[kk]
@@ -1601,9 +1610,157 @@ def plot_active_manipulation(
             plt.legend(fontsize=16)
         else:
             plt.legend()
-    
     plt.show()
     
+    # Return stuffs.
+    return fitted_values_to_be_returned, fitted_errors_to_be_returned
+    
+def analyse_fitted_polynomial_factors(
+    filepath,
+    voltage_list_mV = ['auto'],
+    normalise_resistances = 0,
+    normalise_time = True,
+    plot_no_junction_resistance_under_ohm = 0,
+    fitter = 'third_order',
+    skip_initial_dip = False,
+    colourise = False,
+    ):
+    ''' For a list of files, given as a list of filepath (strings),
+        perform a fit for the whole file, and get the fit values
+        back.
+        
+        Then, plot these fitted values versus a user-supplied voltage list.
+        The value 'auto' vill analyse the file name in order to try to find
+        XpYY, which defines X.YY volt.
+    '''
+    
+    # User input formatting.
+    if isinstance(filepath, str):
+        filepath = [filepath]
+    elif isinstance(filepath, (tuple, set)):
+        filepath = list(filepath)
+    elif isinstance(filepath, dict):
+        filepath = list(filepath.keys())
+    elif not isinstance(filepath, list):
+        # Wrap it.
+        filepath = [filepath]
+    
+    # Try to make voltage list?
+    if voltage_list_mV[0] == 'auto':
+        
+        # User said yes.
+        ## Clear out the list.
+        voltage_list_mV = []
+        for mm in range(len(filepath)):
+            voltage_list_mV.append(0)
+        
+        # Go through files.
+        for ii in range(len(filepath)):
+            item = filepath[ii]
+            
+            # Pattern to match "_XpYY_" format, [V]
+            match_volts = re.search(r'(\d+)p(\d+)', item)
+            if match_volts:
+                volts = float(f"{match_volts.group(1)}.{match_volts.group(2)}")
+                voltage_list_mV[ii] = int(volts*1000)
+            
+            else:
+                # Alternative: pattern to match the last number before ".csv"
+                # Which, is in units of [mV]
+                match_millivolts = re.search(r'(\d+)(?=\.csv$)', item)
+                if match_millivolts:
+                    voltage_list_mV[ii] = int(match_millivolts.group(1))
+                
+                else:
+                    # At this point, the filepath could not be used to determine the voltage.
+                    raise ValueError("Halted! Could not determine voltage used automatically from the file: '"+str(item)+"'")
+    
+    ## At this point, the voltage list is known.
+    
+    # Perform fits.
+    assert fitter != 'none', "Halted! This function requires a fitter to be active, i.e., fitter != 'none'."
+    (fitted_values, fitted_errors) = plot_active_manipulation(
+        filepath = filepath,
+        normalise_resistances = normalise_resistances,
+        normalise_time = normalise_time,
+        plot_no_junction_resistance_under_ohm = plot_no_junction_resistance_under_ohm,
+        fitter = fitter,
+        skip_initial_dip = skip_initial_dip,
+        colourise = colourise,
+    )
+    
+    for listuruu in fitted_values:
+        print(listuruu[1])
+    
+    ## The data format here is weird:
+    ## Each new ROW of fitted_values, contains information about the next
+    ## datapoint on the Y axis. Each COLUMN of fitted values, contains
+    ## this datapoint for a new TRACE in the plot. And, each value
+    ## in fitted_errors, is the error bar.
+    
+    num_traces = max(len(arr) for arr in fitted_values)  # Max number of parameters
+    num_points = len(fitted_values)  # Number of voltage points
+    
+    # Organise data by parameter index
+    y_values = [[] for _ in range(num_traces)]
+    y_errors = [[] for _ in range(num_traces)]
+    for i in range(num_points):
+        for j in range(len(fitted_values[i])):  # Iterate over parameters in each fit
+            y_values[j].append(fitted_values[i][j])
+            y_errors[j].append(fitted_errors[i][j])
+    
+    # Prepare labels for the plot.
+    if fitter == 'second_order':
+        fit_label_list = ['α', 'β']
+    elif fitter == 'third_order':
+        fit_label_list = ['α', 'β', 'δ']
+    elif fitter == 'exponential':
+        fit_label_list = ['γ', 'τ']
+    elif fitter == 'power':
+        fit_label_list = ['A', 'B']
+    else:
+        raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
+    
+    # Plot each parameter trace.
+    ## Create figure for plotting.
+    if colourise:
+        fig1, ax1 = plt.subplots(figsize=(8, 6), facecolor=get_colourise(-2))
+    else:
+        fig1, ax1 = plt.subplots(figsize=(8, 6))
+    
+    for i in range(num_traces):
+        if y_values[i]:
+            if colourise:
+                plt.errorbar(voltage_list_mV, y_values[i], yerr=y_errors[i], marker='o', linestyle='-', capsize=3, label=f'Parameter {fit_label_list[i]}', color=get_colourise(i))
+            else:
+                plt.errorbar(voltage_list_mV, y_values[i], yerr=y_errors[i], marker='o', linestyle='-', capsize=3, label=f'Parameter {fit_label_list[i]}')
+    
+    if colourise:
+        plt.xlabel("Voltage [mV]", fontsize=16, color=get_colourise(-1))
+        plt.ylabel("Fit parameters", fontsize=16, color=get_colourise(-1))
+        plt.title("Fit parameter trends vs. voltage", fontsize=25, color=get_colourise(-1))
+    else:
+        plt.xlabel("Voltage [mV]", fontsize=16)
+        plt.ylabel("Fit parameters", fontsize=16)
+        plt.title("Fit parameter trends vs. voltage", fontsize=25)
+    
+    # Colourise axes and such?
+    plt.grid()
+    ax1.set_xlim(xmin=0) # Include the zero for the voltage.
+    if colourise:
+        fig1.patch.set_alpha(0)
+        
+        ax1.grid(color=get_colourise(-1))
+        ax1.set_facecolor(get_colourise(-2))
+        ax1.spines['bottom'].set_color(get_colourise(-1))
+        ax1.spines['top'].set_color(get_colourise(-1))
+        ax1.spines['left'].set_color(get_colourise(-1))
+        ax1.spines['right'].set_color(get_colourise(-1))
+        ax1.tick_params(axis='both', colors=get_colourise(-1))
+    
+    # Show shits.
+    plt.legend(fontsize=16)
+    plt.show()
     
 
 def calculate_delta_f01(
@@ -1663,8 +1820,8 @@ def plot_active_vs_total_resistance_gain(
     colourise_counter = 0
     
     # TODO: acquire data.
-    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75]
-    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66]
+    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94]
+    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36]
     
     # Sort lists together based on the active gain list.
     sorted_active, sorted_total = zip(*sorted(zip(active_gain_percent, total_gain_percent)))
