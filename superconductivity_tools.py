@@ -35,7 +35,7 @@ def get_colourise(
         elif colourised_counter == -2.2:
             return "#F2F1ED"
         elif colourised_counter == -2.3:
-            return "#F2F1Ed"
+            return "#F2F1ED"
         elif colourised_counter == -2.4:
             return "#F2F1ED"
         else:
@@ -1072,6 +1072,12 @@ def plot_active_manipulation(
             of the .csv format.
     '''
     
+    ## Already up here, let's define a few lists to be used for the
+    ## return statement.
+    list_of_traces_in_plot = []
+    list_of_error_bars_of_traces_in_plot = []
+    list_of_fit_parameter_labels = []
+    
     # Initially, let's define some functions for the fitting.
     '''def second_order_func(t, t_0, R_0, alpha, beta):
         return R_0 + (alpha * (t-t_0)) + (beta * (t-t_0)**2)'''
@@ -1422,7 +1428,7 @@ def plot_active_manipulation(
         file_label = str(os.path.splitext(os.path.basename(filepath_item))[0])
         
         # Determine color and marker for trace?
-        ## Select marker symbol.
+        ## Select marker symbol. Also, this marker symbol is used later, too.
         if   (jj % 5) == 0:
             marker_symbol = 'o'
         elif (jj % 5) == 1:
@@ -1539,8 +1545,12 @@ def plot_active_manipulation(
             ##       residual: actual_y - predicted_y
             residuals = resistances - fit_results[0]
             
-            plt.figure(2) # Set figure 2 as active.
-            plt.scatter(times, residuals, label='Residuals of fit '+str(jj+1))
+            if (not colourise):
+                plt.figure(2) # Set figure 2 as active.
+                plt.scatter(times, residuals, marker=marker_symbol, label='Residuals, '+file_label, color=colors(jj))
+            else:
+                plt.figure(2) # Set figure 2 as active.
+                plt.scatter(times, residuals, marker=marker_symbol, label='Residuals, '+file_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
     
     # Set axes' colour? Title colour? And so on.
     for mm in range(2):
@@ -1634,6 +1644,10 @@ def analyse_fitted_polynomial_factors(
         XpYY, which defines X.YY volt.
     '''
     
+    # Create a list, that will be filled with traces and their properties.
+    # This list will be returned as the function ends.
+    list_of_traces_in_plot = []
+    
     # User input formatting.
     if isinstance(filepath, str):
         filepath = [filepath]
@@ -1689,9 +1703,6 @@ def analyse_fitted_polynomial_factors(
         colourise = colourise,
     )
     
-    for listuruu in fitted_values:
-        print(listuruu[1])
-    
     ## The data format here is weird:
     ## Each new ROW of fitted_values, contains information about the next
     ## datapoint on the Y axis. Each COLUMN of fitted values, contains
@@ -1721,19 +1732,104 @@ def analyse_fitted_polynomial_factors(
     else:
         raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
     
+    ## At this point, voltage_list_mV is the X axis.
+    ## Similarly, y_values[i] is the Y axis.
+    
+    # If fitter is either 'second_order' or 'third order', then the first
+    # parameter reveals the dependency on applied voltage.
+    # Let's try to fit this dependency.    
+    polynomial_fit_successful = False
+    if (fitter == 'second_order') or (fitter == 'third_order'):
+        polynomial_fit_successful = True
+        try:
+            ''' Plotting it as a log-lin diagram, reveals a straight line for the
+            alpha fit parameter, so we have reason to suspect that the first-order
+            resistance dependency to the applied voltage is exponential.
+            // Christian 2025-03-09'''
+            
+            def exponential_func_for_alpha(v_mV, alpha_0, gamma):#, v_mott_mV):
+                #return alpha_0 * ((np.e)**((v_mV - v_mott_mV) * gamma))
+                return alpha_0 * ((np.e)**(v_mV * gamma))
+            
+            # Grab the α values.
+            alpha_values = y_values[0]
+            
+            # Here, sort the alpha_values versus the applied voltages.
+            sorted_pairs = sorted(zip(voltage_list_mV, alpha_values))  
+            voltage_list_mV = [pair[0] for pair in sorted_pairs]  
+            alpha_values    = [pair[1] for pair in sorted_pairs]
+            
+            ## I don't really know how to make a good guess for the scalar alpha_0.
+            alpha_0_guess = 1.0
+            
+            ## For the gamma guess, take the slope of the ln curve.
+            gamma_guess_vector_y = np.log(alpha_values)
+            gamma_guess_alpha_fit = (gamma_guess_vector_y[-1] - gamma_guess_vector_y[0])/(voltage_list_mV[-1] - voltage_list_mV[0])
+            
+            ## For the V_mott guess, it's about 0.5 V for aliminium.
+            v_mott_guess_mV = 500 # mV
+            
+            # Fit!
+            optimal_vals_alpha_fit, covariance_mtx_of_opt_vals_alpha_fit = curve_fit(
+                f     = exponential_func_for_alpha,
+                xdata = voltage_list_mV,
+                ydata = alpha_values,
+                p0    = (alpha_0_guess, gamma_guess_alpha_fit)#, v_mott_guess_mV)
+            )
+            # Get fit errors.
+            fit_err_alphas = np.sqrt(np.diag(covariance_mtx_of_opt_vals_alpha_fit))
+            # Get fit curve for later.
+            fit_curve_x_mV = np.linspace(0, np.max(voltage_list_mV), 100)
+            fitted_curve_alphas = exponential_func_for_alpha(
+                v_mV = fit_curve_x_mV,
+                alpha_0 = optimal_vals_alpha_fit[0],
+                gamma = optimal_vals_alpha_fit[1],
+                ##v_mott_mV = optimal_vals_alpha_fit[2]
+            )
+        except RuntimeError:
+            # Signal failed fit.
+            polynomial_fit_successful = False
+    
     # Plot each parameter trace.
     ## Create figure for plotting.
     if colourise:
-        fig1, ax1 = plt.subplots(figsize=(8, 6), facecolor=get_colourise(-2))
+        fig1, ax1 = plt.subplots(figsize=(10, 8), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(8, 6))
+        fig1, ax1 = plt.subplots(figsize=(10, 8))
     
     for i in range(num_traces):
         if y_values[i]:
             if colourise:
-                plt.errorbar(voltage_list_mV, y_values[i], yerr=y_errors[i], marker='o', linestyle='-', capsize=3, label=f'Parameter {fit_label_list[i]}', color=get_colourise(i))
+                label_string = f'Parameter {fit_label_list[i]}'
+                plt.errorbar(voltage_list_mV, y_values[i], yerr=y_errors[i], marker='o', linestyle='-', capsize=3, label=label_string, color=get_colourise(i))
             else:
-                plt.errorbar(voltage_list_mV, y_values[i], yerr=y_errors[i], marker='o', linestyle='-', capsize=3, label=f'Parameter {fit_label_list[i]}')
+                label_string = f'Parameter {fit_label_list[i]}'
+                plt.errorbar(voltage_list_mV, y_values[i], yerr=y_errors[i], marker='o', linestyle='-', capsize=3, label=label_string)
+            
+            # Append to list of traces to be returned.
+            list_of_traces_in_plot += [voltage_list_mV, y_values[i], label_string, y_errors[i]]
+    
+    # Plot fit of fit?
+    ## polynomial_fit_successful will be False if fitter was not set to
+    ## 'second_order' or 'third_order'.
+    if polynomial_fit_successful:
+        fit_of_fit_label = 'f(V) = α₀·e^(V · γ)\n'
+        for item in range(len(optimal_vals_alpha_fit)):
+            # Find a proper exponent of the number.
+            exponent       = np.floor(np.log10(np.abs( optimal_vals_alpha_fit[item] )))
+            error_exponent = np.floor(np.log10(np.abs( fit_err_alphas[item] )))
+            if item == 0:
+                prefix = 'α₀'
+            else:
+                prefix = ' γ'
+            fit_of_fit_label += prefix+': '+(f"{(optimal_vals_alpha_fit[item] * (10**(-exponent))):.3f}·10^{exponent} ±{(fit_err_alphas[item] * (10**(-error_exponent))):.3f}·10^{error_exponent}")
+            if item != (len(optimal_vals_alpha_fit)-1):
+                fit_of_fit_label += '\n'
+        print("TODO DEBUG MODE IS ON. REMOVE COLOURISATION PARAMETER.")
+        plt.plot(fit_curve_x_mV, fitted_curve_alphas, label = fit_of_fit_label, color=get_colourise(1.1))
+        
+        # Append to list that will be returned.
+        list_of_traces_in_plot += [fit_curve_x_mV, fitted_curve_alphas, fit_of_fit_label]
     
     if colourise:
         plt.xlabel("Voltage [mV]", fontsize=16, color=get_colourise(-1))
@@ -1747,6 +1843,7 @@ def analyse_fitted_polynomial_factors(
     # Colourise axes and such?
     plt.grid()
     ax1.set_xlim(xmin=0) # Include the zero for the voltage.
+    ax1.set_ylim(ymax=0.03)
     if colourise:
         fig1.patch.set_alpha(0)
         
@@ -1762,7 +1859,26 @@ def analyse_fitted_polynomial_factors(
     plt.legend(fontsize=16)
     plt.show()
     
+    # Return a whole bunch of stuff, so that this function
+    # can be used in the meta-function that calls it several times.
+    return list_of_traces_in_plot
 
+def analyse_multiple_sets_of_fitted_polynomial_factors(
+    list_of_filepath_lists,
+    ):
+    ''' Analyse multiple sets of active resistance manipulation data.
+    '''
+    
+    results_of_sets = []
+    # For all sets in the list:
+    for current_set in list_of_filepath_lists:
+        raise NotImplementedError('Halted! Work in progress.')
+        '''results_of_sets.append(
+            analyse_fitted_polynomial_factors(
+                # TODO
+            )
+        )'''
+    
 def calculate_delta_f01(
     initial_resistance,
     final_resistance,
@@ -1820,8 +1936,10 @@ def plot_active_vs_total_resistance_gain(
     colourise_counter = 0
     
     # TODO: acquire data.
-    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94]
-    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36]
+    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94] ## THICK354
+    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36] ## THICK354
+    ##active_gain_percent = [7.0942, 10.0738, 11.8119, 5.0343, 15.0296, 18.0029, 20.0640, 6.0434,  9.0186,  7.6048] ## THICK314
+    ##total_gain_percent  = [9.7949, 12.2327, 14.0164, 6.9078, 17.4735, 20.3925, 22.1454, 8.2411, 11.1680, 10.2548] ## THICK314
     
     # Sort lists together based on the active gain list.
     sorted_active, sorted_total = zip(*sorted(zip(active_gain_percent, total_gain_percent)))
