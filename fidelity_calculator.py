@@ -259,3 +259,13 @@ def plot_maximum_fidelity_for_1q_and_2q_gates(
     else:
         plt.show(block=True)
     
+def calculate_qubit_fidelity(
+    frequency_of_01_transition,
+    t1_time_of_qubit
+    ):
+    ''' Calculate the qubit quality factor.
+        Q = ω_q · T₁
+    '''
+    Q = 2 * np.pi * frequency_of_01_transition * t1_time_of_qubit
+    return Q
+    
