@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from fit_input_checker import verify_supported_input_argument_to_fit
 
 def fit_exponential_decay_t2_echo(
-    data_or_filepath_to_data,
+    raw_data_or_path_to_data,
     delay_arr = [],
     i_renamed_the_delay_arr_to = '',
     plot_for_this_many_seconds = 0.0

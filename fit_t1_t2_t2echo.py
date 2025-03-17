@@ -5,19 +5,19 @@
 #   https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/blob/master/LICENSE
 #############################################################################################
 
-''' Built using a code basis provided by Janka Biznárová,
-    find her at https://orcid.org/0000-0002-8887-8816
-'''
-
 import Labber
 import h5py
-from pathlib import Path
-from matplotlib import pyplot as plt
-import numpy as np
-from scipy import optimize
-from scipy.stats import moment
 import math
 import array
+import re
+import os
+import time
+import numpy as np
+from pathlib import Path
+from matplotlib import pyplot as plt
+from scipy import optimize
+from scipy.stats import moment
+from datetime import datetime
 
 def fit_triple_decoherence_data_run(
     filepath,
@@ -30,9 +30,12 @@ def fit_triple_decoherence_data_run(
     known_T1_distribution = [],
     discard = [],
     no_entries = None,
+    i_renamed_the_delay_arr_to = '',
+    overwrite_q_label = ''
     ):
-    ''' Takes a Labber-formatted log file (.hdf5) where data runs have
-        been done in sets of three: T₁, T₂*, T₂-echo.
+    ''' Takes a Labber-formatted log file (.hdf5),
+        or a list of files taken using the .h5 format from Indecorum,
+        where data runs have been done in sets of three: T₁, T₂*, T₂-echo.
         I.e. the measurement consists of N repetitions of three measurement
         traces, the first one of which will contain T₁ data, the second
         will contain T₂* data, and the third one will contain T₂-echo data.
@@ -61,8 +64,16 @@ def fit_triple_decoherence_data_run(
         to judge how many entries are in the file. Else, override to
         some user-provided argument.
         
+        i_renamed_the_delay_arr_to: if using the .h5 data format list option,
+        then the user might have provided some string that renames the
+        default "delay_arr" argument, i.e., the data for the X axis might
+        have a different name in the data file itself.
+        
         Returns:
         Numpy array containing the result of the fits.
+        
+        Originally built using a code basis provided by Janka Biznárová,
+        find her at https://orcid.org/0000-0002-8887-8816.
     '''
     
     # User syntax checking.
@@ -74,32 +85,7 @@ def fit_triple_decoherence_data_run(
     # Numpy formatting
     known_T1_distribution = np.array( known_T1_distribution )
     
-    # Log file to be analysed.
-    f = Labber.LogFile(filepath)
-    
-    # Acquire the embedded timestamp of the Labber log file.
-    # From this, we create a time axis that is valid for the entire file.
-    with h5py.File(filepath, 'r') as h5f:
-        # Delve into a horrid shittiness of a Labber log file data structure...
-        
-        ## Grab first timestamp and creation time.
-        ## NOTE: the Log Browser API does not enable the user to do this.
-        ##       Thank me later. I had to reverse-engineer these attributes.
-        creation_time  = h5f.attrs["creation_time"]
-        timestamp_list = np.array(h5f["Data"]["Time stamp"][:], dtype=np.float64) + creation_time
-        
-        ## Grab remaining timestamps.
-        for ii in list(h5f.keys()):
-            if ii.startswith('Log_'):
-                timestamp_list = np.append( \
-                    timestamp_list, \
-                    np.array(h5f[ ii ]["Data"]["Time stamp"][:], dtype=np.float64) + h5f[ ii ].attrs["creation_time"] \
-                )
-    
-    # Catch user override for the number of entries.
-    if type(no_entries) == type(None):
-        no_entries = f.getNumberOfEntries()
-    
+    # Various functions to be fitted to, for instance.
     def prettify_decoherence_string(input_string):
         return (input_string.replace('1','₁')).replace('2','₂')
     
@@ -112,28 +98,118 @@ def fit_triple_decoherence_data_run(
     def T2echo_func(x, A, T2_echo, offset):
         return A * np.exp(-x/T2_echo) + offset
     
-    # Acquire assumed x-axis length of the data traces.
-    (a1,b1) = f.getTraceXY(0,0,0) # Note, a1 is in units of seconds.
-    points = len(np.real(b1))
+    def extract_file_creation_time(filename):
+        ''' Given an .h5 file, extract the file creation time.
+        '''
+        # Regular expression to match the date and time pattern
+        match = re.search(r'(\d{2})-([A-Za-z]{3})-(\d{4})_\((\d{2})_(\d{2})_(\d{2})\)', filename)
+        if not match:
+            raise ValueError("Could not extract file creation time from its filename: "+str(filename))
+        
+        # Collect the results of the regular expression.
+        # Then, convert the month abbreviation into a month number.
+        day, month_str, year, hour, minute, second = match.groups()
+        month = time.strptime(month_str, "%b").tm_mon
+        
+        # Create a datetime object.
+        # Finally, return its UNIX timestamp
+        ## Unfortunately, we have to return this value as a numpy float, to
+        ## fit in with the Labber Log Browser philosophy of doubles-only.
+        dt = datetime(int(year), month, int(day), int(hour), int(minute), int(second))
+        return np.float64( dt.timestamp() )
     
-    file_contains_only_one_trace = True
-    try:
-        (c1,d1) = f.getTraceXY(0,0,1)
-        # This operation succeeded, we know that the file contains more
-        # than a single trace.
-        file_contains_only_one_trace = False
-    except:
-        ## Note that Labber is shittily coded and does not return
-        ## any usable exception class for .getTraceXY( illegal value ),
-        ## just 'Error', hence this try-catch all exceptions. Ew.
-        # This exception triggered, the file contains only a single trace.
+    
+    #   Log file to be analysed.
+    ##  Or, list of .h5 log files.
+    if not isinstance(filepath, list):
+        f = Labber.LogFile(filepath)
+        
+        # Acquire the embedded timestamp of the Labber log file.
+        # From this, we create a time axis that is valid for the entire file.
+        with h5py.File(filepath, 'r') as h5f:
+            # Delve into a horrid shittiness of a Labber log file data structure...
+            
+            ## Grab first timestamp and creation time.
+            ## NOTE: the Log Browser API does not enable the user to do this.
+            ##       Thank me later. I had to reverse-engineer these attributes.
+            creation_time  = h5f.attrs["creation_time"]
+            timestamp_list = np.array(h5f["Data"]["Time stamp"][:], dtype=np.float64) + creation_time
+            
+            ## Grab remaining timestamps.
+            for ii in list(h5f.keys()):
+                if ii.startswith('Log_'):
+                    timestamp_list = np.append( \
+                        timestamp_list, \
+                        np.array(h5f[ ii ]["Data"]["Time stamp"][:], dtype=np.float64) + h5f[ ii ].attrs["creation_time"] \
+                    )
+    else:
+        # Then we are operating on lists of .h5 filepaths.
+        creation_time = extract_file_creation_time(filepath[0])
+        ## TODO There is a thing here. The .h5 data files currently do not
+        ##      contain information regarding when the individual data points
+        ##      were taken. As such, there is a time offset equal to that
+        ##      of the duration of the first T₁ measurement, when comparing
+        ##      to the Labber data **I think**. Thus, the difference here
+        ##      is that the timestamp list is essentially the time at which
+        ##      the fit for that datapoint was performed.
+        
+        #  Get the remaining timestamps for the other datapoints.
+        ## Compared to the Labber alternative above, we do not have to add
+        ## the original timestamp as an offset to this data.
+        timestamp_list = []
+        for current_item in filepath:
+            timestamp_list.append( extract_file_creation_time( current_item ) )
+    
+    # Catch user override for the number of entries. The number of entries is
+    # simply the total number of T₁, T₂* and T₂e measurements.
+    if type(no_entries) == type(None):
+        if not isinstance(filepath, list):
+            no_entries = f.getNumberOfEntries()
+        else:
+            no_entries = len(filepath)
+    
+    #  Acquire assumed x-axis length of the data traces.
+    ## The main purpose of this, later, is to spot whether a measurement
+    ## was aborted in Labber. For the Indecorum backend, as of yet,
+    ## no trace is collected for an aborted setup. And, the data
+    ## may very well have different numbers of datapoints in them.
+    if not isinstance(filepath, list):
+        (a1,b1) = f.getTraceXY(0,0,0) # Note, a1 is in units of seconds.
+        points = len(np.real(b1))
+    else:
+        # For the .h5 data structure, we have no limitation, and
+        # no check for points have to be done, strictly speaking.
         pass
     
-    # Check whether the length of the first trace can be used
-    # to compare to the length of all other traces.
-    if not file_contains_only_one_trace:
-        if not (len(np.real(d1)) == points):
-            raise AttributeError("Error! The length of the very first trace and the second trace in the datafile differs. Check your input data. All traces have to be of the same x-axis length as the first trace.")
+    #  Catch whether the file(path) provided contains only one trace.
+    #  Then, see whether its information can be used for comparison
+    #  between traces.
+    ## For the .h5 data structure, simply look at the provided list.
+    ## Also, there is no limitation that all entries have to have the same
+    ## length. So skip that check.
+    file_contains_only_one_trace = True
+    if not isinstance(filepath, list):
+        try:
+            (c1,d1) = f.getTraceXY(0,0,1)
+            # This operation succeeded, we know that the file contains more
+            # than a single trace.
+            file_contains_only_one_trace = False
+        except:
+            ## Note that Labber is shittily coded and does not return
+            ## any usable exception class for .getTraceXY( illegal value ),
+            ## just 'Error', hence this try-catch all exceptions. Ew.
+            # This exception triggered, the file contains only a single trace.
+            pass
+        
+        # Check whether the length of the first trace can be used
+        # to compare to the length of all other traces.
+        if not file_contains_only_one_trace:
+            if not (len(np.real(d1)) == points):
+                raise AttributeError("Error! The length of the very first trace and the second trace in the datafile differs. Check your input data. All traces have to be of the same x-axis length as the first trace.")
+    else:
+        pass
+        ##if len(filepath) != 1:
+        ##    file_contains_only_one_trace = False
     
     # Declare arrays for storing decoherence times. Also, we must keep track
     # of files that have the same length as the original input file.
@@ -145,7 +221,7 @@ def fit_triple_decoherence_data_run(
     # Declare iteration counter.
     counter = 0
     
-    # Declare array for holding the particula
+    # Declare array for holding the particular
     # time where the measurement was performed.
     measurement_time = []
     
@@ -164,13 +240,37 @@ def fit_triple_decoherence_data_run(
         
         # Put 'NaN' into the T_dec_full entry for this fit, until
         # further notice. Note that T_dec_full will be len(file) / 3 long!
+        ## Ideally, it is possible that Indecorum was stopped early,
+        ## and may thus be of some other length, non-divisible by 3.
         T_dec_full.append( np.nan )
         error_T_dec_full.append( np.nan )
         
-        # Fetch trace, store in plot handle.
-        (delay,complex_datapoint) = f.getTraceXY(select_resonator,0,i)
+        # Fetch trace!
+        if not isinstance(filepath, list):
+            (delay,complex_datapoint) = f.getTraceXY(select_resonator,0,i)
+        else:
+            ## A bit more complicated for the .h5 structure.
+            ## Open the file, get the data.
+            with h5py.File(os.path.abspath( filepath[i] ), 'r') as h5f:
+                complex_datapoint = (h5f["processed_data"][()])[select_resonator][0]
+                
+                if i_renamed_the_delay_arr_to == '':
+                    delay = h5f[ "delay_arr" ][()]
+                else:
+                    delay = h5f[i_renamed_the_delay_arr_to][()]
+                
+                # To get around the non-restriction for the .h5 data
+                # list format thingy, we write the "points" variable here.
+                points = len(complex_datapoint)
+                
+                # Also, given that the measurements can look quite differently
+                # in the .h5 data format thingy from one measurement to
+                # another, we should also get the a1 parameter here.
+                a1 = delay
+            
+        # Extract absolute value, store in plot handle.
         readoutY = np.abs(complex_datapoint)
-        plt.plot(delay,readoutY)
+        plt.plot(delay, readoutY)
         
         # Does the user request to remove fits that are knowingly wrong?
         if not (i in np.array(discard)):
@@ -192,6 +292,10 @@ def fit_triple_decoherence_data_run(
                     
                     # Get index of the time axis that is closest to the amplitude that most likey corresponds to the T_dec value.
                     pop_likely_for_T_dec = 0.36787944117 * initial_guess_A + initial_guess_offset
+                    
+                    ## Here, you'd either have an a1 parameter from reading
+                    ## the Labber file. Or, some other time trace thing
+                    ## from reading the .h5 list format things.
                     initial_guess_T_dec = a1[np.abs(readoutY - pop_likely_for_T_dec).argmin()]
                     
                     # Fit data given p0 as initial guessing values.
@@ -287,10 +391,16 @@ def fit_triple_decoherence_data_run(
     T_dec = T_dec*1e6
     error_T_dec = error_T_dec*1e6
     
+    # Figure out the qubit number label.
+    if overwrite_q_label != '':
+        q_label = overwrite_q_label
+    else:
+        q_label = 'Q'+str(select_resonator+1)
+    
     # Axis and figure size dimension management.
     T_dec_plots = plt.figure(figsize = [23.5,10.0])
     ax1 = T_dec_plots.add_subplot(111,  label="1")
-    ax1.errorbar(measurement_time, T_dec, error_T_dec, color=use_this_colour, marker = 'o', fmt='o',markersize = 12, capsize = 15, label='Q'+str(select_resonator+1))
+    ax1.errorbar(measurement_time, T_dec, error_T_dec, color=use_this_colour, marker = 'o', fmt='o',markersize = 12, capsize = 15, label=q_label)
     ax1.set_ylabel('$T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ [µs]', fontsize = 37)
     ax1.set_xlabel('Time [h]', fontsize = 37)
     
@@ -308,9 +418,22 @@ def fit_triple_decoherence_data_run(
     plt.ylim(0,220)
     plt.yticks(fontsize = 31)
     
+    # Set title.
     plt.title('$T_{'+str(select_T1_T2_T2e.replace('T',''))+'}$ time scatter', fontsize=36)
-    plt.savefig(filepath.replace('.hdf5','') + '_Q'+str(select_resonator+1)+'_'+select_T1_T2_T2e+'_time' + ".png", bbox_inches = 'tight', transparent = set_transparent)
-    print("Total duration for time scatter data: "+str((timestamp_list[-1] - timestamp_list[0])/3600) + " hours. The start of the trace is at UNIX time: "+str(timestamp_list[0]))
+    
+    # Get figure name.
+    if not isinstance(filepath, list):
+        plt.savefig(filepath.replace('.hdf5','')+'_'+q_label+'_'+select_T1_T2_T2e+'_time' + ".png", bbox_inches = 'tight', transparent = set_transparent)
+    else:
+        # Extract an appropriate file date.
+        match = re.search(r'(\d{2}-[A-Za-z]{3}-\d{4}_\(\d{2}_\d{2}_\d{2}\))', filepath[-1])
+        if match:
+            time_name = match.group(0)
+        else:
+            print("WARNING: could not extract an appropriate date for the exported file. Defaulting to current UNIX time.")
+            time_name = str(int(time.time()))
+        plt.savefig('decoherence_analysis_'+q_label+'_'+time_name+'_'+select_T1_T2_T2e+'_time' + ".png", bbox_inches = 'tight', transparent = set_transparent)
+    print("Total duration for time scatter data: "+str((timestamp_list[-1] - timestamp_list[0])/3600) + " hours. UNIX time for the start is at: "+str(timestamp_list[0]))
     
     ## Decoherence time histogram ##
     
@@ -334,7 +457,7 @@ def fit_triple_decoherence_data_run(
     # Add start to T_2^* data?
     if '$T_{2}$' in stringus_dingus:
         stringus_dingus = stringus_dingus.replace('$T_{2}$','${T_{2}}^{*}$')
-    plt.title('Q'+str(select_resonator+1) + stringus_dingus + ' histogram', fontsize=36)
+    plt.title(q_label + stringus_dingus + ' histogram', fontsize=36)
     plt.ylabel('Counts', fontsize = 37)
     
     # Rudimentary check whether the histogram
@@ -353,7 +476,19 @@ def fit_triple_decoherence_data_run(
     else:
         plt.legend(fontsize = 30, loc = histogram_legend_location)
     
-    plt.savefig(filepath.replace('.hdf5','') + '_Q'+str(select_resonator+1)+'_'+select_T1_T2_T2e+'_histogram' + ".png", bbox_inches = 'tight')
-    plt.show()
+    # Export figure things.
+    if not isinstance(filepath, list):
+        plt.savefig(filepath.replace('.hdf5','') + '_'+q_label+'_'+select_T1_T2_T2e+'_histogram' + ".png", bbox_inches = 'tight')
+    else:
+        # Extract an appropriate file date.
+        match = re.search(r'(\d{2}-[A-Za-z]{3}-\d{4}_\(\d{2}_\d{2}_\d{2}\))', filepath[-1])
+        if match:
+            time_name = match.group(0)
+        else:
+            print("WARNING: could not extract an appropriate date for the exported file. Defaulting to current UNIX time.")
+            time_name = str(int(time.time()))
+        plt.savefig('decoherence_analysis_'+q_label+'_'+time_name+'_'+select_T1_T2_T2e+'_histogram' + ".png", bbox_inches = 'tight')
     
+    # Plot shits. Return.
+    plt.show()
     return (T_dec, T_dec_full)
