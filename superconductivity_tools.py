@@ -1338,11 +1338,33 @@ def plot_active_manipulation(
             reader = csv.reader(csvfile, delimiter=';')
             rows = list(reader)  # Convert to list for indexing options
             
+            ## In case of old data files, we need to catch whether there is
+            ## no tag telling us where the manipulation sequence started.
+            ## So, we actually go through the file once first, looking
+            ## for tags.
+            old_file = True
+            for i in range(len(rows)):
+                try:
+                    if 'START_MANIPULATION' in str(rows[i+1][2]):
+                        old_file = False
+                except IndexError:
+                    # In this case, we didn't find the tag either.
+                    pass
+            if old_file:
+                # Thus, we (TODO: currently) have no reliable way of
+                # determining where the initial dip ends, if this happens.
+                print("Data file '"+str(filepath_item)+"' could not be used to identify where the initial dip ends. Ignoring argument.")
+                do_not_save_data_yet = False
+            
             # Go through the file.
             for i in range(len(rows)):
                 if i % 6 == 3:
                     
                     if do_not_save_data_yet:
+                        ## This portion will create an IndexError in case
+                        ## the datafile is old and does not contain
+                        ## any 'START_MANIPULATION' tag.
+                        ## This error case was handled above.
                         if 'START_MANIPULATION' in str(rows[i+1][2]):
                             # Then signal that we may commence.
                             do_not_save_data_yet = False
@@ -1473,70 +1495,75 @@ def plot_active_manipulation(
         
         ## At this point, store the fit values and errors, for the return
         ## statement that happens later.
-        fitted_values_to_be_returned.append(fit_results[1])
-        fitted_errors_to_be_returned.append(fit_results[2])
+        if fitter != 'none':
+            fitted_values_to_be_returned.append(fit_results[1])
+            fitted_errors_to_be_returned.append(fit_results[2])
         
-        for kk in range(len(fit_results[1])):
-            fitted_values = (fit_results[1])[kk]
-            fitted_errors = (fit_results[2])[kk]
-            prefix = '?'
-            
-            # See comment above regarding the error bars being larger
-            # than the fitted values if R_0 and t_0 are included.
-            """if   kk == 0:
-                prefix = 'R₀'
-                fit_label += prefix+': '+(f"{fitted_values:.3f} ±{fitted_errors:.3f}")+'\n'
-            elif kk == 1:
-                prefix = 't₀'
-                fit_label += prefix+': '+(f"{fitted_values:.3f} ±{fitted_errors:.3f}")+'\n'
-            else:"""
-            if fitter == 'second_order':
-                """if   kk == 2:"""
-                if   kk == 0:
-                    prefix = 'α'
-                    """elif kk == 3:"""
+            for kk in range(len(fit_results[1])):
+                fitted_values = (fit_results[1])[kk]
+                fitted_errors = (fit_results[2])[kk]
+                prefix = '?'
+                
+                # See comment above regarding the error bars being larger
+                # than the fitted values if R_0 and t_0 are included.
+                """if   kk == 0:
+                    prefix = 'R₀'
+                    fit_label += prefix+': '+(f"{fitted_values:.3f} ±{fitted_errors:.3f}")+'\n'
                 elif kk == 1:
-                    prefix = 'β'
-            elif fitter == 'third_order':
-                """if   kk == 2:"""
-                if   kk == 0:
-                    prefix = 'α'
-                    """elif kk == 3:"""
-                elif kk == 1:
-                    prefix = 'β'
-                    """elif kk == 4:"""
-                elif kk == 2:
-                    prefix = 'δ'
-            elif fitter == 'exponential':
-                """if   kk == 2:"""
-                if   kk == 0:
-                    prefix = 'ε'
-                    """elif kk == 3:"""
-                elif kk == 1:
-                    prefix = 'γ'
-                    """elif kk == 4:"""
-                elif kk == 2:
-                    prefix = 'τ'
-            elif fitter == 'power':
-                """if   kk == 2:"""
-                if   kk == 0:
-                    prefix = 'A'
-                    """elif kk == 3:"""
-                elif kk == 1:
-                    prefix = 'B'
+                    prefix = 't₀'
+                    fit_label += prefix+': '+(f"{fitted_values:.3f} ±{fitted_errors:.3f}")+'\n'
+                else:"""
+                if fitter == 'second_order':
+                    """if   kk == 2:"""
+                    if   kk == 0:
+                        prefix = 'α'
+                        """elif kk == 3:"""
+                    elif kk == 1:
+                        prefix = 'β'
+                elif fitter == 'third_order':
+                    """if   kk == 2:"""
+                    if   kk == 0:
+                        prefix = 'α'
+                        """elif kk == 3:"""
+                    elif kk == 1:
+                        prefix = 'β'
+                        """elif kk == 4:"""
+                    elif kk == 2:
+                        prefix = 'δ'
+                elif fitter == 'exponential':
+                    """if   kk == 2:"""
+                    if   kk == 0:
+                        prefix = 'ε'
+                        """elif kk == 3:"""
+                    elif kk == 1:
+                        prefix = 'γ'
+                        """elif kk == 4:"""
+                    elif kk == 2:
+                        prefix = 'τ'
+                elif fitter == 'power':
+                    """if   kk == 2:"""
+                    if   kk == 0:
+                        prefix = 'A'
+                        """elif kk == 3:"""
+                    elif kk == 1:
+                        prefix = 'B'
+                else:
+                    raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
+                
+                # Find a proper exponent of the number.
+                exponent       = np.floor(np.log10(np.abs( fitted_values )))
+                error_exponent = np.floor(np.log10(np.abs( fitted_errors )))
+                fit_label += prefix+': '+(f"{(fitted_values * (10**(-exponent))):.3f}·10^{exponent} ±{(fitted_errors * (10**(-error_exponent))):.3f}·10^{error_exponent}")+'\n'
+            if (not colourise):
+                plt.figure(1) # Set figure 1 as active.
+                plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors(jj))
             else:
-                raise ValueError("Halted! Unknown value provided for agument 'fitter': "+str(fitter))
-            
-            # Find a proper exponent of the number.
-            exponent       = np.floor(np.log10(np.abs( fitted_values )))
-            error_exponent = np.floor(np.log10(np.abs( fitted_errors )))
-            fit_label += prefix+': '+(f"{(fitted_values * (10**(-exponent))):.3f}·10^{exponent} ±{(fitted_errors * (10**(-error_exponent))):.3f}·10^{error_exponent}")+'\n'
-        if (not colourise):
-            plt.figure(1) # Set figure 1 as active.
-            plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors(jj))
+                plt.figure(1) # Set figure 1 as active.
+                plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
         else:
-            plt.figure(1) # Set figure 1 as active.
-            plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
+            # Fitter == 'none'.
+            fitted_values_to_be_returned.append(None)
+            fitted_errors_to_be_returned.append(None)
         
         # Get residuals plot?
         if fitter != 'none':
@@ -1631,7 +1658,7 @@ def analyse_fitted_polynomial_factors(
     normalise_resistances = 0,
     normalise_time = True,
     plot_no_junction_resistance_under_ohm = 0,
-    fitter = 'third_order',
+    fitter = 'second_order',
     skip_initial_dip = False,
     colourise = False,
     ):
@@ -1755,9 +1782,20 @@ def analyse_fitted_polynomial_factors(
             alpha_values = y_values[0]
             
             # Here, sort the alpha_values versus the applied voltages.
-            sorted_pairs = sorted(zip(voltage_list_mV, alpha_values))  
-            voltage_list_mV = [pair[0] for pair in sorted_pairs]  
-            alpha_values    = [pair[1] for pair in sorted_pairs]
+            ##if voltage_list_mV == sorted(voltage_list_mV):
+            ##    # The list is ordered, do nothing.
+            ##    pass
+            ##elif
+            if voltage_list_mV == sorted(voltage_list_mV, reverse = True):
+                # The list is reversed, sort it.
+                voltage_list_mV.reverse()
+                alpha_values.reverse()
+            else:
+                # The list is a mess.
+                sorted_pairs = sorted(zip(voltage_list_mV, alpha_values))
+                voltage_list_mV, alpha_values = zip(*sorted_pairs)
+                voltage_list_mV = list(voltage_list_mV)
+                alpha_values = list(alpha_values)
             
             ## I don't really know how to make a good guess for the scalar alpha_0.
             alpha_0_guess = 1.0
@@ -1799,15 +1837,14 @@ def analyse_fitted_polynomial_factors(
     
     for i in range(num_traces):
         if y_values[i]:
+            label_string = f'Parameter {fit_label_list[i]}'
             if colourise:
-                label_string = f'Parameter {fit_label_list[i]}'
                 plt.errorbar(voltage_list_mV, y_values[i], yerr=y_errors[i], marker='o', linestyle='-', capsize=3, label=label_string, color=get_colourise(i))
             else:
-                label_string = f'Parameter {fit_label_list[i]}'
                 plt.errorbar(voltage_list_mV, y_values[i], yerr=y_errors[i], marker='o', linestyle='-', capsize=3, label=label_string)
             
             # Append to list of traces to be returned.
-            list_of_traces_in_plot += [voltage_list_mV, y_values[i], label_string, y_errors[i]]
+            list_of_traces_in_plot += [[voltage_list_mV, y_values[i], label_string, y_errors[i]]]
     
     # Plot fit of fit?
     ## polynomial_fit_successful will be False if fitter was not set to
@@ -1825,11 +1862,10 @@ def analyse_fitted_polynomial_factors(
             fit_of_fit_label += prefix+': '+(f"{(optimal_vals_alpha_fit[item] * (10**(-exponent))):.3f}·10^{exponent} ±{(fit_err_alphas[item] * (10**(-error_exponent))):.3f}·10^{error_exponent}")
             if item != (len(optimal_vals_alpha_fit)-1):
                 fit_of_fit_label += '\n'
-        print("TODO DEBUG MODE IS ON. REMOVE COLOURISATION PARAMETER.")
-        plt.plot(fit_curve_x_mV, fitted_curve_alphas, label = fit_of_fit_label, color=get_colourise(1.1))
+        plt.plot(fit_curve_x_mV, fitted_curve_alphas, label = fit_of_fit_label)
         
         # Append to list that will be returned.
-        list_of_traces_in_plot += [fit_curve_x_mV, fitted_curve_alphas, fit_of_fit_label]
+        list_of_traces_in_plot += [[fit_curve_x_mV, fitted_curve_alphas, fit_of_fit_label, None]]
     
     if colourise:
         plt.xlabel("Voltage [mV]", fontsize=16, color=get_colourise(-1))
@@ -1840,10 +1876,10 @@ def analyse_fitted_polynomial_factors(
         plt.ylabel("Fit parameters", fontsize=16)
         plt.title("Fit parameter trends vs. voltage", fontsize=25)
     
-    # Colourise axes and such?
+    # Colourise axes, set axis limits, and such?
     plt.grid()
-    ax1.set_xlim(xmin=0) # Include the zero for the voltage.
-    ax1.set_ylim(ymax=0.03)
+    ax1.set_xlim(xmin=0.0, xmax=1100)   # Include the zero for the voltage.
+    ax1.set_ylim(ymax=0.6, ymin=-0.050)
     if colourise:
         fig1.patch.set_alpha(0)
         
@@ -1865,20 +1901,89 @@ def analyse_fitted_polynomial_factors(
 
 def analyse_multiple_sets_of_fitted_polynomial_factors(
     list_of_filepath_lists,
+    voltage_list_mV = ['auto'],
+    normalise_resistances = 0,
+    normalise_time = True,
+    plot_no_junction_resistance_under_ohm = 0,
+    fitter = 'second_order',
+    skip_initial_dip = False,
+    colourise = False,
     ):
     ''' Analyse multiple sets of active resistance manipulation data.
+        
+        The list_of_filepath_lists argument should be a list, containing lists
+        of filepaths. These filepaths correspond to resistance-vs-time
+        manipulations done on Josephson junctions.
     '''
     
-    results_of_sets = []
-    # For all sets in the list:
-    for current_set in list_of_filepath_lists:
-        raise NotImplementedError('Halted! Work in progress.')
-        '''results_of_sets.append(
-            analyse_fitted_polynomial_factors(
-                # TODO
-            )
-        )'''
+    # User argument sanitation.
+    if fitter.lower() == 'none':
+        raise ValueError("Halted! This function requires a fitter to be active; you provided 'none' as an argument here.")
     
+    # Collect all of the data.
+    results_of_sets = []
+    for current_set in list_of_filepath_lists:
+        
+        # Fit!
+        results_of_sets.append(
+            analyse_fitted_polynomial_factors(
+                filepath = current_set,
+                voltage_list_mV = voltage_list_mV,
+                normalise_resistances = normalise_resistances,
+                normalise_time = normalise_time,
+                plot_no_junction_resistance_under_ohm = plot_no_junction_resistance_under_ohm,
+                fitter = fitter,
+                skip_initial_dip = skip_initial_dip,
+                colourise = colourise,
+            )
+        )
+    
+    # Plot the parameters in separate plots.
+    ## How many parameters do we expect to see?
+    if   fitter == 'second_order':
+        expected_number_of_fit_parameters = 2
+    elif fitter == 'third_order':
+        expected_number_of_fit_parameters = 3
+    elif fitter == 'exponential':
+        expected_number_of_fit_parameters = 2
+    elif fitter == 'power':
+        expected_number_of_fit_parameters = 2
+    
+    # Make plots.
+    ## Create figures for plotting.
+    if colourise:
+        fig1, ax1 = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
+        fig2, ax2 = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
+        if expected_number_of_fit_parameters == 3:
+            fig3, ax3 = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
+    else:
+        fig1, ax1 = plt.subplots(figsize=(10, 5))
+        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        if expected_number_of_fit_parameters == 3:
+            fig3, ax3 = plt.subplots(figsize=(10, 5))
+    
+    for curr_figure in range(expected_number_of_fit_parameters):
+        plt.figure( curr_figure ) # Set figure "curr_figure" as active.
+        
+        # Go through the data.
+        for sets in range(len(list_of_filepath_lists)):
+            
+            # Get the fitted parameter's voltages, data, label, and error bars.
+            voltage_list_mV = results_of_sets[sets][curr_figure][0]
+            parameter_data = results_of_sets[sets][curr_figure][1]
+            label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(curr_figure)
+            errors = results_of_sets[sets][curr_figure][3]
+            # Plot!
+            if colourise:
+                plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle='-', capsize=3, label=label_string, color=get_colourise(i))
+            else:
+                plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle='-', capsize=3, label=label_string)
+    
+    # Show shits.
+    plt.show()
+    
+    return results_of_sets
+
 def calculate_delta_f01(
     initial_resistance,
     final_resistance,
