@@ -344,6 +344,10 @@ def fit_triple_decoherence_data_run(
                     if not fit_failure:
                         p_err = np.sqrt(np.diag(p_cov))
                         T_dec_error_perc = p_err[1]/p[1] * 100
+                    else:
+                        # In case there was no T_dec_error_perc declared,
+                        # make one.
+                        T_dec_error_perc = 100
                     
                     # Append datapoint?
                     if (abs(T_dec_error_perc) <= maximum_tolerable_error_in_percent) and (not fit_failure):
