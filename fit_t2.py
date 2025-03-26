@@ -240,10 +240,10 @@ def fit_exponential_decay_t2_echo(
                     fit_error = fit_err_x[0]
                     
                     # Print result.
-                    if i_provided_a_filepath:
-                        print("T₂_echo fit failure! Cannot fit: "+str(data_or_filepath_to_data))
+                    if the_user_provided_a_list_of_files:
+                        print("T₂_echo fit failure! Cannot fit: "+str(current_fit_item))
                     else:
-                        print("T₂_echo fit failure! Cannot fit the provided raw data.")
+                        print("T₂_echo fit failure! Cannot fit the provided data.")
                     
                     # Store failed fit and its failed plusminus error bar.
                     ## TODO this part here has probably not been protected against usage cases with multiplexed readouts.
@@ -528,10 +528,10 @@ def fit_oscillating_exponential_decay_t2_asterisk(
                     fit_error = fit_err_x[0]
                     
                     # Print result.
-                    if i_provided_a_filepath:
-                        print("T₂* fit failure! Cannot fit: "+str(data_or_filepath_to_data))
+                    if the_user_provided_a_list_of_files:
+                        print("T₂* fit failure! Cannot fit: "+str(current_fit_item))
                     else:
-                        print("T₂* fit failure! Cannot fit the provided raw data.")
+                        print("T₂* fit failure! Cannot fit the provided data.")
                     
                     # Store failed fit and its failed plusminus error bar.
                     ## TODO this part here has probably not been protected against usage cases with multiplexed readouts.
