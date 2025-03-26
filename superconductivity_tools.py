@@ -1305,11 +1305,11 @@ def plot_active_manipulation(
     
     # Create figure for plotting.
     if colourise:
-        fig1, ax1 = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
-        fig2, ax2 = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
+        fig1, ax1 = plt.subplots(figsize=(12, 11), facecolor=get_colourise(-2))
+        fig2, ax2 = plt.subplots(figsize=(8, 11), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(10, 5))
-        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        fig1, ax1 = plt.subplots(figsize=(12, 11))
+        fig2, ax2 = plt.subplots(figsize=(8, 11))
     
     # Go through the files and add them to the plot.
     ## Also, store fit values for the return statement.
@@ -1952,18 +1952,25 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
     # Make plots.
     ## Create figures for plotting.
     if colourise:
-        fig1, ax1 = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
-        fig2, ax2 = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
+        fig1, ax1 = plt.subplots(figsize=(8, 11), facecolor=get_colourise(-2))
+        fig2, ax2 = plt.subplots(figsize=(8, 11), facecolor=get_colourise(-2))
         if expected_number_of_fit_parameters == 3:
-            fig3, ax3 = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
+            fig3, ax3 = plt.subplots(figsize=(8, 11), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(10, 5))
-        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        fig1, ax1 = plt.subplots(figsize=(8, 11))
+        fig2, ax2 = plt.subplots(figsize=(8, 11))
         if expected_number_of_fit_parameters == 3:
-            fig3, ax3 = plt.subplots(figsize=(10, 5))
+            fig3, ax3 = plt.subplots(figsize=(8, 11))
     
+    # Figure out colours.
+    if not colourise:
+        colour_label = 'tab20'
+        num_items_to_colour = len(list_of_filepath_lists)
+        colours = plt.cm.get_cmap(colour_label, num_items_to_colour)
+    
+    # Loop through the data and create plotty things.
     for curr_figure in range(expected_number_of_fit_parameters):
-        plt.figure( curr_figure ) # Set figure "curr_figure" as active.
+        plt.figure( curr_figure+1 ) # Set figure "curr_figure" as active.
         
         # Go through the data.
         for sets in range(len(list_of_filepath_lists)):
@@ -1971,13 +1978,84 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             # Get the fitted parameter's voltages, data, label, and error bars.
             voltage_list_mV = results_of_sets[sets][curr_figure][0]
             parameter_data = results_of_sets[sets][curr_figure][1]
-            label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(curr_figure)
+            label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(sets+1)
             errors = results_of_sets[sets][curr_figure][3]
             # Plot!
-            if colourise:
-                plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle='-', capsize=3, label=label_string, color=get_colourise(i))
+            if curr_figure == 0:
+                linestyle = ''
             else:
-                plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle='-', capsize=3, label=label_string)
+                linestyle = '-'
+            if colourise:
+                plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=get_colourise(sets))
+            else:
+                plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours(sets))
+                
+            # Plot fit trace in the alpha plot?
+            if curr_figure == 0:
+                # Note that curr_figure here is always 0. The fit curve is
+                # stored at index expected_number_of_fit_parameters, since the
+                # first indices contain the fit parameter data.
+                ## Do note that a failed fit results in no fit data being
+                ## stored. Hence, a try-catch statement.
+                try:
+                    fit_x_axis = results_of_sets[sets][curr_figure+expected_number_of_fit_parameters][0]
+                    fit_y_axis = results_of_sets[sets][curr_figure+expected_number_of_fit_parameters][1]
+                    fit_label  = results_of_sets[sets][curr_figure+expected_number_of_fit_parameters][2]
+                    if not colourise:
+                        plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours(sets))
+                    else:
+                        plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = get_colourise(sets+0.1))
+                except IndexError:
+                    print("No fit data found in set "+str(sets)+".")
+    
+    # Include the origin and such.
+    ax1.set_xlim(xmin=0.0, xmax=1100)
+    
+    # Make title.
+    for ll in range(expected_number_of_fit_parameters):
+        plt.figure(ll+1) # Set figure ll+1 as active.
+        plt.grid()
+        if (not colourise):
+            title_colour = "#000000"
+        else:
+            title_colour = get_colourise(-1)
+        
+        plt.xlabel("Voltage [mV]", fontsize=16)
+        plt.ylabel("Parameter value", fontsize=16)
+        if fitter != 'none':
+            if fitter == 'second_order':
+                plt.title("Fit parameters, 2nd-ord-polyn.", color=title_colour, fontsize=25)
+            elif fitter == 'third_order':
+                plt.title("Fit parameters, 3rd-ord-polyn.", color=title_colour, fontsize=25)
+            elif fitter == 'exponential':
+                plt.title("Fit parameters, exponential func.", color=title_colour, fontsize=25)
+            elif fitter == 'power':
+                plt.title("Fit parameters, power-law", color=title_colour, fontsize=25)
+        else:
+            raise ValueError("Error! Could not understand argument provided to 'fitter': "+str(fitter))
+    
+        # Show legends.
+        plt.legend(fontsize=16)
+    
+    # Grid colourisation?
+    if colourise:
+        fig1.patch.set_alpha(0)
+        ax1.grid(color=get_colourise(-1))
+        ax1.set_facecolor(get_colourise(-2))
+        ax1.spines['bottom'].set_color(get_colourise(-1))
+        ax1.spines['top'].set_color(get_colourise(-1))
+        ax1.spines['left'].set_color(get_colourise(-1))
+        ax1.spines['right'].set_color(get_colourise(-1))
+        ax1.tick_params(axis='both', colors=get_colourise(-1))
+    
+        fig2.patch.set_alpha(0)
+        ax2.grid(color=get_colourise(-1))
+        ax2.set_facecolor(get_colourise(-2))
+        ax2.spines['bottom'].set_color(get_colourise(-1))
+        ax2.spines['top'].set_color(get_colourise(-1))
+        ax2.spines['left'].set_color(get_colourise(-1))
+        ax2.spines['right'].set_color(get_colourise(-1))
+        ax2.tick_params(axis='both', colors=get_colourise(-1))
     
     # Show shits.
     plt.show()
@@ -2020,9 +2098,250 @@ def calculate_delta_f01(
     # Return difference.
     return (final_frequency - initial_frequency)
 
+def acquire_creep_data_from_folder(
+    folder_path,
+    take_creep_data_at_this_time_s,
+    filename_tags = [],
+    ):
+    ''' From a supplied folder path, acquire the resistance creep of the
+        files held within.
+    '''
+    
+    # Make lists to store the active and active+passive resistance increase.
+    active_gain_percent  = []
+    total_gain_percent   = []
+    
+    # User input sanitisation.
+    if not os.path.isdir(folder_path):
+        raise ValueError("Halted! Invalid path: "+str(folder_path))
+    
+    # Process all files yo.
+    for filename in os.listdir(folder_path):
+        # Ensure that all filenames are present.
+        if all(keyword in filename for keyword in filename_tags):
+            full_path = os.path.join(folder_path, filename)
+            # Catch whether there are nasty subfolders.
+            if os.path.isfile(full_path):
+                
+                # We only want .csv files.
+                if filename.endswith(".csv"):
+                    ## Set some process flags.
+                    reference_resistance = 0.0
+                    resistance_at_manipulation_finished = 0.0
+                    creep_began_at_time = -1.0
+                    creep_analysed_at_this_time = -1.0
+                    resistance_at_creep_point = 0.0
+                    shorted = False
+                    
+                    # Open file, do the thing.                    
+                    with open(os.path.abspath(full_path), newline='', encoding='utf-8') as csvfile:
+                        reader = csv.reader(csvfile, delimiter=';')
+                        rows = list(reader)  # Convert to list for indexing options
+                        
+                        # Go through the file.
+                        for i in range(len(rows)):
+                            # Every sixth row +3 contains a resistance value.
+                            if (i % 6 == 3) and (not shorted):
+                                
+                                # We will constantly be on the lookout for
+                                # broken junctions in the measurement.
+                                try:
+                                    if 'SHORTED' in rows[i+1][2]:
+                                        # Broken junction. If we got our value,
+                                        # so be it. Otherwise, just abort anyhow.
+                                        shorted = True
+                                except:
+                                    # Then there is no such cell.
+                                    pass
+                                
+                                # Grab some resistance as the starting value
+                                # for the resistance manipulation?
+                                if reference_resistance == 0.0:
+                                    try:
+                                        # Was this the start of the
+                                        # resistance manipulation?
+                                        if 'START_MANIPULATION' in rows[i+1][2]:
+                                            # Oh shit, it was. Grab resistance.
+                                            reference_resistance = float(rows[i][1])
+                                            
+                                            # Get the SI prefix for this data.
+                                            ## TODO append more options, like MOhm.
+                                            if '[kOhm]' in str(rows[i][0]):
+                                                si_unit_prefix_scaler = 1000
+                                            else:
+                                                si_unit_prefix_scaler = 1
+                                            
+                                            # Scale to Ohm
+                                            reference_resistance *= si_unit_prefix_scaler
+                                            
+                                    except IndexError:
+                                        # In this case, there is simply nothing
+                                        # written in such a cell.
+                                        pass
+                                
+                                else:
+                                    ## At this point, there is a reference
+                                    ## resistance that we can work from.
+                                    ## We want to know whether the upcoming
+                                    ## resistance value is the one that the
+                                    ## user wants.
+                                    
+                                    # Look for the tag signalling
+                                    # that the manipulation is done.
+                                    ## There are situations where
+                                    ## this tag never appears.
+                                    ## If that happens, simply assume
+                                    ## that the measurement before
+                                    ## the START_CREEP tag is the end
+                                    ## of the manipulation.
+                                    if 'STOP_MANIPULATION' in rows[i+1][2]:
+                                        # Manipulation finished!
+                                        # Grab the current resistance.
+                                        resistance_at_manipulation_finished = float(rows[i][1])
+                                        
+                                        # Get the SI prefix for this data.
+                                        ## TODO append more options, like MOhm.
+                                        if '[kOhm]' in str(rows[i][0]):
+                                            si_unit_prefix_scaler = 1000
+                                        else:
+                                            si_unit_prefix_scaler = 1
+                                        
+                                        # Scale to Ohm
+                                        resistance_at_manipulation_finished *= si_unit_prefix_scaler
+                                        
+                                        # Grab the time at which this happened.
+                                        # Every sixth row +4 contains a time value
+                                        creep_began_at_time = float(rows[i+1][1])
+                                    
+                                    elif 'START_CREEP' in rows[i+1][2]:
+                                        # Check whether this is a merged file,
+                                        # that is, the resistance manipulation
+                                        # simply stopped, and the operator
+                                        # stopped the manipulation portion.
+                                        if resistance_at_manipulation_finished == 0:
+                                            # This happened, meaning that
+                                            # the manipulation didn't reach
+                                            # its target. Select the previous
+                                            # resistance as the 'end datapoint'
+                                            resistance_at_manipulation_finished = float(rows[i-6][1])
+                                        
+                                            # Get the SI prefix for this data.
+                                            ## TODO append more options, like MOhm.
+                                            if '[kOhm]' in str(rows[i-6][0]):
+                                                si_unit_prefix_scaler = 1000
+                                            else:
+                                                si_unit_prefix_scaler = 1
+                                            
+                                            # Scale to Ohm
+                                            resistance_at_manipulation_finished *= si_unit_prefix_scaler
+                                            
+                                            # Grab the time at which the creep started.
+                                            try:
+                                                creep_began_at_time = float(rows[i+1-6][1])
+                                            except IndexError:
+                                                creep_began_at_time = float(rows[i+1][1])
+                                        
+                                        # In either case, we continue
+                                        # by looking for the user-set
+                                        # time at which the resistance
+                                        # of interest is located.
+                                        creep_analysed_at_this_time = \
+                                            creep_began_at_time + \
+                                            take_creep_data_at_this_time_s
+                                    
+                                    # Now, we are merely waiting for the
+                                    # resistance point taken at the time that
+                                    # the user is interested in.
+                                    if creep_analysed_at_this_time != -1:
+                                        
+                                        # Then, let's look for times.
+                                        current_time = float(rows[i+1][1])
+                                        if current_time >= creep_analysed_at_this_time:
+                                            # Fantastic, this resistance should probably be our final datapoint.
+                                            # Let's just check whether the latest datapoint were
+                                            # closer in time to that data, first.
+                                            previous_time = float(rows[i+1-6][1])
+                                            diff_current  = creep_began_at_time - current_time
+                                            diff_previous = creep_began_at_time - previous_time
+                                            if diff_current < diff_previous:
+                                                # The datapoint that passed the
+                                                # timestamp where the user
+                                                # would have wanted the data,
+                                                # is closer.
+                                                ## VERIFY that the sample
+                                                ## didn't die at precisely
+                                                ## this point in time!
+                                                try:
+                                                    if 'SHORTED' in rows[i+1][2]:
+                                                        # Junction dead at the
+                                                        # finish line.
+                                                        shorted = True
+                                                except:
+                                                    # Then there is no such cell.
+                                                    pass
+                                                
+                                                if not shorted:
+                                                    # Success!
+                                                    resistance_at_creep_point = float(rows[i][1])
+                                            else:
+                                                # The previous datapoint was
+                                                # closer in time to the user-
+                                                # requested time.
+                                                ## Here, we do not have to
+                                                ## verify whether this
+                                                ## resistance is taken at a
+                                                ## point that is a short.
+                                                ## Since, this fact would
+                                                ## have been discovered by now.
+                                                resistance_at_creep_point = float(rows[i-6][1])
+                                            
+                                            # Double-check whether we shorted
+                                            # at the finish line.
+                                            if not shorted:
+                                                # Get the SI prefix for this data.
+                                                ## TODO append more options, like MOhm.
+                                                if '[kOhm]' in str(rows[i-6][0]):
+                                                    si_unit_prefix_scaler = 1000
+                                                else:
+                                                    si_unit_prefix_scaler = 1
+                                                
+                                                # Scale to Ohm
+                                                resistance_at_creep_point *= si_unit_prefix_scaler
+                    
+                    # At this point, we are done with the file.
+                    # Collect values.
+                    if reference_resistance != 0.0:
+                        if resistance_at_manipulation_finished != 0.0:
+                            if resistance_at_creep_point != 0.0:
+                                print("Ref res: "+str(reference_resistance)+", Res at manip finished: "+str(resistance_at_manipulation_finished)+", Res total: "+str(resistance_at_creep_point))
+                                active_gain_percent.append((resistance_at_manipulation_finished / reference_resistance -1)*100)
+                                total_gain_percent.append((resistance_at_creep_point / reference_resistance -1)*100)
+                                assert (resistance_at_creep_point / reference_resistance -1) > 0, "ERROR: "+str(filename)
+                                if shorted:
+                                    print(">> Shorted during creep, but after the sought-for data was found: "+str(filename))
+                            else:
+                                print(">> Failed during creep: "+str(filename))
+                        else:
+                            print(">> Failed during manipulation: "+str(filename))
+                    else:
+                        print(">> Manipulation failed to start: "+str(filename))
+                else:
+                    print(">> Can't read file '"+str(filename)+"'")
+            else:
+                print(">> Can't process '"+str(filename)+"'")
+    
+    # Return things.
+    if len(active_gain_percent) != len(total_gain_percent):
+        raise RuntimeError("Error! The number of entries for the active manipulations does not match the number of successful manipulations. This is a bug. No. manipulations was: "+str(active_gain_percent)+", No. successes was: "+str(total_gain_percent))
+    return (active_gain_percent, total_gain_percent)
+    
+
 def plot_active_vs_total_resistance_gain(
     title_voltage_V,
     title_junction_size_nm,
+    folder_path,
+    take_creep_data_at_this_time_s,
+    filename_tags = [],
     outlier_threshold_in_std_devs = 2.0,
     consider_outliers = True,
     plot_ideal_curve = False,
@@ -2032,6 +2351,16 @@ def plot_active_vs_total_resistance_gain(
         and the total gain on the Y axis in percent relative to the
         initial resistance point. Also, make a fit.
         
+        folder_path: path to folder containing measurement files.
+        
+        take_creep_data_at_this_time_s: time in seconds where the datapoint
+        will be taken for the resistance manipulation. The point closest
+        in time to the user-supplied value will be chosen.
+        
+        filename_tags: defines substrings that must be found in the filename
+        for the file to be considered for data inclusion. If blank, then
+        consider all files in the folder.
+        
         Datapoints that fall outside of outlier_threshold_in_std_devs are
         considered outliers, this limit was set to 2 standard deviations
         from the mean.
@@ -2040,11 +2369,21 @@ def plot_active_vs_total_resistance_gain(
     # Counter to keep track of colourised patterns.
     colourise_counter = 0
     
+    # Acquire dataset.
+    ## Rework voltage into something that will be written in the title.
+    ## Append this number to the filename_tags to look for.
+    filename_tags.append(str(title_voltage_V).replace('.',"p"))
+    (active_gain_percent, total_gain_percent) = acquire_creep_data_from_folder(
+        folder_path = folder_path,
+        take_creep_data_at_this_time_s = take_creep_data_at_this_time_s,
+        filename_tags = filename_tags,
+    )
+    
     # TODO: acquire data.
-    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94] ## THICK354
-    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36] ## THICK354
-    ##active_gain_percent = [7.0942, 10.0738, 11.8119, 5.0343, 15.0296, 18.0029, 20.0640, 6.0434,  9.0186,  7.6048] ## THICK314
-    ##total_gain_percent  = [9.7949, 12.2327, 14.0164, 6.9078, 17.4735, 20.3925, 22.1454, 8.2411, 11.1680, 10.2548] ## THICK314
+    ##active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94] ## THICK354
+    ##total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36] ## THICK354
+    #active_gain_percent = [7.0942, 10.0738, 11.8119, 5.0343, 15.0296, 18.0029, 20.0640, 6.0434,  9.0186,  7.6048, 4.040, 10.007, 4.060, 6.020, 21.129, 3.577, 20.741, 3.043, 1.017] ## THICK314
+    #total_gain_percent  = [9.7949, 12.2327, 14.0164, 6.9078, 17.4735, 20.3925, 22.1454, 8.2411, 11.1680, 10.2548, 5.986, 12.063, 5.804, 7.871, 23.058, 5.378, 23.186, 4.797, 2.859] ## THICK314
     
     # Sort lists together based on the active gain list.
     sorted_active, sorted_total = zip(*sorted(zip(active_gain_percent, total_gain_percent)))
@@ -2193,9 +2532,9 @@ def plot_active_vs_total_resistance_gain(
     
     # Extend axes to include the origin?
     if np.all(sorted_active >= 0):
-        ax.set_xlim(xmin=0)
+        ax.set_xlim(xmin=0, xmax=21.5)
     if np.all(sorted_total >= 0):
-        ax.set_ylim(ymin=0)
+        ax.set_ylim(ymin=0, ymax=23.5)
     
     # Fancy colours?
     if (not colourise):
