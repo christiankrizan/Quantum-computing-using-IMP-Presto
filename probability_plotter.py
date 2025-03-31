@@ -652,6 +652,11 @@ def plot_logic_table(
     # We require some API tools from the Labber API.
     import Labber
     
+    # User input sanitation:
+    if export_filepath.endswith("\\Desktop"):
+        export_filepath += "\\"
+        print("WARNING: Detected '\Desktop' in the end of the export path. You meant [-]\\Desktop\\. This was fixed for you.")
+    
     def get_stepchannelvalue(StepChannels, name):
         for i, item in enumerate(StepChannels):
             if item['name'] == name:
