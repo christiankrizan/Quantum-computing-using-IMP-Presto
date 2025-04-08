@@ -40,6 +40,7 @@ def calculate_E_C(
     anharmonicity_Hz,
     E_J_Hz,
     acceptable_frequency_error = 150,
+    verbose = True
     ):
     ''' Use (2.19) from Joseph Rahamim's PhD thesis to calculate the
         charging energy based on anharmonicity and the Josephson
@@ -77,6 +78,10 @@ def calculate_E_C(
                 E_C_Hz *= 0.99
             elif difference < 0:
                 E_C_Hz *= 1.01
+    
+    # Report difference?
+    if verbose:
+        print("Difference |anharmonicity / E_C|: "+str(np.abs(anharmonicity_Hz / E_C_Hz)))
     
     # Finished!
     return E_C_Hz
