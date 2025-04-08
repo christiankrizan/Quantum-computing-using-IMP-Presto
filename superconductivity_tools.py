@@ -203,7 +203,7 @@ def calculate_RT_resistance_from_target_f01(
     difference_between_RT_and_cold_resistance = 1.1385,
     T = 0.010,
     R_N_initial_guess = 15000,
-    acceptable_frequency_offset = 200,
+    acceptable_frequency_offset = 100,
     verbose = True
     ):
     ''' Given a target |0⟩ → |1⟩ transition of a transmon,
@@ -297,7 +297,7 @@ def calculate_resistance_to_manipulate_to(
         # Original junction resistance known?
         if original_resistance_of_junction > 0:
             increase = room_temperature_resistance_to_hit / original_resistance_of_junction
-            assert increase >= 1.0, "Error! The resistance can only go up. Unable to tune junction to the target frequency. Needed tuning: "+str((increase-1)*100)+" %"
+            assert increase >= 1.0, "Error! The resistance can only go up (for now). Unable to tune junction to the target frequency. Needed tuning: "+str((increase-1)*100)+" %"
             print(f"The target room-temperature resistance is: {(room_temperature_resistance_to_hit):.3f} [Ω], which corresponds to {((increase-1)*100):.3f} %")
         else:
             print(f"The target room-temperature resistance is: {(room_temperature_resistance_to_hit):.3f} [Ω]")
@@ -307,24 +307,251 @@ def calculate_resistance_to_manipulate_to(
     if expected_aging > 0:
         raise NotImplementedError("Not finished.")
     
-    # TODO the creep is not a fixed offset like this, it is time dependent.
+    # TODO current, our only knowledge of the creep is that it is a fixed offset compared to the initial resistance.
     ## Well, to be picky, we know that the end number is pretty much
     ## a fixed resistance offset.
-    if expected_resistance_creep > 0:
+    if expected_resistance_creep >= 0:
+        if original_resistance_of_junction == 0:
+            raise ValueError("Halted! If assuming creep, then the original resistance of the junction must be known. Check your arguments.")
+        
         print(f"Expecting {((expected_resistance_creep-1)*100):.3f} % worth of resistance creep.")
-        room_temperature_resistance_to_hit = room_temperature_resistance_to_hit / expected_resistance_creep
-        if original_resistance_of_junction > 0:
-            increase = room_temperature_resistance_to_hit / original_resistance_of_junction
-            print(f"Excluding resistance creep, expect to hit: {(room_temperature_resistance_to_hit):.3f} [Ω], which is {((increase-1)*100):.3f} %")
-        else:
-            print(f"Excluding resistance creep, expect to hit: {(room_temperature_resistance_to_hit):.3f} [Ω]")
+        
+        # Figure out the creep.
+        creep_in_ohms = (original_resistance_of_junction * expected_resistance_creep - original_resistance_of_junction)
+        
+        # Subtract!
+        room_temperature_resistance_to_hit -= creep_in_ohms
+        increase = room_temperature_resistance_to_hit / original_resistance_of_junction
+        print(f"Excluding resistance creep, expect to hit: {(room_temperature_resistance_to_hit):.3f} [Ω], which is {((increase-1)*100):.3f} %")
+        
     elif expected_resistance_creep < 0:
         raise ValueError("Error! The resistance creep is expected to be a positive number; the resistance is expected to increase post-manipulation.")
     
     return room_temperature_resistance_to_hit
 
+def fit_ambegaokar_baratoff_josephson_koch_to_resistance(
+    measured_junction_resistances,
+    measured_qubit_frequencies,
+    E_C_in_Hz,
+    Delta_cold_eV,
+    difference_between_RT_and_cold_resistance = 1.1385,
+    T = 0.010,
+    colourise = False,
+    verbose = True
+    ):
+    ''' Given measured frequency and resistance values,
+        fit the equation that maps frequency to resistance.
+    '''
+    
+    # User argument sanitation:
+    if not (len(measured_qubit_frequencies) == len(measured_junction_resistances)):
+        raise ValueError("Halted! The list measured_qubit_frequencies must have an equal number of entries as the list measured_junction_resistances.")
+    
+    # Sort the lists. Sort by the first list, and unzip them
+    sorted_pairs = sorted(zip(measured_junction_resistances, measured_qubit_frequencies))
+    sorted_resistances, sorted_frequencies = zip(*sorted_pairs)
+    measured_junction_resistances = (list(sorted_resistances)).copy()
+    measured_qubit_frequencies    = (list(sorted_frequencies)).copy()
+    
+    # Define the equation to fit to.
+    def ambegaokar_baratoff_josephson_koch(
+        room_temperature_resistance,
+        E_C_in_Hz,
+        Delta_cold_eV,
+        ##difference_between_RT_and_cold_resistance,
+        ##T
+        ):
+        # Physical constants
+        h = 6.62607015e-34       # Planck's constant [J/Hz]
+        h_bar = h / (2 * np.pi)  # Reduced Planck's constant [J/Hz]
+        e = 1.602176634e-19      # Elementary charge [C]
+        k_B = 1.380649e-23       # Boltzmann's constant [J/K]
+        
+        # User-set values
+        ## Calculate the normal state resistance of the S-I-S junction.
+        R_N = room_temperature_resistance * difference_between_RT_and_cold_resistance
+        Delta_cold = Delta_cold_eV * e # Superconducting gap at mK temperature [J]
+        E_C = E_C_in_Hz * h # Charging energy [J]
+        
+        # Calculate I_c using the Ambegaokar-Baratoff relation
+        I_c = (np.pi * Delta_cold)/(2*e*R_N) ## * np.tanh(Delta_cold / (2 * k_B * T))
+        
+        # Calculate E_J
+        E_J = (h_bar / (2*e)) * I_c
+        
+        # Calculate f_01
+        ## Koch 2007 equation regarding transmon f_01, precision to second order.
+        ## https://doi.org/10.1103/PhysRevB.77.180502
+        second_order_correction_factor = -(E_C / 2) * (E_C / (8*E_J))
+        
+        # Return answer.
+        return (np.sqrt(8 * E_J * E_C) -E_C + second_order_correction_factor)/h
+    
+    # Create figure for plotting.
+    if verbose:
+        if colourise:
+            fig, ax = plt.subplots(figsize=(12, 10), facecolor=get_colourise(-2))
+        else:
+            fig, ax = plt.subplots(figsize=(12, 10))
+    
+    # Plot the data, and its fitted-to curve,
+    ## Get the fit and its data.
+    optimal_vals, covariance_mtx_of_opt_vals = curve_fit(
+        f     = ambegaokar_baratoff_josephson_koch,
+        xdata = measured_junction_resistances,
+        ydata = measured_qubit_frequencies,
+        p0    = (E_C_in_Hz, Delta_cold_eV)
+    )
+    ###(E_C_in_Hz, Delta_cold_eV, difference_between_RT_and_cold_resistance, T)
+    fit_x_values = np.linspace(measured_junction_resistances[0]*0.90, measured_junction_resistances[-1]*1.10, 100)
+    fitted_curve = ambegaokar_baratoff_josephson_koch(
+        room_temperature_resistance = fit_x_values,
+        E_C_in_Hz = optimal_vals[0],
+        Delta_cold_eV = optimal_vals[1],
+        ##difference_between_RT_and_cold_resistance = optimal_vals[2],
+        ##T = optimal_vals[3],
+    )
+    
+    # Get the fit error.
+    fit_err = np.sqrt(np.diag(covariance_mtx_of_opt_vals))
+    err_E_C_in_Hz = fit_err[0]
+    err_Delta_cold_eV = fit_err[1]
+    ##err_difference_between_RT_and_cold_resistance = fit_err[2]
+    ##err_T = fit_err[3]
+    
+    # Do teh plottings!
+    if verbose:
+        if colourise:
+            plt.scatter(measured_junction_resistances, measured_qubit_frequencies, color=get_colourise(colourise_counter), label=f"Measured data.")
+            colourise_counter += 1
+            ## Plot the ideal curve.
+            plt.plot(fit_x_values, fitted_curve, color=get_colourise(colourise_counter))
+            colourise_counter += 1
+        else:
+            plt.scatter(measured_junction_resistances, measured_qubit_frequencies, color="#34D2D6", label=f"Measured data")
+            plt.plot(fit_x_values, fitted_curve, '--', color="#D63834")
+    
+    # Labels and such.
+    if verbose:
+        plt.grid()
+        if colourise:
+            fig.patch.set_alpha(0)
+            ax.grid(color=get_colourise(-1))
+            ax.set_facecolor(get_colourise(-2))
+            ax.spines['bottom'].set_color(get_colourise(-1))
+            ax.spines['top'].set_color(get_colourise(-1))
+            ax.spines['left'].set_color(get_colourise(-1))
+            ax.spines['right'].set_color(get_colourise(-1))
+            ax.tick_params(axis='both', colors=get_colourise(-1))
+    
+        # Bump up the size of the ticks' numbers on the axes.
+        ax.tick_params(axis='both', labelsize=13)
+    
+        # Fancy colours?
+        if (not colourise):
+            plt.xlabel("Resistance [Ω]", fontsize=18)
+            plt.ylabel("Qubit plasma frequency [Hz]", fontsize=18)
+            plt.title(f"Qubit frequency vs. resistance", fontsize=27)
+        else:
+            plt.xlabel("Resistance [Ω]", color=get_colourise(-1), fontsize=18)
+            plt.ylabel("Qubit plasma frequency [Hz]", color=get_colourise(-1), fontsize=18)
+            plt.title(f"Qubit frequency vs. resistance", color=get_colourise(-1), fontsize=27)
+    
+        # Show shits.
+        plt.legend(fontsize=16)
+        plt.show()
+    
+    # Print shits.
+    if verbose:
+        print("E_C: "+str(optimal_vals[0])+" ±"+str(fit_err[0])+" Hz")
+        print("Delta: "+str(optimal_vals[1])+" ±"+str(fit_err[1])+" eV")
+        ##print("Diff. R vs. R_N: "+str(optimal_vals[2])+" ±"+str(fit_err[2])+" %")
+        ##print("T: "+str(optimal_vals[3])+" ±"+str(fit_err[3])+" K")
+        
+    # Calculate frequency differences.
+    diff_list = []
+    for fif in range(len(measured_qubit_frequencies)):
+        current_measured_frequency  = measured_qubit_frequencies[fif]
+        current_measured_resistance = measured_junction_resistances[fif]
+        
+        current_predicted_frequency = calculate_f01_from_RT_resistance(
+            room_temperature_resistance = current_measured_resistance,
+            E_C_in_Hz = 195e6,#optimal_vals[0],
+            Delta_cold_eV = 172.48e-6,#optimal_vals[1],
+            difference_between_RT_and_cold_resistance = difference_between_RT_and_cold_resistance,
+            T = T,
+            verbose = verbose
+        )
+        
+        # Positive = "Your value was above the prediction"
+        # Negative = "Your value was below the prediction"
+        curr_difference = current_measured_frequency - current_predicted_frequency
+        
+        # Append to list of stats.
+        diff_list.append(curr_difference)
+    
+    return optimal_vals, fit_err, diff_list
 
-
+def run_fits_of_ambegaokar_baratoff_josephson_koch(
+    measured_junction_resistances,
+    measured_qubit_frequencies,
+    E_C_in_Hz_guess_list,
+    Delta_cold_eV_guess_list,
+    ##difference_between_RT_and_cold_resistance_guess_list,
+    acceptable_limits = [(100e6, 500e6), (105e-6, 285e-6)]##, (0.95, 1.25)]
+    ##T = 0.010,
+    ):
+    ''' Try different values until the fit works out.
+    '''
+    
+    # Set flags.
+    success = False
+    attempts = 0
+    try:
+        total_attempts_to_do = len(E_C_in_Hz_guess_list) * len(Delta_cold_eV_guess_list) * len(difference_between_RT_and_cold_resistance_guess_list)
+    except NameError:
+        total_attempts_to_do = len(E_C_in_Hz_guess_list) * len(Delta_cold_eV_guess_list)
+    
+    for E_C_in_Hz_current in E_C_in_Hz_guess_list:
+        for Delta_cold_eV_current in Delta_cold_eV_guess_list:
+            ##for difference_between_RT_and_cold_resistance_current in difference_between_RT_and_cold_resistance_guess_list:
+            try:
+                optimal_vals, fit_err = fit_ambegaokar_baratoff_josephson_koch_to_resistance(
+                    measured_junction_resistances = measured_junction_resistances,
+                    measured_qubit_frequencies = measured_qubit_frequencies,
+                    E_C_in_Hz = E_C_in_Hz_current,
+                    Delta_cold_eV = Delta_cold_eV_current,
+                    ##difference_between_RT_and_cold_resistance = difference_between_RT_and_cold_resistance_current,
+                    ##T = T,
+                    colourise = False,
+                    verbose = False
+                )
+                
+                # Check limits:
+                if (optimal_vals[0] >= acceptable_limits[0][0]) and (optimal_vals[0] <= acceptable_limits[0][1]):
+                    # E_C was fine!
+                    if (optimal_vals[1] >= acceptable_limits[1][0]) and (optimal_vals[1] <= acceptable_limits[1][1]):
+                        # Delta was fine!
+                        ##if (optimal_vals[2] >= acceptable_limits[2][0]) and (optimal_vals[2] <= acceptable_limits[2][1]):
+                        ## # Resistance mapping was fine!
+                        
+                        # Jolly! Report!
+                        print("--------------------------------------------------\nLegal values found!")
+                        print("E_C: "+str(optimal_vals[0])+" Hz ±"+str(fit_err[0]))
+                        print("Delta: "+str(optimal_vals[1])+" eV ±"+str(fit_err[1]))
+                        ##print("R_RT to R_N: "+str(optimal_vals[2])+" ±"+str(fit_err[2]))
+                        
+                        success = True
+            except RuntimeError:
+                pass
+            
+            attempts += 1
+            if ((attempts/total_attempts_to_do) % 0.025) == 0:
+                print("Attempts made: "+str(attempts)+", "+str(attempts/total_attempts_to_do)+"% done.")
+    
+    if (not success):
+        print("Failed to find working set of parameters.")
+    
 def plot_fourier_transform_of_resistance_creep(
     filepath,
     normalise_resistances = 0,
@@ -762,9 +989,9 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
     
     assert colourise == True, "Halted! Code missing for setting colour to its default. Fix it." # TODO
     
-    plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=16)
-    plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=16)
-    plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=25)
+    plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=18)
+    plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=18)
+    plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=27)
     plt.legend()
     plt.show()
 
@@ -1046,6 +1273,7 @@ def plot_active_manipulation(
     plot_no_junction_resistance_under_ohm = 0,
     fitter = 'none',
     skip_initial_dip = False,
+    plot_fit_parameters_in_legend = False,
     colourise = False,
     ):
     ''' Plot soledly only the active manipulation.
@@ -1556,10 +1784,16 @@ def plot_active_manipulation(
                 fit_label += prefix+': '+(f"{(fitted_values * (10**(-exponent))):.3f}·10^{exponent} ±{(fitted_errors * (10**(-error_exponent))):.3f}·10^{error_exponent}")+'\n'
             if (not colourise):
                 plt.figure(1) # Set figure 1 as active.
-                plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors(jj))
+                if plot_fit_parameters_in_legend:
+                    plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors(jj))
+                else:
+                    plt.plot(times, fit_results[0], linestyle='--', color=colors(jj))
             else:
                 plt.figure(1) # Set figure 1 as active.
-                plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
+                if plot_fit_parameters_in_legend:
+                    plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
+                else:
+                    plt.plot(times, fit_results[0], linestyle='--', color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
         else:
             # Fitter == 'none'.
             fitted_values_to_be_returned.append(None)
@@ -1618,32 +1852,32 @@ def plot_active_manipulation(
     # Other figure formatting.
     if (not colourise):
         plt.figure(1) # Set figure 1 as active.
-        plt.xlabel("Duration [s]", fontsize=16)
-        plt.ylabel(y_label_text, fontsize=16)
-        plt.title("Resistance vs. Time", fontsize=25)
+        plt.xlabel("Duration [s]", fontsize=18)
+        plt.ylabel(y_label_text, fontsize=18)
+        plt.title("Resistance vs. Time", fontsize=27)
         
         plt.figure(2) # Set figure 2 as active.
-        plt.xlabel("Duration [s]", fontsize=16)
-        plt.ylabel(y_label_text, fontsize=16)
+        plt.xlabel("Duration [s]", fontsize=18)
+        plt.ylabel(y_label_text, fontsize=18)
         if fitter != 'none':
             if fitter == 'second_order':
-                plt.title("Residuals, 2nd-ord-polyn.", fontsize=25)
+                plt.title("Residuals, 2nd-ord-polyn.", fontsize=27)
             elif fitter == 'third_order':
-                plt.title("Residuals, 3rd-ord-polyn.", fontsize=25)
+                plt.title("Residuals, 3rd-ord-polyn.", fontsize=27)
             elif fitter == 'exponential':
-                plt.title("Residuals, exponential func.", fontsize=25)
+                plt.title("Residuals, exponential func.", fontsize=27)
             elif fitter == 'power':
-                plt.title("Residuals, power-law", fontsize=25)
+                plt.title("Residuals, power-law", fontsize=27)
     else:
         plt.figure(1) # Set figure 1 as active.
-        plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=16)
-        plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=16)
-        plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=25)
+        plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=18)
+        plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=18)
+        plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=27)
     
     # Show shits.
     for ll in range(2):
         plt.figure(ll+1)
-        if ll == 1:
+        if (not plot_fit_parameters_in_legend):
             plt.legend(fontsize=16)
         else:
             plt.legend()
@@ -1660,6 +1894,7 @@ def analyse_fitted_polynomial_factors(
     plot_no_junction_resistance_under_ohm = 0,
     fitter = 'second_order',
     skip_initial_dip = False,
+    plot_fit_parameters_in_legend = False,
     colourise = False,
     ):
     ''' For a list of files, given as a list of filepath (strings),
@@ -1727,6 +1962,7 @@ def analyse_fitted_polynomial_factors(
         plot_no_junction_resistance_under_ohm = plot_no_junction_resistance_under_ohm,
         fitter = fitter,
         skip_initial_dip = skip_initial_dip,
+        plot_fit_parameters_in_legend = plot_fit_parameters_in_legend,
         colourise = colourise,
     )
     
@@ -1847,8 +2083,8 @@ def analyse_fitted_polynomial_factors(
             list_of_traces_in_plot += [[voltage_list_mV, y_values[i], label_string, y_errors[i]]]
     
     # Plot fit of fit?
-    ## polynomial_fit_successful will be False if fitter was not set to
-    ## 'second_order' or 'third_order'.
+    ## polynomial_fit_successful will be False if fitter
+    ## was not set to 'second_order' or 'third_order'.
     if polynomial_fit_successful:
         fit_of_fit_label = 'f(V) = α₀·e^(V · γ)\n'
         for item in range(len(optimal_vals_alpha_fit)):
@@ -1868,13 +2104,13 @@ def analyse_fitted_polynomial_factors(
         list_of_traces_in_plot += [[fit_curve_x_mV, fitted_curve_alphas, fit_of_fit_label, None]]
     
     if colourise:
-        plt.xlabel("Voltage [mV]", fontsize=16, color=get_colourise(-1))
-        plt.ylabel("Fit parameters", fontsize=16, color=get_colourise(-1))
-        plt.title("Fit parameter trends vs. voltage", fontsize=25, color=get_colourise(-1))
+        plt.xlabel("Voltage [mV]", fontsize=18, color=get_colourise(-1))
+        plt.ylabel("Fit parameters", fontsize=18, color=get_colourise(-1))
+        plt.title("Fit parameter trends vs. voltage", fontsize=27, color=get_colourise(-1))
     else:
-        plt.xlabel("Voltage [mV]", fontsize=16)
-        plt.ylabel("Fit parameters", fontsize=16)
-        plt.title("Fit parameter trends vs. voltage", fontsize=25)
+        plt.xlabel("Voltage [mV]", fontsize=18)
+        plt.ylabel("Fit parameters", fontsize=18)
+        plt.title("Fit parameter trends vs. voltage", fontsize=27)
     
     # Colourise axes, set axis limits, and such?
     plt.grid()
@@ -1907,6 +2143,8 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
     plot_no_junction_resistance_under_ohm = 0,
     fitter = 'second_order',
     skip_initial_dip = False,
+    plot_fit_parameters_in_legend = False,
+    set_labels = [],
     colourise = False,
     ):
     ''' Analyse multiple sets of active resistance manipulation data.
@@ -1919,6 +2157,10 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
     # User argument sanitation.
     if fitter.lower() == 'none':
         raise ValueError("Halted! This function requires a fitter to be active; you provided 'none' as an argument here.")
+
+    # Did the user label the sets?
+    if (len(set_labels) != 0) and (not (len(list_of_filepath_lists) == len(set_labels))):
+        raise ValueError("Halted! Unable to determine set labels, ensure that you did provide a set label for each filepath in your arguments.") 
     
     # Collect all of the data.
     results_of_sets = []
@@ -1934,6 +2176,7 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
                 plot_no_junction_resistance_under_ohm = plot_no_junction_resistance_under_ohm,
                 fitter = fitter,
                 skip_initial_dip = skip_initial_dip,
+                plot_fit_parameters_in_legend = plot_fit_parameters_in_legend,
                 colourise = colourise,
             )
         )
@@ -1952,15 +2195,15 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
     # Make plots.
     ## Create figures for plotting.
     if colourise:
-        fig1, ax1 = plt.subplots(figsize=(8, 11), facecolor=get_colourise(-2))
-        fig2, ax2 = plt.subplots(figsize=(8, 11), facecolor=get_colourise(-2))
+        fig1, ax1 = plt.subplots(figsize=(9, 11), facecolor=get_colourise(-2))
+        fig2, ax2 = plt.subplots(figsize=(9, 11), facecolor=get_colourise(-2))
         if expected_number_of_fit_parameters == 3:
-            fig3, ax3 = plt.subplots(figsize=(8, 11), facecolor=get_colourise(-2))
+            fig3, ax3 = plt.subplots(figsize=(9, 11), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(8, 11))
-        fig2, ax2 = plt.subplots(figsize=(8, 11))
+        fig1, ax1 = plt.subplots(figsize=(9, 11))
+        fig2, ax2 = plt.subplots(figsize=(9, 11))
         if expected_number_of_fit_parameters == 3:
-            fig3, ax3 = plt.subplots(figsize=(8, 11))
+            fig3, ax3 = plt.subplots(figsize=(9, 11))
     
     # Figure out colours.
     if not colourise:
@@ -1978,7 +2221,10 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             # Get the fitted parameter's voltages, data, label, and error bars.
             voltage_list_mV = results_of_sets[sets][curr_figure][0]
             parameter_data = results_of_sets[sets][curr_figure][1]
-            label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(sets+1)
+            if len(set_labels) > 0:
+                label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(set_labels[sets])
+            else:
+                label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(sets+1)
             errors = results_of_sets[sets][curr_figure][3]
             # Plot!
             if curr_figure == 0:
@@ -2000,7 +2246,10 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
                 try:
                     fit_x_axis = results_of_sets[sets][curr_figure+expected_number_of_fit_parameters][0]
                     fit_y_axis = results_of_sets[sets][curr_figure+expected_number_of_fit_parameters][1]
-                    fit_label  = results_of_sets[sets][curr_figure+expected_number_of_fit_parameters][2]
+                    if plot_fit_parameters_in_legend:
+                        fit_label  = results_of_sets[sets][curr_figure+expected_number_of_fit_parameters][2]
+                    else:
+                        fit_label = None
                     if not colourise:
                         plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours(sets))
                     else:
@@ -2020,17 +2269,17 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
         else:
             title_colour = get_colourise(-1)
         
-        plt.xlabel("Voltage [mV]", fontsize=16)
-        plt.ylabel("Parameter value", fontsize=16)
+        plt.xlabel("Voltage [mV]", fontsize=18)
+        plt.ylabel("Parameter value", fontsize=18)
         if fitter != 'none':
             if fitter == 'second_order':
-                plt.title("Fit parameters, 2nd-ord-polyn.", color=title_colour, fontsize=25)
+                plt.title("Fit parameters, 2nd-ord-polyn.", color=title_colour, fontsize=27)
             elif fitter == 'third_order':
-                plt.title("Fit parameters, 3rd-ord-polyn.", color=title_colour, fontsize=25)
+                plt.title("Fit parameters, 3rd-ord-polyn.", color=title_colour, fontsize=27)
             elif fitter == 'exponential':
-                plt.title("Fit parameters, exponential func.", color=title_colour, fontsize=25)
+                plt.title("Fit parameters, exponential func.", color=title_colour, fontsize=27)
             elif fitter == 'power':
-                plt.title("Fit parameters, power-law", color=title_colour, fontsize=25)
+                plt.title("Fit parameters, power-law", color=title_colour, fontsize=27)
         else:
             raise ValueError("Error! Could not understand argument provided to 'fitter': "+str(fitter))
     
@@ -2538,13 +2787,13 @@ def plot_active_vs_total_resistance_gain(
     
     # Fancy colours?
     if (not colourise):
-        plt.xlabel("Active manipulation [%]", fontsize=16)
-        plt.ylabel("Total manipulation [%]", fontsize=16)
-        plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=25)
+        plt.xlabel("Active manipulation [%]", fontsize=18)
+        plt.ylabel("Total manipulation [%]", fontsize=18)
+        plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=27)
     else:
-        plt.xlabel("Active manipulation [%]", color=get_colourise(-1), fontsize=16)
-        plt.ylabel("Total manipulation [%]",  color=get_colourise(-1), fontsize=16)
-        plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", color=get_colourise(-1), fontsize=25)
+        plt.xlabel("Active manipulation [%]", color=get_colourise(-1), fontsize=18)
+        plt.ylabel("Total manipulation [%]",  color=get_colourise(-1), fontsize=18)
+        plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", color=get_colourise(-1), fontsize=27)
     
     # Show shits.
     plt.legend(fontsize=16)
