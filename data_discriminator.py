@@ -570,7 +570,44 @@ def construct_state_from_quadrature_voltage(
         voltages into qubit states. A linearising map.
     '''
     raise NotImplementedError("Halted! This function is not finished.")
+
+def post_process_data_from_logic_table_given_confusion_matrix(
+    logic_table_data,
+    confusion_matrix,
+    ):
+    ''' Given a dataset where each new row of the input matrix,
+        is some readout where each column is a state being discriminated
+        into, calculate the best-guess X given some confusion matrix data.
+        
+        See C. Križan et al. 2024 for more information on this method,
+        https://arxiv.org/html/2412.15022v1
+    '''
     
+    # Get data.
+    """ from probability_plotter import plot_logic_table
+        # TODO: In the future, it would probably be better if this
+        # function can calculate the data itself, as in, run the
+        plot_logic_table function for the user, not requiring him
+        to do it himself.
+    """
+    
+    ## logic_table_data contains the resulting data.
+    processed_output = []
+    for row in logic_table_data:
+        
+        # Perform error mitigation by applying the inverse of
+        # the confusion matrix.
+        x_calculated = fit_to_confusion_matrix(
+            y_vector = row,
+            confusion_matrix = confusion_matrix,
+        )
+        
+        # Append!
+        processed_output.append(x_calculated)
+    
+    # Return!
+    return np.array( processed_output )
+
 def post_process_data_given_confusion_matrix(
     filepaths_to_plot,
     confusion_matrix,
