@@ -7,7 +7,7 @@
 
 from random import randint
 import numpy as np
-import csv  
+import csv
 import matplotlib.pyplot as plt
 import sys
 import os
@@ -445,20 +445,20 @@ def fit_ambegaokar_baratoff_josephson_koch_to_resistance(
             ax.tick_params(axis='both', colors=get_colourise(-1))
     
         # Bump up the size of the ticks' numbers on the axes.
-        ax.tick_params(axis='both', labelsize=13)
+        ax.tick_params(axis='both', labelsize=23)
     
         # Fancy colours?
         if (not colourise):
-            plt.xlabel("Resistance [Ω]", fontsize=18)
-            plt.ylabel("Qubit plasma frequency [Hz]", fontsize=18)
-            plt.title(f"Qubit frequency vs. resistance", fontsize=27)
+            plt.xlabel("Resistance [Ω]", fontsize=33)
+            plt.ylabel("Qubit plasma frequency [Hz]", fontsize=33)
+            plt.title(f"Qubit frequency vs. resistance", fontsize=38)
         else:
-            plt.xlabel("Resistance [Ω]", color=get_colourise(-1), fontsize=18)
-            plt.ylabel("Qubit plasma frequency [Hz]", color=get_colourise(-1), fontsize=18)
-            plt.title(f"Qubit frequency vs. resistance", color=get_colourise(-1), fontsize=27)
+            plt.xlabel("Resistance [Ω]", color=get_colourise(-1), fontsize=33)
+            plt.ylabel("Qubit plasma frequency [Hz]", color=get_colourise(-1), fontsize=33)
+            plt.title(f"Qubit frequency vs. resistance", color=get_colourise(-1), fontsize=38)
     
         # Show shits.
-        plt.legend(fontsize=16)
+        plt.legend(fontsize=26)
         plt.show()
     
     # Print shits.
@@ -762,7 +762,7 @@ def plot_fourier_transform_of_resistance_creep(
 def plot_josephson_junction_resistance_manipulation_and_creep(
     filepath,
     normalise_resistances = 2,
-    normalise_time_to_creep_effect = True,
+    normalise_time = 0,
     attempt_to_color_plots_from_file_name = False,
     plot_no_junction_resistance_under_ohm = 0,
     colourise = False,
@@ -777,6 +777,11 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
                 will be reported as a percentage of this initial value.
             2:  same as 1, but the resistance creep's datapoint_0
                 will be the resistance that is normalised to.
+        
+        normalise_time will:
+            0: plot the UNIX timestamp on the x axis.
+            1: normalise to the creep effect.
+            2: normalise to the very beginning of the measurement.
     '''
     
     # Colourise counter, keeping track of the colour formatting.
@@ -817,6 +822,7 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
         first_time_value_has_been_checked = False
         zero_point_was_found = False
         time_offset_due_to_appended_data = 0
+        first_time_value_detected = -1.0
         si_unit_prefix_scaler = 1.0
         resistance_at_creep_start = 0
         add_this_time_offset_too = 0
@@ -855,6 +861,10 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
                         
                         # Every sixth row +4 contains a time value
                         time_value = float(rows[i+1][1])
+                        
+                        ## Was this a UNIX timestamp that we should offset for?
+                        if first_time_value_detected == -1.0:
+                            first_time_value_detected = time_value
                         
                         # Check whether a new measurement appended data onto the old one.
                         if time_value == 0:
@@ -903,13 +913,13 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
                 # In that case, just take the last value and normalise to that.
                 resistances = (resistances / resistances[-1]) - 1
         elif normalise_resistances == 1:
-            resistances = (resistances / resistances[0]) - 1
-            y_label_text = "Resistance normalised to starting value [-]"
+            resistances = ((resistances / resistances[0]) - 1) * 100
+            y_label_text = "Resistance increase [%]"
         else:
             y_label_text = "Resistance [Ω]"
         
-        # Normalise time axis?
-        if normalise_time_to_creep_effect:
+        # Normalise time axis to creep effect?
+        if (normalise_time == 1):
             # Then scale the time axis accordingly.
             times = np.array(times, dtype=np.float64)
             times = times - time_offset_due_to_appended_data
@@ -917,6 +927,10 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
                 # In that case, the measurement was likely aborted.
                 # Subtract the highest time value.
                 times -= times[-1]
+        elif (normalise_time == 2):
+            # Then cut away the UNIX timestamp taken at datapoint 0.
+            times = np.array(times, dtype=np.float64)
+            times -= first_time_value_detected
         
         # Iterate zero_points index counter.
         zz += 1
@@ -985,13 +999,14 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
         ax.tick_params(axis='both', colors=get_colourise(-1))
     
     # Bump up the size of the ticks' numbers on the axes.
-    ax.tick_params(axis='both', labelsize=13)
+    ax.tick_params(axis='both', labelsize=23)
     
     assert colourise == True, "Halted! Code missing for setting colour to its default. Fix it." # TODO
     
-    plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=18)
-    plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=18)
-    plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=27)
+    plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=33)
+    plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=33)
+    plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=38)
+    
     plt.legend()
     plt.show()
 
@@ -1275,6 +1290,9 @@ def plot_active_manipulation(
     skip_initial_dip = False,
     plot_fit_parameters_in_legend = False,
     colourise = False,
+    export_plot_to = '',
+    title_label = None,
+    enable_mask = False
     ):
     ''' Plot soledly only the active manipulation.
         
@@ -1544,13 +1562,14 @@ def plot_active_manipulation(
     fitted_values_to_be_returned = []
     fitted_errors_to_be_returned = []
     lowest_non_short_resistance_of_all = 1000000000
+    highest_number_on_the_y_axis = 0.0
     for jj in range(len(filepath)):
         filepath_item = filepath[jj]
         
         # Set initial parameters.
         times = []
         resistances = []
-        obvious_short = 100 # [Ω]  --  Define a resistance that defines "a short."
+        obvious_short = 160 # [Ω]  --  Define a resistance that defines "a short."
         lowest_non_short_resistance_in_set = 1000000000
         
         ## The new time format assumes that all data is set with reference
@@ -1711,12 +1730,56 @@ def plot_active_manipulation(
             num_items_to_colour = len(filepath)
             colors = plt.cm.get_cmap(colour_label, num_items_to_colour)
             
+            # Mask the scatter plot?
+            if enable_mask:
+                mask = (times >= 0) & (times <= 300)
+                times_to_plot = np.array(times)[mask]
+                resistances_to_plot = np.array(resistances)[mask]
+            else:
+                times_to_plot = times.copy()
+                resistances_to_plot = resistances.copy()
+            
             plt.figure(1) # Set figure 1 as active.
-            plt.scatter(times, resistances, marker=marker_symbol, label=file_label, color=colors(jj))
+            plt.scatter(times_to_plot, resistances_to_plot, marker=marker_symbol, label=file_label, color=colors(jj))
+            
+            # Update the largest value present on the y-axis?
+            if np.max(resistances) > highest_number_on_the_y_axis:
+                highest_number_on_the_y_axis = np.max(resistances)
+            
+            ##plt.figure(3) # Set figure 3 as active.
+            ##plt.scatter(times_to_plot, np.log10(resistances_to_plot), marker=marker_symbol, label=file_label, color=colors(jj))
         else:
+            
+            # Get pseudolegacy filename labels?
+            if   'thin'  in file_label.lower():
+                # Get the last number.
+                match = re.search(r'(\d+)$', file_label)
+                file_label = str(int(match.group(1)) if match else None)+' mV'
+                
+            elif 'thick' in file_label.lower():
+                # Get the last number.
+                match = re.search(r'(\d+)$', file_label)
+                file_label = str(int(match.group(1)) if match else None)+' mV'
+            
+            # Mask the scatter plot?
+            if enable_mask:
+                mask = (times >= 0) & (times <= 300)
+                times_to_plot = np.array(times)[mask]
+                resistances_to_plot = np.array(resistances)[mask]
+            else:
+                times_to_plot = times.copy()
+                resistances_to_plot = resistances.copy()
+        
             # Then follow the schema.
             plt.figure(1) # Set figure 1 as active.
-            plt.plot(times, resistances, marker=marker_symbol, label=file_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
+            plt.scatter(times_to_plot, resistances_to_plot, marker=marker_symbol, label=file_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
+            
+            ##plt.figure(3) # Set figure 3 as active.
+            ##plt.plot(times_to_plot, np.log10(resistances_to_plot), marker=marker_symbol, label=file_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
+            
+            # Update the largest value present on the y-axis?
+            if np.max(resistances) > highest_number_on_the_y_axis:
+                highest_number_on_the_y_axis = np.max(resistances)
         
         # Plot the fit curve.
         fit_label = ''
@@ -1782,18 +1845,28 @@ def plot_active_manipulation(
                 exponent       = np.floor(np.log10(np.abs( fitted_values )))
                 error_exponent = np.floor(np.log10(np.abs( fitted_errors )))
                 fit_label += prefix+': '+(f"{(fitted_values * (10**(-exponent))):.3f}·10^{exponent} ±{(fitted_errors * (10**(-error_exponent))):.3f}·10^{error_exponent}")+'\n'
+            
+            # Mask the fit pot?
+            if enable_mask:
+                mask = (times >= 0) & (times <= 300)
+                times_to_plot = np.array(times)[mask]
+                fit_to_plot   = np.array(fit_results[0])[mask]
+            else:
+                times_to_plot = times
+                fit_to_plot   = fit_results[0]
+            
             if (not colourise):
                 plt.figure(1) # Set figure 1 as active.
                 if plot_fit_parameters_in_legend:
-                    plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors(jj))
+                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors(jj))
                 else:
-                    plt.plot(times, fit_results[0], linestyle='--', color=colors(jj))
+                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', color=colors(jj))
             else:
                 plt.figure(1) # Set figure 1 as active.
                 if plot_fit_parameters_in_legend:
-                    plt.plot(times, fit_results[0], linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
+                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
                 else:
-                    plt.plot(times, fit_results[0], linestyle='--', color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
+                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
         else:
             # Fitter == 'none'.
             fitted_values_to_be_returned.append(None)
@@ -1839,8 +1912,8 @@ def plot_active_manipulation(
         ax2.tick_params(axis='both', colors=get_colourise(-1))
     
     # Bump up the size of the ticks' numbers on the axes.
-    ax1.tick_params(axis='both', labelsize=13)
-    ax2.tick_params(axis='both', labelsize=13)
+    ax1.tick_params(axis='both', labelsize=23)
+    ax2.tick_params(axis='both', labelsize=23)
     
     # Extend axes to include the origin?
     ## Do not extend the x-axis if trying to plot the UNIX time.
@@ -1850,37 +1923,58 @@ def plot_active_manipulation(
     #    ax1.set_ylim(ymin=-5)
     
     # Other figure formatting.
+    ## Figure out the label padding.
+    if (normalise_resistances == 1):
+        
+        if highest_number_on_the_y_axis < 8:
+            label_padding = 68
+        elif highest_number_on_the_y_axis < 30:
+            label_padding = 20
+        else:
+            label_padding = 30
+    else:
+        label_padding = 30
+    
+    
     if (not colourise):
         plt.figure(1) # Set figure 1 as active.
-        plt.xlabel("Duration [s]", fontsize=18)
-        plt.ylabel(y_label_text, fontsize=18)
-        plt.title("Resistance vs. Time", fontsize=27)
+        plt.xlabel("Duration [s]", fontsize=33)
+        plt.ylabel(y_label_text, fontsize=33, labelpad=label_padding)
+        
+        # Set title for this figure.
+        plt.title(title_label, fontsize=38)
         
         plt.figure(2) # Set figure 2 as active.
-        plt.xlabel("Duration [s]", fontsize=18)
-        plt.ylabel(y_label_text, fontsize=18)
+        plt.xlabel("Duration [s]", fontsize=33)
+        plt.ylabel(y_label_text, fontsize=33)
         if fitter != 'none':
             if fitter == 'second_order':
-                plt.title("Residuals, 2nd-ord-polyn.", fontsize=27)
+                plt.title("Residuals, 2nd-ord-polyn.", fontsize=38)
             elif fitter == 'third_order':
-                plt.title("Residuals, 3rd-ord-polyn.", fontsize=27)
+                plt.title("Residuals, 3rd-ord-polyn.", fontsize=38)
             elif fitter == 'exponential':
-                plt.title("Residuals, exponential func.", fontsize=27)
+                plt.title("Residuals, exponential func.", fontsize=38)
             elif fitter == 'power':
-                plt.title("Residuals, power-law", fontsize=27)
+                plt.title("Residuals, power-law", fontsize=38)
     else:
         plt.figure(1) # Set figure 1 as active.
-        plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=18)
-        plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=18)
-        plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=27)
+        plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=33)
+        plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=33)
+        plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=38)
     
     # Show shits.
     for ll in range(2):
         plt.figure(ll+1)
+        plt.xticks(fontsize=30)
+        plt.yticks(fontsize=30)
         if (not plot_fit_parameters_in_legend):
-            plt.legend(fontsize=16)
+            plt.legend(fontsize=26)
         else:
             plt.legend()
+        # Save plot?
+        if export_plot_to != '':
+            plt.tight_layout()
+            plt.savefig(export_plot_to+"Fig"+str(ll+1), dpi=169, bbox_inches='tight')
     plt.show()
     
     # Return stuffs.
@@ -2014,8 +2108,9 @@ def analyse_fitted_polynomial_factors(
                 #return alpha_0 * ((np.e)**((v_mV - v_mott_mV) * gamma))
                 return alpha_0 * ((np.e)**(v_mV * gamma))
             
-            # Grab the α values.
+            # Grab the α values and β values.
             alpha_values = y_values[0]
+            beta_values  = y_values[1]
             
             # Here, sort the alpha_values versus the applied voltages.
             ##if voltage_list_mV == sorted(voltage_list_mV):
@@ -2024,14 +2119,18 @@ def analyse_fitted_polynomial_factors(
             ##elif
             if voltage_list_mV == sorted(voltage_list_mV, reverse = True):
                 # The list is reversed, sort it.
+                ## IMPORTANT: remember that the beta_values
+                ##            also must be reversed here.
                 voltage_list_mV.reverse()
                 alpha_values.reverse()
+                beta_values.reverse()
             else:
                 # The list is a mess.
-                sorted_pairs = sorted(zip(voltage_list_mV, alpha_values))
-                voltage_list_mV, alpha_values = zip(*sorted_pairs)
+                sorted_triples = sorted(zip(voltage_list_mV, alpha_values, beta_values))
+                voltage_list_mV, alpha_values, beta_values = zip(*sorted_triples)
                 voltage_list_mV = list(voltage_list_mV)
                 alpha_values = list(alpha_values)
+                beta_values = list(beta_values)
             
             ## I don't really know how to make a good guess for the scalar alpha_0.
             alpha_0_guess = 1.0
@@ -2104,13 +2203,13 @@ def analyse_fitted_polynomial_factors(
         list_of_traces_in_plot += [[fit_curve_x_mV, fitted_curve_alphas, fit_of_fit_label, None]]
     
     if colourise:
-        plt.xlabel("Voltage [mV]", fontsize=18, color=get_colourise(-1))
-        plt.ylabel("Fit parameters", fontsize=18, color=get_colourise(-1))
-        plt.title("Fit parameter trends vs. voltage", fontsize=27, color=get_colourise(-1))
+        plt.xlabel("Voltage [mV]", fontsize=33, color=get_colourise(-1))
+        plt.ylabel("Fit parameters", fontsize=33, color=get_colourise(-1))
+        plt.title("Fit parameter trends vs. voltage", fontsize=38, color=get_colourise(-1))
     else:
-        plt.xlabel("Voltage [mV]", fontsize=18)
-        plt.ylabel("Fit parameters", fontsize=18)
-        plt.title("Fit parameter trends vs. voltage", fontsize=27)
+        plt.xlabel("Voltage [mV]", fontsize=33)
+        plt.ylabel("Fit parameters", fontsize=33)
+        plt.title("Fit parameter trends vs. voltage", fontsize=38)
     
     # Colourise axes, set axis limits, and such?
     plt.grid()
@@ -2128,7 +2227,7 @@ def analyse_fitted_polynomial_factors(
         ax1.tick_params(axis='both', colors=get_colourise(-1))
     
     # Show shits.
-    plt.legend(fontsize=16)
+    plt.legend(fontsize=26)
     plt.show()
     
     # Return a whole bunch of stuff, so that this function
@@ -2195,15 +2294,15 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
     # Make plots.
     ## Create figures for plotting.
     if colourise:
-        fig1, ax1 = plt.subplots(figsize=(9, 11), facecolor=get_colourise(-2))
-        fig2, ax2 = plt.subplots(figsize=(9, 11), facecolor=get_colourise(-2))
+        fig1, ax1 = plt.subplots(figsize=(15, 11), facecolor=get_colourise(-2))
+        fig2, ax2 = plt.subplots(figsize=(15, 11), facecolor=get_colourise(-2))
         if expected_number_of_fit_parameters == 3:
-            fig3, ax3 = plt.subplots(figsize=(9, 11), facecolor=get_colourise(-2))
+            fig3, ax3 = plt.subplots(figsize=(15, 11), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(9, 11))
-        fig2, ax2 = plt.subplots(figsize=(9, 11))
+        fig1, ax1 = plt.subplots(figsize=(15, 11))
+        fig2, ax2 = plt.subplots(figsize=(15, 11))
         if expected_number_of_fit_parameters == 3:
-            fig3, ax3 = plt.subplots(figsize=(9, 11))
+            fig3, ax3 = plt.subplots(figsize=(15, 11))
     
     # Figure out colours.
     if not colourise:
@@ -2221,10 +2320,13 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             # Get the fitted parameter's voltages, data, label, and error bars.
             voltage_list_mV = results_of_sets[sets][curr_figure][0]
             parameter_data = results_of_sets[sets][curr_figure][1]
+            
             if len(set_labels) > 0:
-                label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(set_labels[sets])
+                ##label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(set_labels[sets])
+                label_string = ''+str(set_labels[sets])
             else:
-                label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(sets+1)
+                ##label_string = results_of_sets[sets][curr_figure][2] + ', set '+str(sets+1)
+                label_string = ''+str(sets+1)
             errors = results_of_sets[sets][curr_figure][3]
             # Plot!
             if curr_figure == 0:
@@ -2235,7 +2337,7 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
                 plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=get_colourise(sets))
             else:
                 plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours(sets))
-                
+            
             # Plot fit trace in the alpha plot?
             if curr_figure == 0:
                 # Note that curr_figure here is always 0. The fit curve is
@@ -2269,22 +2371,32 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
         else:
             title_colour = get_colourise(-1)
         
-        plt.xlabel("Voltage [mV]", fontsize=18)
-        plt.ylabel("Parameter value", fontsize=18)
+        plt.xlabel("Voltage [mV]", fontsize=33)
+        if fitter == 'second_order':
+            if (ll+1) == 1:
+                plt.ylabel("Parameter α", fontsize=33)
+            else:
+                plt.ylabel("Parameter β", fontsize=33)
+        else:
+            print("WARNING: Unable to select appropriate Y-axis labels at this time.")
+            plt.ylabel("Parameter value", fontsize=33)
+        
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
         if fitter != 'none':
             if fitter == 'second_order':
-                plt.title("Fit parameters, 2nd-ord-polyn.", color=title_colour, fontsize=27)
+                plt.title("Fit parameters, 2nd order polynomial", color=title_colour, fontsize=38)
             elif fitter == 'third_order':
-                plt.title("Fit parameters, 3rd-ord-polyn.", color=title_colour, fontsize=27)
+                plt.title("Fit parameters, 3rd order polynomial", color=title_colour, fontsize=38)
             elif fitter == 'exponential':
-                plt.title("Fit parameters, exponential func.", color=title_colour, fontsize=27)
+                plt.title("Fit parameters, exponential function", color=title_colour, fontsize=38)
             elif fitter == 'power':
-                plt.title("Fit parameters, power-law", color=title_colour, fontsize=27)
+                plt.title("Fit parameters, power-law", color=title_colour, fontsize=38)
         else:
             raise ValueError("Error! Could not understand argument provided to 'fitter': "+str(fitter))
-    
+        
         # Show legends.
-        plt.legend(fontsize=16)
+        plt.legend(fontsize=26)
     
     # Grid colourisation?
     if colourise:
@@ -2622,15 +2734,16 @@ def plot_active_vs_total_resistance_gain(
     ## Rework voltage into something that will be written in the title.
     ## Append this number to the filename_tags to look for.
     filename_tags.append(str(title_voltage_V).replace('.',"p"))
-    (active_gain_percent, total_gain_percent) = acquire_creep_data_from_folder(
+    '''(active_gain_percent, total_gain_percent) = acquire_creep_data_from_folder(
         folder_path = folder_path,
         take_creep_data_at_this_time_s = take_creep_data_at_this_time_s,
         filename_tags = filename_tags,
-    )
+    )'''
     
     # TODO: acquire data.
-    ##active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94] ## THICK354
-    ##total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36] ## THICK354
+    print("WARNING CHANGE BACK")
+    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94] ## THICK354
+    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36] ## THICK354
     #active_gain_percent = [7.0942, 10.0738, 11.8119, 5.0343, 15.0296, 18.0029, 20.0640, 6.0434,  9.0186,  7.6048, 4.040, 10.007, 4.060, 6.020, 21.129, 3.577, 20.741, 3.043, 1.017] ## THICK314
     #total_gain_percent  = [9.7949, 12.2327, 14.0164, 6.9078, 17.4735, 20.3925, 22.1454, 8.2411, 11.1680, 10.2548, 5.986, 12.063, 5.804, 7.871, 23.058, 5.378, 23.186, 4.797, 2.859] ## THICK314
     
@@ -2666,10 +2779,10 @@ def plot_active_vs_total_resistance_gain(
     
     # Create figure for plotting.
     if colourise:
-        fig, ax = plt.subplots(figsize=(9, 10), facecolor=get_colourise(-2))
+        fig, ax = plt.subplots(figsize=(12, 11), facecolor=get_colourise(-2))
         #plt.figure(figsize=(10, 5), facecolor=get_colourise(-2))
     else:
-        fig, ax = plt.subplots(figsize=(9, 10))
+        fig, ax = plt.subplots(figsize=(12, 11))
         #plt.figure(figsize=(10, 5))
     
     # Let's fit the data and see what we get.
@@ -2777,24 +2890,139 @@ def plot_active_vs_total_resistance_gain(
         ax.tick_params(axis='both', colors=get_colourise(-1))
     
     # Bump up the size of the ticks' numbers on the axes.
-    ax.tick_params(axis='both', labelsize=13)
+    ax.tick_params(axis='both', labelsize=23)
     
     # Extend axes to include the origin?
     if np.all(sorted_active >= 0):
-        ax.set_xlim(xmin=0, xmax=21.5)
+        ax.set_xlim(xmin=0, xmax=17.5)
+        print("WARNING CHANGE BACK")
+        ##i##ax.set_xlim(xmin=0, xmax=26.0)
     if np.all(sorted_total >= 0):
         ax.set_ylim(ymin=0, ymax=23.5)
+        print("WARNING CHANGE BACK")
+        ##i##ax.set_ylim(ymin=0, ymax=36.0)
     
     # Fancy colours?
     if (not colourise):
-        plt.xlabel("Active manipulation [%]", fontsize=18)
-        plt.ylabel("Total manipulation [%]", fontsize=18)
-        plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=27)
+        plt.xlabel("Active manipulation [%]", fontsize=33)
+        plt.ylabel("Total manipulation [%]", fontsize=33)
+        plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=38)
     else:
-        plt.xlabel("Active manipulation [%]", color=get_colourise(-1), fontsize=18)
-        plt.ylabel("Total manipulation [%]",  color=get_colourise(-1), fontsize=18)
-        plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", color=get_colourise(-1), fontsize=27)
+        plt.xlabel("Active manipulation [%]", color=get_colourise(-1), fontsize=33)
+        plt.ylabel("Total manipulation [%]",  color=get_colourise(-1), fontsize=33)
+        print("WARNING: CHANGE BACK")
+        plt.title(f"Active vs. total manipulation\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", color=get_colourise(-1), fontsize=38)
     
     # Show shits.
-    plt.legend(fontsize=16)
+    plt.legend(fontsize=26)
     plt.show()
+    
+def plot_ac_voltage_for_biased_junction(
+    dc_current,
+    ac_current,
+    ac_freq,
+    critical_current
+    ):
+    
+    time_axis = np.linspace(-25e-9, 25e-9, 20000)
+    
+    def ac_voltage_for_biased_junction(
+        t,
+        dc_current,
+        ac_current,
+        ac_freq,
+        critical_current
+        ):
+        ''' Calculated by Christian Križan. '''
+        
+        omega = 2*np.pi*ac_freq
+        
+        mfq = (2.067833848e-15)/(2*np.pi)
+        
+        top_part = omega * (ac_current / critical_current) * np.cos(omega * t)
+        
+        inner_part_of_bottom = (dc_current + ac_current*np.sin( omega * t )) / critical_current
+        
+        bottom_part = np.sqrt( 1 - (inner_part_of_bottom)**2 )
+        
+        return mfq * (top_part / bottom_part)
+    
+    y_axis = ac_voltage_for_biased_junction(
+        t = time_axis,
+        dc_current = dc_current,
+        ac_current = ac_current,
+        ac_freq = ac_freq,
+        critical_current = critical_current
+        )
+    
+    fig, ax = plt.subplots(figsize=(12, 10))
+    
+    plt.grid()
+    
+    plt.xlabel("Time [µs]", fontsize=33)
+    plt.ylabel("Voltage [nV]", fontsize=33)
+    plt.title(f"Voltage over junction", fontsize=38)
+    
+    ax.tick_params(axis='both', labelsize=23)
+    
+    print(np.max(y_axis))
+    
+    plt.plot(time_axis*(1e6), y_axis*(1e9), color='green')
+    plt.show()
+    
+def plot_critical_current_of_double_ScS_junction(  ):
+    
+    phi_phi0_axis = np.linspace(-5.5, 5.5, 20000)
+    
+    def function_cos(
+        phi_phi0,
+        ):
+        ''' Calculated by Christian Križan. '''
+        
+        return np.abs(np.cos(np.pi * phi_phi0))
+    
+    y_axis = 2 * function_cos( phi_phi0_axis )
+    
+    fig, ax = plt.subplots(figsize=(12, 10))
+    
+    plt.grid()
+    
+    plt.xlabel("Φ/Φ₀ [-]", fontsize=33)
+    plt.ylabel("I_c / I_s [-]", fontsize=33)
+    plt.title(f"Critical current dependency on B", fontsize=38)
+    
+    ax.tick_params(axis='both', labelsize=23)
+    
+    print(np.max(y_axis))
+    
+    plt.plot(phi_phi0_axis, y_axis, color='purple')
+    plt.show()
+    
+def plot_critical_current_of_triple_ScS_junction(  ):
+    
+    phi_phi0_axis = np.linspace(-5.5, 5.5, 20000)
+    
+    def function_triple_cos(
+        phi_phi0,
+        ):
+        ''' Calculated by Christian Križan. '''
+        
+        return 2*np.abs(np.cos(np.pi * phi_phi0))+1
+    
+    y_axis = function_triple_cos( phi_phi0_axis )
+    
+    fig, ax = plt.subplots(figsize=(12, 10))
+    
+    plt.grid()
+    
+    plt.xlabel("Φ/Φ₀ [-]", fontsize=33)
+    plt.ylabel("I_c / I_s [-]", fontsize=33)
+    plt.title(f"Critical current dependency on B, 3 shorts", fontsize=38)
+    
+    ax.tick_params(axis='both', labelsize=23)
+    
+    print(np.max(y_axis))
+    
+    plt.plot(phi_phi0_axis, y_axis, color='orange')
+    plt.show()
+    
