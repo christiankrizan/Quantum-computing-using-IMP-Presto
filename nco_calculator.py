@@ -72,35 +72,56 @@ def calculate_nco_groups_from_frequency_lists(
     '''
     
     ## TODO!
-    if number_of_frequency_groups != 2:
-        raise NotImplementedError("Halted! Only 2 group are supported as of yet. TODO!")
+    if not ((number_of_frequency_groups == 2) or (number_of_frequency_groups == 3)):
+        raise NotImplementedError("Halted! Only 2 or 3 groups are supported as of yet. TODO!")
     
-    # Function to check if a given NCO fits a set of frequencies
+    # Function to check if a given NCO fits a set of frequencies.
     def is_valid_nco(nco, group):
         return all(nco_guard_band_complex/2 <= abs(f - nco) <= baseband_bandwidth_complex/2 for f in group)
-
-    # Try all ways to split into two groups of four signals each
-    for group1 in itertools.combinations(frequency_list, int(np.ceil(len(frequency_list)/number_of_frequency_groups))):
-        
-        ## TODO! More groups pls.
-        group2 = tuple(set(frequency_list) - set(group1))
-        
-        # Generate potential NCOs as the midpoint of each group range
-        for nco1 in np.linspace(min(group1) + 0.01, max(group1) - 0.01, 100):
-            if is_valid_nco(nco1, group1):
-                for nco2 in np.linspace(min(group2) + 0.01, max(group2) - 0.01, 100):
-                    if is_valid_nco(nco2, group2):
-                        ## TODO! More groups pls.
-                        solution = {
-                            "Group 1": group1, "NCO 1": nco1,
-                            "Group 2": group2, "NCO 2": nco2
-                        }
-                        break
-                if 'solution' in locals():
-                    break
-        if 'solution' in locals():
-            break
     
-    # Return the solution found!
-    return solution
+    # Determine number of signals per group.
+    group_size = int(np.ceil(len(frequency_list) / number_of_frequency_groups))
+
+    # Try all ways to split into the required number of groups.
+    for group_combo in itertools.combinations(frequency_list, group_size):
+        
+        # First group is selected
+        group1 = set(group_combo)
+        remaining_signals = set(frequency_list) - group1
+
+        # If only two groups, create group2 with remaining signals
+        if number_of_frequency_groups == 2:
+            group2 = tuple(remaining_signals)
+
+            # Generate potential NCOs
+            for nco1 in np.linspace(min(group1) + nco_guard_band_complex/2, max(group1) - nco_guard_band_complex/2, 100):
+                if is_valid_nco(nco1, group1):
+                    for nco2 in np.linspace(min(group2) + nco_guard_band_complex/2, max(group2) - nco_guard_band_complex/2, 100):
+                        if is_valid_nco(nco2, group2):
+                            return {
+                                "Group 1": tuple(group1), "NCO 1": nco1,
+                                "Group 2": group2, "NCO 2": nco2
+                            }
+
+        # If three groups, try splitting further
+        elif number_of_frequency_groups == 3:
+            for group2_combo in itertools.combinations(remaining_signals, group_size):
+                group2 = set(group2_combo)
+                group3 = tuple(remaining_signals - group2)
+
+                # Generate potential NCOs
+                for nco1 in np.linspace(min(group1) + nco_guard_band_complex/2, max(group1) - nco_guard_band_complex/2, 100):
+                    if is_valid_nco(nco1, group1):
+                        for nco2 in np.linspace(min(group2) + nco_guard_band_complex/2, max(group2) - nco_guard_band_complex/2, 100):
+                            if is_valid_nco(nco2, group2):
+                                for nco3 in np.linspace(min(group3) + nco_guard_band_complex/2, max(group3) - nco_guard_band_complex/2, 100):
+                                    if is_valid_nco(nco3, group3):
+                                        return {
+                                            "Group 1": tuple(group1), "NCO 1": nco1,
+                                            "Group 2": tuple(group2), "NCO 2": nco2,
+                                            "Group 3": group3, "NCO 3": nco3
+                                        }
+    
+    # If no valid solution is found, return None.
+    return None
     
