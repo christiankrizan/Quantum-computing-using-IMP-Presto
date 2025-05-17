@@ -10,7 +10,67 @@ import h5py
 import os
 import numpy as np
 import matplotlib.pyplot as plt
- 
+from mpl_toolkits.mplot3d import Axes3D
+
+def plot_process_matrices(
+    filepath_ideal,
+    filepath_predicted,
+    save_path
+    ):
+    ''' Given some .npy file, plot the process matrix.
+    '''
+    
+    # Load the two .npy files
+    ideal = np.load(filepath_ideal)
+    predicted = np.load(filepath_predicted)
+    
+    # Set visual squash range
+    zlim = (-0.5, 0.5)
+    
+    # Target resolution
+    dpi = 400
+    fig_width = 4850 / dpi # 4181 / dpi  # ≈ 6.968"
+    fig_height = 4000 / dpi #2750 / dpi # ≈ 4.583"
+    
+    # Setup figure with target print size
+    fig = plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
+    
+    def plot_matrix(ax, matrix, title, colour):
+        X, Y = np.meshgrid(np.arange(matrix.shape[0]), np.arange(matrix.shape[1]))
+        X = X.ravel()
+        Y = Y.ravel()
+        Z = np.zeros_like(X)
+        dx = dy = 0.5 * np.ones_like(X)
+        dz = matrix.ravel()
+        
+        ax.bar3d(X, Y, Z, dx, dy, dz, color=colour, shade=True)
+        ax.set_title(title)
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_zlabel("Value")
+        ax.set_zlim(zlim)
+    
+    # Top-left: Real part of ideal
+    ax1 = fig.add_subplot(2, 2, 1, projection='3d')
+    plot_matrix(ax1, ideal.real, "Re( chi_ideal )", colour="#34D2D6")##colour="#D63834")
+
+    # Bottom-left: Imag part of ideal
+    ax2 = fig.add_subplot(2, 2, 3, projection='3d')
+    plot_matrix(ax2, ideal.imag, "Im( chi_ideal )", colour="#34D2D6")##colour="#D63834")
+
+    # Top-right: Real part of predicted
+    ax3 = fig.add_subplot(2, 2, 2, projection='3d')
+    plot_matrix(ax3, predicted.real, "Re( chi_predicted )", colour="#8934D6")##colour="#81D634")
+
+    # Bottom-right: Imag part of predicted
+    ax4 = fig.add_subplot(2, 2, 4, projection='3d')
+    plot_matrix(ax4, predicted.imag, "Im( chi_predicted )", colour="#8934D6")##colour="#81D634")
+
+    # Save the figure
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
+    plt.show() # Show!
+
 def barplot(
     filepaths_to_plot,
     title = '',
