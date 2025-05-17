@@ -7,6 +7,7 @@
 
 from random import randint
 import numpy as np
+import pandas as pd
 import csv
 import matplotlib.pyplot as plt
 import sys
@@ -1000,8 +1001,6 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
     
     # Bump up the size of the ticks' numbers on the axes.
     ax.tick_params(axis='both', labelsize=23)
-    
-    assert colourise == True, "Halted! Code missing for setting colour to its default. Fix it." # TODO
     
     plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=33)
     plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=33)
@@ -2734,18 +2733,18 @@ def plot_active_vs_total_resistance_gain(
     ## Rework voltage into something that will be written in the title.
     ## Append this number to the filename_tags to look for.
     filename_tags.append(str(title_voltage_V).replace('.',"p"))
-    '''(active_gain_percent, total_gain_percent) = acquire_creep_data_from_folder(
+    (active_gain_percent, total_gain_percent) = acquire_creep_data_from_folder(
         folder_path = folder_path,
         take_creep_data_at_this_time_s = take_creep_data_at_this_time_s,
         filename_tags = filename_tags,
-    )'''
+    )
     
-    # TODO: acquire data.
-    print("WARNING CHANGE BACK")
-    active_gain_percent = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94] ## THICK354
-    total_gain_percent  = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36] ## THICK354
-    #active_gain_percent = [7.0942, 10.0738, 11.8119, 5.0343, 15.0296, 18.0029, 20.0640, 6.0434,  9.0186,  7.6048, 4.040, 10.007, 4.060, 6.020, 21.129, 3.577, 20.741, 3.043, 1.017] ## THICK314
-    #total_gain_percent  = [9.7949, 12.2327, 14.0164, 6.9078, 17.4735, 20.3925, 22.1454, 8.2411, 11.1680, 10.2548, 5.986, 12.063, 5.804, 7.871, 23.058, 5.378, 23.186, 4.797, 2.859] ## THICK314
+    ##  Here are the two datasets for R01 and R02, i.e., the 354x354nm^2  ##
+    ##  and 318x318nm^2 junction sizes from the JJTest100W3 wafer.        ##
+    #active_gain_percent  = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94, 4.97522988,  6.17057683, 7.01116346] ## THICK354
+    #total_gain_percent   = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36, 6.99326582, 10.37398798, 9.57568379] ## THICK354
+    #active_gain_percent = [7.0942, 10.0738, 11.8119, 5.0343, 15.0296, 18.0029, 20.0640, 6.0434,  9.0186,  7.6048, 4.040, 10.007, 4.060, 6.020, 21.129, 3.577, 20.741, 3.043, 1.017, 0.78152682, 1.08007167, 2.1641953,  3.4114392 ] ## THICK318
+    #total_gain_percent  = [9.7949, 12.2327, 14.0164, 6.9078, 17.4735, 20.3925, 22.1454, 8.2411, 11.1680, 10.2548, 5.986, 12.063, 5.804, 7.871, 23.058, 5.378, 23.186, 4.797, 2.859, 2.51228217, 4.02749426, 4.87928191, 6.21816964] ## THICK318
     
     # Sort lists together based on the active gain list.
     sorted_active, sorted_total = zip(*sorted(zip(active_gain_percent, total_gain_percent)))
@@ -2779,10 +2778,10 @@ def plot_active_vs_total_resistance_gain(
     
     # Create figure for plotting.
     if colourise:
-        fig, ax = plt.subplots(figsize=(12, 11), facecolor=get_colourise(-2))
+        fig, ax = plt.subplots(figsize=(12, 8), facecolor=get_colourise(-2))
         #plt.figure(figsize=(10, 5), facecolor=get_colourise(-2))
     else:
-        fig, ax = plt.subplots(figsize=(12, 11))
+        fig, ax = plt.subplots(figsize=(12, 8))
         #plt.figure(figsize=(10, 5))
     
     # Let's fit the data and see what we get.
@@ -2894,19 +2893,16 @@ def plot_active_vs_total_resistance_gain(
     
     # Extend axes to include the origin?
     if np.all(sorted_active >= 0):
-        ax.set_xlim(xmin=0, xmax=17.5)
-        print("WARNING CHANGE BACK")
-        ##i##ax.set_xlim(xmin=0, xmax=26.0)
+        ax.set_xlim(xmin=0, xmax=26.0)
     if np.all(sorted_total >= 0):
-        ax.set_ylim(ymin=0, ymax=23.5)
-        print("WARNING CHANGE BACK")
-        ##i##ax.set_ylim(ymin=0, ymax=36.0)
+        ax.set_ylim(ymin=0, ymax=36.0)
     
     # Fancy colours?
     if (not colourise):
         plt.xlabel("Active manipulation [%]", fontsize=33)
         plt.ylabel("Total manipulation [%]", fontsize=33)
-        plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=38)
+        #plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=38)
+        plt.title(f"Active vs. total manipulation\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=38)
     else:
         plt.xlabel("Active manipulation [%]", color=get_colourise(-1), fontsize=33)
         plt.ylabel("Total manipulation [%]",  color=get_colourise(-1), fontsize=33)
@@ -3000,6 +2996,8 @@ def plot_critical_current_of_double_ScS_junction(  ):
     
 def plot_critical_current_of_triple_ScS_junction(  ):
     
+    raise NotImplementedError("Halted! There is an error in the calculation below, do not proceed.")
+    
     phi_phi0_axis = np.linspace(-5.5, 5.5, 20000)
     
     def function_triple_cos(
@@ -3025,4 +3023,239 @@ def plot_critical_current_of_triple_ScS_junction(  ):
     
     plt.plot(phi_phi0_axis, y_axis, color='orange')
     plt.show()
+
+def plot_barplot_comparing_qubit_quality_factors(
+    qubit_identifiers = ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8"]
+    ):
+    raise NotImplementedError("Halted! Not done.")
+
+    # Redefine the data since execution state was reset
+    quarters = ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"]
+    ch3_values_updated = [1676534, 1190290, 2487886, 1500422, 1014434, 1123330, 1186250, 1122872]
+    ch5_values_updated = [840215, None, 1337651, None, 1297704, None, 1212784, None]
+    ch3_values_twice_updated = [1302120, None, 1375136, None, None, 365889, 1397712, 1116143]
+    ch5_values_twice_updated = [None, None, 1341931, None, 1860994, None, 163470, None]
+
+    # Create two subplots: one for Ch3 comparison and one for Ch5 comparison
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6), sharey=True)
+
+    # First subplot: Ch3 (Reference vs Manipulated Reference)
+    axes[0].bar(x - 0.2, reference, width=0.4, label="Reference", color="blue", alpha=0.7)
+    axes[0].bar(x + 0.2, [v if v is not None else 0 for v in manipulated_reference], width=0.4, label="Manipulated reference", color="green", alpha=0.7)
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(quarters)
+    axes[0].set_title("Ch3 Comparison")
+    axes[0].set_ylabel("Qubit quality factor")
+    axes[0].grid(axis="y", linestyle="--", alpha=0.6)
+    axes[0].legend()
+    for i in range(len(quarters)):
+        if manipulated_reference[i] is None:
+            axes[0].text(x[i] + 0.2, 500000, "N/A", ha="center", fontsize=9, color="green")
+
+    # Second subplot: Ch5 (Manipulated vs Twice Manipulated)
+    axes[1].bar(x - 0.2, [v if v is not None else 0 for v in manipulated], width=0.4, label="Manipulated", color="red", alpha=0.7)
+    axes[1].bar(x + 0.2, [v if v is not None else 0 for v in twice_manipulated], width=0.4, label="Twice manipulated", color="orange", alpha=0.7)
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(quarters)
+    axes[1].set_title("Ch5 Comparison")
+    axes[1].grid(axis="y", linestyle="--", alpha=0.6)
+    axes[1].legend()
+    for i in range(len(quarters)):
+        if manipulated[i] is None:
+            axes[1].text(x[i] - 0.2, 500000, "N/A", ha="center", fontsize=9, color="red")
+        if twice_manipulated[i] is None:
+            axes[1].text(x[i] + 0.2, 500000, "N/A", ha="center", fontsize=9, color="orange")
+
+    # Adjust layout and display
+    plt.suptitle("Side-by-Side Comparisons: Ch3 and Ch5 Variants")
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.show()
+
+def compare_junction_oxidation_dose_to_known_dataset(
+    path_to_reference_data_file,
+    list_of_normal_resistances_times_area_ohm_micrometer_squared = [],
+    list_of_oxidation_times_in_minutes = [],
+    list_of_oxidation_pressures_in_mbar = [],
+    user_label_list = [],
+    plot_reference_fit = False
+    ):
+    ''' Plots your values for some oxidation process that you have obtained,
+        against the reference dataset.
+        
+        The reference fit comes from J. Phys. d: Appl. Phys. 48 (2015) 395308.
+        
+        The format of the dataset should be an .xlsx file.
+        
+        Format of file:
+            A1: blank   B1: "R_sg"  C1: "R_n"   D1: blank   E1: "Area"  F1: "R_n * A"   G1: "G/A"       H1: "p*t"       I1: "t_ox"  J1: "p_ox"  K1: blank   L1: "t"
+            A2: blank   B2: blank   C2: blank   D2: blank   E2: "µm^2"  F2: "µm^2"      G2: "mS/µm^2"   H2: "mbar s"    I2: "sec."  J2: "mbar"  K2: blank   L2: "min."
+            C3:
+                Insert cell data here! Remember that column K is blank.
+    '''
+    # User input sanitation.
+    if not ((len(list_of_normal_resistances_times_area_ohm_micrometer_squared) == len(list_of_oxidation_times_in_minutes)) and (len(list_of_normal_resistances_times_area_ohm_micrometer_squared) == len(list_of_oxidation_pressures_in_mbar))):
+        raise ValueError("Halted! The lengths of the input datasets do not match.\n"+\
+        "len(list_of_normal_resistances_times_area_ohm_micrometer_squared): "+str(len(list_of_normal_resistances_times_area_ohm_micrometer_squared))+"\n"+\
+        "len(list_of_oxidation_times_in_minutes): "+str(len(list_of_oxidation_times_in_minutes))+"\n"+\
+        "len(list_of_oxidation_pressures_in_mbar): "+str(len(list_of_oxidation_pressures_in_mbar))
+        )
+    
+    ## Calculate effective oxygen dose, using an empirical model:
+    ## Fig. 4 in L. J. Zeng et al. 2015, J. Phys. D: Appl. Phys. 48 395308
+    def effective_oxygen_dose(t_minutes, p_mbar):
+        ''' t_minutes:  oxidation time in minutes
+            p_mbar:     oxidation pressure in mbar
+        '''
+        return (t_minutes**0.65) * (p_mbar**0.43)
+    
+    # Open datafile, extract data.
+    df = pd.read_excel(path_to_reference_data_file)
+
+    # Extract data from columns I, J, and F.
+    # Recall that Excel columns are 0-indexed in pandas as 8, 9, 5.
+    # Extract data (skip first two rows: header and units)
+    t_ox_seconds = df.iloc[2:, 8].dropna().to_numpy()       # Column I (t in seconds)
+    p_ox_mbar = df.iloc[2:, 9].dropna().to_numpy()          # Column J (p in mbar)
+    normal_state_resistance = df.iloc[2:, 5].dropna().to_numpy()  # Column F (R_N·A in Ω·µm^2)
+    
+    # Ensure all lists are the same length (safe fallback)
+    min_len = min(len(t_ox_seconds), len(p_ox_mbar), len(normal_state_resistance))
+    t_ox_seconds = t_ox_seconds[:min_len]
+    p_ox_mbar = p_ox_mbar[:min_len]
+    normal_state_resistance = normal_state_resistance[:min_len]
+    
+    # Convert time to minutes.
+    t_ox_minutes = t_ox_seconds / 60
+    
+    # Calculate effective oxygen dose.
+    dose = effective_oxygen_dose(t_ox_minutes, p_ox_mbar)
+    
+    # Plot setup.
+    fig, ax = plt.subplots(figsize=(12, 10))
+    plt.loglog(dose, normal_state_resistance, 'o', color="#000000", markerfacecolor='none', label="J. Phys. D: Appl. Phys. 48 (2015) 395308")
+    plt.xlabel("D = t₀^0.65 · p₀^0.43 [min^0.65 · mbar^0.43]", fontsize=33)
+    plt.ylabel("Normal resistance [Ω · µm^2]", fontsize=33)
+    plt.title("R_N vs. oxygen dose", fontsize=38)
+    
+    ## Now, plot the user-added data?
+    if len(list_of_normal_resistances_times_area_ohm_micrometer_squared) != 0:
+        
+        for ii in range(len(list_of_normal_resistances_times_area_ohm_micrometer_squared)):
+            normal_resistances_ohm_micrometer_squared = np.array(list_of_normal_resistances_times_area_ohm_micrometer_squared[ii])
+            oxidation_times_in_minutes = np.array(list_of_oxidation_times_in_minutes[ii])
+            oxidation_pressures_in_mbar = np.array(list_of_oxidation_pressures_in_mbar[ii])
+            
+            # Get user dose.
+            user_dose = effective_oxygen_dose(oxidation_times_in_minutes, oxidation_pressures_in_mbar)
+            
+            # Plot user things.
+            if ii == 0:
+                marker_string = 'p'
+            elif ii == 1:
+                marker_string = '*'
+            elif ii == 2:
+                marker_string = 'H'
+            elif ii == 3:
+                marker_string = '^'
+            elif ii == 4:
+                marker_string = 'x'
+            else:
+                marker_string = 'o'
+            plt.loglog(user_dose, normal_resistances_ohm_micrometer_squared, marker_string, markersize = 8, label=user_label_list[ii])
+    
+    # Plot reference fit line?
+    if plot_reference_fit:
+        x_fit = np.linspace(1e-1, 1e2, 1000)
+        def fit_func(x):
+            return 57.25 * (x**(1.0139))
+        plt.plot(x_fit, fit_func(x_fit), ':', color="red")
+    
+    # Axes adjustments.
+    plt.ylim(2e0, 3e3)
+    plt.xlim(1e-1, 1e2)
+    ax.tick_params(axis='both', labelsize=23)
+    
+    # Grid and legend.
+    plt.grid(True, which="both", ls="--")
+    plt.legend(fontsize=24)
+    plt.tight_layout()
+    
+    # Show stuff!
+    plt.show()
+
+def compare_aging_vs_junction_sizes():
+    ''' Reconstruct plot from Maurizio Toselli's thesis,
+        but adjust for reported inaccuracy of thick-oxide x axis.
+        
+        Important: the Y data is extracted from the rastered plot,
+        this Y data is thus accurate when viewed in print, but less accurate
+        when worked with digitally.
+    '''
+    thin_x  = np.array([100, 150, 200, 250, 300, 350, 400, 450, 500, 550])
+    thin_y  = np.array([33.247058823529414, 28.2, 22.41176470588235, 21.24705882352941, 18.03529411764706, 16.129411764705882, 15.494117647058824, 13.905882352941177, 12.882352941176471, 12.458823529411765])
+    thick_x = np.array([150, 200, 250, 300, 350, 400, 450, 500, 550, 600])
+    thick_y = np.array([3.2823529411764705, 3.0352941176470587, 2.788235294117647, 2.611764705882353, 2.2588235294117647, 1.9058823529411764, 1.9058823529411764, 1.7647058823529411, 1.2352941176470589, 1.2352941176470589])
+    
+    fig, ax = plt.subplots(figsize=(12, 7))
+    plt.scatter(thin_x,  thin_y,  s=60, color="#0BB5F4", label="Aging, soft oxide")
+    plt.scatter(thick_x, thick_y, s=80, color="#F44A0B", label="Aging, hard oxide")
+    
+    # Axes adjustments.
+    plt.ylim(0, 40)
+    plt.xlim(0, 700)
+    ax.tick_params(axis='both', labelsize=23)
+    
+    # Grid, legend, axis labels, title.
+    plt.grid(True, which="both", ls="--")
+    plt.legend(fontsize=24)
+    plt.xlabel("Junction width [nm]", fontsize=33)
+    plt.ylabel("Resistance increase [%]", fontsize=33)
+    
+    #  Show stuff!
+    ## As of writing, pope Leo XIV got announced. Random.
+    plt.tight_layout()
+    plt.show()
+
+def plot_free_energy_vs_total_current_of_rf_squid():
+    
+    # Assume zero externally applied magnetic field.
+    
+    fig, ax = plt.subplots(figsize=(12, 10))
+    
+    ##Phi_0 = 2.067833848e-15 [Wb]
+    ##L = 100e-12 # [H]
+    I_C = 100e-6  # [A]
+    
+    def beta_LRF(L, I_C):
+        return 2*np.pi * (L*I_C)/(2.067833848e-15)
+    
+    def energy_in_rf_squid( i, beta_LRF):
+        return (1/2) * beta_LRF * (i**2) - np.cos(beta_LRF * i)
+    
+    # Find energy, specifically E_tot / E_J
+    currents = np.linspace(-1.5, 1.5, 400)
+    free_energy_normalised_100pH = energy_in_rf_squid( currents, beta_LRF(100e-12, I_C) )
+    free_energy_normalised_10pH = energy_in_rf_squid( currents, beta_LRF(50e-12, I_C) )
+    free_energy_normalised_1pH = energy_in_rf_squid( currents, beta_LRF(10e-12, I_C) )
+    free_energy_normalised_0p1pH = energy_in_rf_squid( currents, beta_LRF(0.1e-12, I_C) )
+    
+    
+    fig, ax = plt.subplots(figsize=(12, 7))
+    plt.plot(currents, free_energy_normalised_100pH, label="L: 100 pH, I_C: 100 µA, β: "+f"{beta_LRF(100e-12, I_C):.2f}")
+    plt.plot(currents, free_energy_normalised_10pH, label="L: 50 pH, I_C: 100 µA, β: "+f"{beta_LRF(50e-12, I_C):.2f}")
+    plt.plot(currents, free_energy_normalised_1pH, label="L: 10 pH, I_C: 100 µA, β: "+f"{beta_LRF(10e-12, I_C):.2f}")
+    plt.plot(currents, free_energy_normalised_0p1pH, label="L: 0.1 pH, I_C: 100 µA, β: "+f"{beta_LRF(0.1e-12, I_C):.2f}")
+    
+    plt.ylabel("E_tot / E_ J [-]", fontsize=33)
+    plt.xlabel("I_s / I_C [-]", fontsize=33)
+    ax.tick_params(axis='both', labelsize=23)
+    
+    plt.grid()
+    plt.legend(fontsize=20)
+    plt.show()
+    
+    
+    
+    
+    
     
