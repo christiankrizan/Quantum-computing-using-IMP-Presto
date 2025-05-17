@@ -447,9 +447,9 @@ def fit_triple_decoherence_data_run(
     # for getting a decent number of bins.
     
     no_entries = len(T_dec)
-    mean_T_dec = int(round(np.mean(T_dec),0)) ###round(np.mean(T_dec),2) #np.around(np.mean(T_dec),0)
-    std_T_dec  = int(round(np.std(T_dec),0)) ###round(np.std(T_dec),2)  #np.around(np.std(T_dec),0)
-    third_moment_skewness_of_ditribution = moment(T_dec, moment = 3) # Get the assymetry of the distribution
+    mean_T_dec = int(round(np.mean(T_dec),0)) ###round(np.mean(T_dec),2)  #np.around(np.mean(T_dec),0)
+    std_T_dec  = int(round(np.std(T_dec),0))  ###round(np.std(T_dec),2)   #np.around(np.std(T_dec),0)
+    third_moment_skewness_of_ditribution = moment(T_dec, moment = 3) # Get the asymmetry of the distribution
     sigma_g1 = np.sqrt( (6*(no_entries - 2))/((no_entries + 1)*(no_entries + 3)) )
     doane_correction_factor_Ke = np.log2(1 + np.abs(third_moment_skewness_of_ditribution)/sigma_g1)
     bins_calculated = int(np.ceil(1 + np.log2( no_entries ) + doane_correction_factor_Ke))
