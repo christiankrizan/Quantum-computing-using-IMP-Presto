@@ -70,13 +70,13 @@ def plot_qubit_quality_vs_t1_tp(
         term3 = (5/4) * ( (Delta**2)/(omega_q**2) )
         term4 = -(1/4) * ( (Delta**3)/(omega_q**3) )
         corr_factor = term1 + term2 + term3 + term4
-        return simplified_term * corr_factor
+        return simplified_term * corr_factor, (Delta/(2*np.pi))
     
     def calculate_qubit_quality_factor( omega_q, T1 ):
         return omega_q * T1
     
     # Create figure for plotting.
-    fig, ax1 = plt.subplots(1, figsize=(12.8, 11), sharey=False)
+    fig, ax1 = plt.subplots(1, figsize=(12.8, 11.083), sharey=False)
     
     # For plotting purposes, keep track of the highest Y value in the plot.
     highest_ylim = 0.0
@@ -108,6 +108,10 @@ def plot_qubit_quality_vs_t1_tp(
         curr_kappa_set = list_of_lists_of_resonator_linewidth_kappa_Hz[ii]
         curr_T1_set    = list_of_lists_of_T1_s[ii]
         
+        # Statistics is nice. Let's prepare a T_p list.
+        curr_Tp_list = []
+        curr_Delta_Hz_list = []
+        
         ## Let's make one scatter mass in the plot from index ii.
         
         # Calculate the X-axis T₁/T_p, and the Y-axis Q_qb.
@@ -125,7 +129,7 @@ def plot_qubit_quality_vs_t1_tp(
                 )
                 
                 # Calculate the Purcell decay time for this entry.
-                curr_Tp = calculate_Tp(
+                curr_Tp, curr_Delta_Hz = calculate_Tp(
                     omega_r = curr_omega_r_set[jj],
                     omega_q = curr_omega_q_set[jj],
                     g = curr_g,
@@ -134,6 +138,10 @@ def plot_qubit_quality_vs_t1_tp(
                 
                 # Calculate T₁/T_p for current entry.
                 t1_tp_axis.append( curr_T1_set[jj] / curr_Tp )
+                
+                print("Set "+str(ii+1)+", Qubit "+str(jj+1)+", calculated Tp: "+str(curr_Tp)+" [s], calculated Delta: "+str(curr_Delta_Hz)+" [Hz]")
+                curr_Tp_list.append(curr_Tp)
+                curr_Delta_Hz_list.append(curr_Delta_Hz)
             
                 ## Now, get qubit quality factor for the Y-axis.
                 curr_quality_factor = calculate_qubit_quality_factor( 
@@ -154,7 +162,7 @@ def plot_qubit_quality_vs_t1_tp(
                 # At this point, we have one scatter dot to plot.
                 if not transpose_axes:
                     try:
-                        ax1.scatter(t1_tp_axis[-1]+move_away, qubit_quality_axis[-1]/1e6, s=130+bump_up_size, label=None, marker=list_of_qubit_scatter_symbols[jj], color=list_of_set_colours[ii])
+                        ax1.scatter(t1_tp_axis[-1], qubit_quality_axis[-1]/1e6, s=130+bump_up_size, label=None, marker=list_of_qubit_scatter_symbols[jj], color=list_of_set_colours[ii])
                     except ValueError:
                         print(list_of_set_colours[ii])
                 else:
@@ -164,6 +172,12 @@ def plot_qubit_quality_vs_t1_tp(
                 # Then this entry is a None. Something is missing.
                 t1_tp_axis.append( None )
                 qubit_quality_axis.append( None )
+        
+        # At this point, we can print some stats about curr_Tp_list
+        curr_Tp_array = np.array(curr_Tp_list)
+        curr_Delta_Hz_array = np.array(curr_Delta_Hz_list)
+        print("Set "+str(ii+1)+", Tp mean: "+str(np.mean(curr_Tp_array))+" [s], Tp std. deviation: "+str(np.std(curr_Tp_array, ddof=1))+" [s]")
+        print("Set "+str(ii+1)+", Delta mean: "+str(np.mean(curr_Delta_Hz_array/1e9))+" [GHz], Delta std. deviation: "+str(np.std(curr_Delta_Hz_array/1e9, ddof=1))+" [GHz]")
     
     # Labels and formatting stuff.
     ax1.grid()
@@ -173,7 +187,10 @@ def plot_qubit_quality_vs_t1_tp(
         ax1.set_xlabel(r"$T_1 / T_p$ [-]", fontsize=33)
         ax1.set_ylabel("Qubit quality factor [$10^6$]", fontsize=33)
         ax1.set_xlim(-0.05, 1.05)
-        ax1.set_ylim(-highest_ylim * 0.05, highest_ylim * 1.05)
+        ## ax1.set_ylim(-highest_ylim * 0.05, highest_ylim * 1.05)
+        ##ax1.set_ylim(0.0, highest_ylim * 1.05)
+        ax1.set_ylim(0.0, 2.603896)
+        
     else:
         # Note that the metric keeping track of the highest T₁/T_p
         # in the plot, is still labeled "highest_ylim", even though it's
