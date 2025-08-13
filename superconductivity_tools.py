@@ -13,9 +13,45 @@ import matplotlib.pyplot as plt
 import sys
 import os
 import re
+import colorsys # Used for generating curve colours.
 from scipy.optimize import curve_fit
 from scipy.stats import moment
 from scipy.stats import linregress
+from scipy.interpolate import interp1d
+from datetime import datetime
+
+def hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i:i+2], 16)/255.0 for i in (0, 2, 4))
+
+def rgb_to_hex(rgb):
+    return "#{:02X}{:02X}{:02X}".format(*(int(round(c * 255)) for c in rgb))
+
+def interpolate_hsv_colours(start_hex, end_hex, n):
+    start_rgb = hex_to_rgb(start_hex)
+    end_rgb = hex_to_rgb(end_hex)
+
+    start_hsv = colorsys.rgb_to_hsv(*start_rgb)
+    end_hsv = colorsys.rgb_to_hsv(*end_rgb)
+
+    # Handle hue circular interpolation
+    h1, h2 = start_hsv[0], end_hsv[0]
+    if abs(h1 - h2) > 0.5:
+        if h1 > h2:
+            h2 += 1
+        else:
+            h1 += 1
+
+    colors = []
+    for i in range(n):
+        t = i / (n - 1) if n > 1 else 0
+        h = (h1 + t * (h2 - h1)) % 1.0
+        s = start_hsv[1] + t * (end_hsv[1] - start_hsv[1])
+        v = start_hsv[2] + t * (end_hsv[2] - start_hsv[2])
+        rgb = colorsys.hsv_to_rgb(h, s, v)
+        colors.append(rgb_to_hex(rgb))
+
+    return colors
 
 def get_colourise(
     colourised_counter
@@ -189,10 +225,13 @@ def calculate_f01_from_RT_resistance(
         print("E_J / E_C is: "+str(E_J/E_C))
     
     # Calculate f_01
-    ## Koch 2007 equation regarding transmon f_01, precision to second order.
+    '''## Koch 2007 equation regarding transmon f_01, precision to second order.
     ## https://doi.org/10.1103/PhysRevB.77.180502
-    second_order_correction_factor = -(E_C / 2) * (E_C / (8*E_J))
-    f_01 = (np.sqrt(8 * E_J * E_C) -E_C + second_order_correction_factor)/h
+    second_order_correction_factor = -(E_C / 2) * (E_C / (8*E_J))'''
+    # Updated calculation from
+    xi = np.sqrt(2 * E_C / E_J)
+    second_order_correction_factor = (1 + (1/4)*xi + (21/128)*(xi**2))
+    f_01 = (np.sqrt(8 * E_J * E_C) - E_C * second_order_correction_factor)/h
     
     # Return value!
     return f_01
@@ -274,13 +313,13 @@ def calculate_resistance_to_manipulate_to(
     Delta_cold_eV,
     original_resistance_of_junction = 0,
     expected_aging = 0,
-    expected_resistance_creep = 0,
+    expected_resistance_relaxation = 0,
     verbose = True
     ):
     ''' Given a target frequency, calculate what resistance should be
-        manipulated to, including resistance creep effects.
+        manipulated to, including resistance relaxation effects.
         
-        The units of expected_aging and expected_resistance_creep are linear.
+        The units of expected_aging and expected_resistance_relaxation are linear.
         I.e., 1.05 means that you expect an additional 5 % extra resistance.
     '''
     
@@ -308,25 +347,25 @@ def calculate_resistance_to_manipulate_to(
     if expected_aging > 0:
         raise NotImplementedError("Not finished.")
     
-    # TODO current, our only knowledge of the creep is that it is a fixed offset compared to the initial resistance.
+    # TODO current, our only knowledge of the relaxation is that it is a fixed offset compared to the initial resistance.
     ## Well, to be picky, we know that the end number is pretty much
     ## a fixed resistance offset.
-    if expected_resistance_creep >= 0:
+    if expected_resistance_relaxation >= 0:
         if original_resistance_of_junction == 0:
-            raise ValueError("Halted! If assuming creep, then the original resistance of the junction must be known. Check your arguments.")
+            raise ValueError("Halted! If assuming relaxation, then the original resistance of the junction must be known. Check your arguments.")
         
-        print(f"Expecting {((expected_resistance_creep-1)*100):.3f} % worth of resistance creep.")
+        print(f"Expecting {((expected_resistance_relaxation-1)*100):.3f} % worth of resistance relaxation.")
         
-        # Figure out the creep.
-        creep_in_ohms = (original_resistance_of_junction * expected_resistance_creep - original_resistance_of_junction)
+        # Figure out the relaxation.
+        relaxation_in_ohms = (original_resistance_of_junction * expected_resistance_relaxation - original_resistance_of_junction)
         
         # Subtract!
-        room_temperature_resistance_to_hit -= creep_in_ohms
+        room_temperature_resistance_to_hit -= relaxation_in_ohms
         increase = room_temperature_resistance_to_hit / original_resistance_of_junction
-        print(f"Excluding resistance creep, expect to hit: {(room_temperature_resistance_to_hit):.3f} [Ω], which is {((increase-1)*100):.3f} %")
+        print(f"Excluding resistance relaxation, expect to hit: {(room_temperature_resistance_to_hit):.3f} [Ω], which is {((increase-1)*100):.3f} %")
         
-    elif expected_resistance_creep < 0:
-        raise ValueError("Error! The resistance creep is expected to be a positive number; the resistance is expected to increase post-manipulation.")
+    elif expected_resistance_relaxation < 0:
+        raise ValueError("Error! The resistance relaxation is expected to be a positive number; the resistance is expected to increase post-manipulation.")
     
     return room_temperature_resistance_to_hit
 
@@ -457,7 +496,7 @@ def fit_ambegaokar_baratoff_josephson_koch_to_resistance(
             plt.xlabel("Resistance [Ω]", color=get_colourise(-1), fontsize=33)
             plt.ylabel("Qubit plasma frequency [Hz]", color=get_colourise(-1), fontsize=33)
             plt.title(f"Qubit frequency vs. resistance", color=get_colourise(-1), fontsize=38)
-    
+        
         # Show shits.
         plt.legend(fontsize=26)
         plt.show()
@@ -553,10 +592,10 @@ def run_fits_of_ambegaokar_baratoff_josephson_koch(
     if (not success):
         print("Failed to find working set of parameters.")
     
-def plot_fourier_transform_of_resistance_creep(
+def plot_fourier_transform_of_resistance_relaxation(
     filepath,
     normalise_resistances = 0,
-    normalise_time_to_creep_effect = False,
+    normalise_time_to_relaxation_effect = False,
     attempt_to_color_plots_from_file_name = False,
     plot_no_junction_resistance_under_ohm = 0
     ):
@@ -594,7 +633,7 @@ def plot_fourier_transform_of_resistance_creep(
         zero_point_was_found = False
         time_offset_due_to_appended_data = 0
         si_unit_prefix_scaler = 1.0
-        resistance_at_creep_start = 0
+        resistance_at_relaxation_start = 0
         add_this_time_offset_too = 0
         
         with open(os.path.abspath(filepath_item), newline='') as csvfile:
@@ -636,12 +675,12 @@ def plot_fourier_transform_of_resistance_creep(
                                     print("WARNING: file \""+str(filepath_item)+"\" contains multiple \"time = 0\" points.")
                                     add_this_time_offset_too = times[-1]
                                 else:
-                                    # Set zero point, i.e., start of creep.
+                                    # Set zero point, i.e., start of relaxation.
                                     zero_points[zz] = time_offset_due_to_appended_data
                                     zero_point_was_found = True
                                     
-                                    # Log the resistance at the creep's start
-                                    resistance_at_creep_start = current_resistance
+                                    # Log the resistance at the relaxation's start
+                                    resistance_at_relaxation_start = current_resistance
                                     
                                 # Log time for the appended data.
                                 ## I.e., time_value == 0, and it's not the first
@@ -659,10 +698,10 @@ def plot_fourier_transform_of_resistance_creep(
         # Normalise resistance axis?
         resistances = np.array(resistances, dtype=np.float64)
         if normalise_resistances == 2:
-            # Check whether the start of the creep was found.
-            if resistance_at_creep_start > 0:
-                resistances = (resistances / resistance_at_creep_start) - 1
-                plt.ylabel("Resistance normalised to creep effect start [-]")
+            # Check whether the start of the relaxation was found.
+            if resistance_at_relaxation_start > 0:
+                resistances = (resistances / resistance_at_relaxation_start) - 1
+                plt.ylabel("Resistance normalised to relaxation effect start [-]")
             else:
                 # In that case, just take the last value and normalise to that.
                 resistances = (resistances / resistances[-1]) - 1
@@ -673,7 +712,7 @@ def plot_fourier_transform_of_resistance_creep(
             plt.ylabel("Resistance [Ω]")
         
         # Normalise time axis?
-        if normalise_time_to_creep_effect:
+        if normalise_time_to_relaxation_effect:
             # Then scale the time axis accordingly.
             times = np.array(times, dtype=np.float64)
             times = times - time_offset_due_to_appended_data
@@ -752,7 +791,7 @@ def plot_fourier_transform_of_resistance_creep(
             plt.grid()
             plt.show()
             
-            ##plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colors(jj))
+            ##plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colors[jj])## TODO!! colors(jj))
         
     ##plt.xlabel("Duration [s]")
     ##plt.title("Resistance vs. Time")
@@ -760,28 +799,29 @@ def plot_fourier_transform_of_resistance_creep(
     ##plt.legend()
     ##plt.show()
     
-def plot_josephson_junction_resistance_manipulation_and_creep(
+def plot_josephson_junction_resistance_manipulation_and_relaxation(
     filepath,
     normalise_resistances = 2,
     normalise_time = 0,
     attempt_to_color_plots_from_file_name = False,
     plot_no_junction_resistance_under_ohm = 0,
     colourise = False,
+    savepath = '',
     ):
     ''' Plot the data from the resistance manipulation and ensueing
-        resistance creep.
+        resistance relaxation.
         
         normalise_resistances will:
             0:  do not normalise resistances,
             1:  set the first measured resistance value as the initial
                 resistance of the device; all subsequent values
                 will be reported as a percentage of this initial value.
-            2:  same as 1, but the resistance creep's datapoint_0
+            2:  same as 1, but the resistance relaxation's datapoint_0
                 will be the resistance that is normalised to.
         
         normalise_time will:
             0: plot the UNIX timestamp on the x axis.
-            1: normalise to the creep effect.
+            1: normalise to the relaxation effect.
             2: normalise to the very beginning of the measurement.
     '''
     
@@ -801,11 +841,11 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
     
     # Create figure for plotting.
     if colourise:
-        fig, ax = plt.subplots(figsize=(10, 5), facecolor=get_colourise(-2))
+        fig, ax = plt.subplots(figsize=(12.8, 13), facecolor=get_colourise(-2))
         #plt.figure(figsize=(10, 5), facecolor=get_colourise(-2))
     else:
-        fig, ax = plt.subplots(figsize=(10, 5))
-        #plt.figure(figsize=(10, 5))
+        fig, ax = plt.subplots(figsize=(12.8, 9.75))
+        ##fig, ax = plt.subplots(figsize=(12.8, 13))
     
     # Create list that will keep track of where the "time = 0" points are
     # in the files.
@@ -825,7 +865,7 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
         time_offset_due_to_appended_data = 0
         first_time_value_detected = -1.0
         si_unit_prefix_scaler = 1.0
-        resistance_at_creep_start = 0
+        resistance_at_relaxation_start = 0
         add_this_time_offset_too = 0
         obvious_short = 100 # [Ω]  --  Define a resistance that defines "a short."
         lowest_non_short_resistance_in_set = 1000000000
@@ -877,12 +917,12 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
                                     print("WARNING: file \""+str(filepath_item)+"\" contains multiple \"time = 0\" points.")
                                     add_this_time_offset_too = times[-1]
                                 else:
-                                    # Set zero point, i.e., start of creep.
+                                    # Set zero point, i.e., start of relaxation.
                                     zero_points[zz] = time_offset_due_to_appended_data
                                     zero_point_was_found = True
                                     
-                                    # Log the resistance at the creep's start
-                                    resistance_at_creep_start = current_resistance
+                                    # Log the resistance at the relaxation's start
+                                    resistance_at_relaxation_start = current_resistance
                                     
                                 # Log time for the appended data.
                                 ## I.e., time_value == 0, and it's not the first
@@ -899,27 +939,27 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
         
         # Normalise resistance axis?
         resistances = np.array(resistances, dtype=np.float64)
-        '''if normalise_resistances == 3:
-            # In that case, normalise to the lowest resistance found, that
-            # is not an obvious short.
-            resistances = (resistances / lowest_non_short_resistance_in_set) - 1
-            y_label_text = "Resistance normalised to lowest resistance in the set [-]"
-        el'''
-        if normalise_resistances == 2:
-            # Check whether the start of the creep was found.
-            if resistance_at_creep_start > 0:
-                resistances = (resistances / resistance_at_creep_start) - 1
-                y_label_text = "Resistance normalised to creep effect start [-]"
-            else:
-                # In that case, just take the last value and normalise to that.
-                resistances = (resistances / resistances[-1]) - 1
-        elif normalise_resistances == 1:
-            resistances = ((resistances / resistances[0]) - 1) * 100
-            y_label_text = "Resistance increase [%]"
-        else:
-            y_label_text = "Resistance [Ω]"
         
-        # Normalise time axis to creep effect?
+        if normalise_resistances == 3:
+            # In this case, use both y axes of normalise_resistances 1 and 2.
+            resistances_ohm = resistances.copy()
+            resistances_pct = ((resistances / resistances[0]) - 1) * 100
+        else:
+            if normalise_resistances == 2:
+                # Check whether the start of the relaxation was found.
+                if resistance_at_relaxation_start > 0:
+                    resistances = (resistances / resistance_at_relaxation_start) - 1
+                    y_label_text = "Resistance normalised to relaxation effect start [-]"
+                else:
+                    # In that case, just take the last value and normalise to that.
+                    resistances = (resistances / resistances[-1]) - 1
+            elif normalise_resistances == 1:
+                resistances = ((resistances / resistances[0]) - 1) * 100
+                y_label_text = "Resistance increase [%]"
+            else:
+                y_label_text = "Resistance [Ω]"
+        
+        # Normalise time axis to relaxation effect?
         if (normalise_time == 1):
             # Then scale the time axis accordingly.
             times = np.array(times, dtype=np.float64)
@@ -978,7 +1018,55 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
                 # Just plot from a map.
                 num_items_to_colour = len(filepath)
                 colors = plt.cm.get_cmap('tab20', num_items_to_colour)
-                plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colors(jj))
+                if savepath == '':
+                    ## TODO remove this try-catch bs.
+                    try:
+                        plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colors[jj])## TODO!! colors(jj))
+                    except TypeError:
+                        plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colors(jj)) ## TODO!!
+                else:
+                    #dot_color = "#C4EE1C" ## TODO!
+                    dot_color = "#EE1C1C" ## TODO!
+                    if normalise_resistances == 3:
+                        ##ax.plot(times, resistances_ohm, marker='o', linestyle='-', label=file_label + " [Ω]", color=dot_color)
+                        print("TODO: dividing the time axis by 3600 to put it in hours instead of seconds.")
+                        #ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="200x200 nm sparse-oxide", color=dot_color)
+                        #ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="350x350 nm dense-oxide", color=dot_color)
+                        ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="318x318 nm compact-oxide", color=dot_color)
+                        
+                        if 'ax2' not in locals():
+                            ax2 = ax.twinx()
+                            ax2.set_ylabel("Resistance increase [%]", fontsize=33)
+                            
+                            # Set ylim limits!
+                            ###bottom_percent = -5
+                            ###top_percent = 280
+                            bottom_percent = -1
+                            top_percent = 6
+                            
+                            # Begin with the percent axis. Simple, just set the numbers.
+                            ax2.set_ylim(bottom_percent,top_percent)
+                            
+                            ## Ok, but for resistances, then this gymnastics
+                            ## right here is a bit tricky. Say that
+                            ## bottom_percent = -5, meaning, -5% is the bottom.
+                            ## And, say that top_percent = 280, i.e.,
+                            ## that the resist. axis top corresponds to +280%.
+                            ## The solution is to count backwards.
+                            ## (res/res[0] - 1)*100 = -5  # [%]
+                            ## ⇒ res = (((-5)/100)+1)*res[0]  # [%]
+                            ## ... where you replace -5% with bottom_percent
+                            ##     or top_percent, as needed. res then goes
+                            ##     into .ylim for the resistance axis in Ω.
+                            
+                            # Set the ordinary resistance axis!
+                            ax.set_ylim(((bottom_percent/100)+1)*resistances_ohm[0], ((top_percent/100)+1)*resistances_ohm[0])
+                        
+                        print("TODO: the percent-x axis has been divided into hours, instead of seconds.")
+                        ax2.plot(times/3600, resistances_pct, marker='o', linestyle='--', color=dot_color)
+                        
+                    else:
+                        plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=dot_color)
         else:
             # Use patterned colour.
             plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=get_colourise((colourised_counter // 4) + ((colourised_counter % 4) + 1) / 10))
@@ -986,7 +1074,6 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
         
     
     # Set axes' colour? Title colour? And so on.
-    plt.grid()
     if colourise:
         fig.patch.set_alpha(0)
         ax.grid(color=get_colourise(-1))
@@ -998,15 +1085,69 @@ def plot_josephson_junction_resistance_manipulation_and_creep(
         #ax.set_xlabel('X Label', color=get_colourise(-1))
         #ax.set_ylabel('Y Label', color=get_colourise(-1))
         ax.tick_params(axis='both', colors=get_colourise(-1))
+        plt.grid()
+    
+    
+    if normalise_resistances == 3:
+        ax.set_ylabel("Resistance [Ω]", fontsize=33)
+        ax.grid()
+        if colourise:
+            ax2.tick_params(axis='y', colors=get_colourise(-1), labelsize=23)
+            ax2.spines['right'].set_color(get_colourise(-1))
+            ax2.yaxis.label.set_color(get_colourise(-1))
+        ax.tick_params(axis='y', labelsize=23)
+        if 'ax2' in locals():
+            ax2.tick_params(axis='y', labelsize=23)
+    else:
+        ax.set_ylabel(y_label_text, fontsize=33)
+        ax.grid()
+    
+    # Set x-axis text.
+    if normalise_time == 0:
+        ax.set_xlabel("Time [s since epoch]", fontsize=33)
+    elif normalise_time == 1:
+        ax.set_xlabel("Time since resistance relaxation onset [s]", fontsize=33)
+    elif normalise_time == 2:
+        print("TODO: the x axis may have been divided into hours, instead of seconds. Check the unit in the plot if unsure.")
+        ax.set_xlabel("Duration [h]", fontsize=33)
+    else:
+        ax.set_xlabel("Time [s]", fontsize=33)
     
     # Bump up the size of the ticks' numbers on the axes.
     ax.tick_params(axis='both', labelsize=23)
     
     plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=33)
-    plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=33)
-    plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=38)
+    ##plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=33)
+    if savepath == '':
+        plt.title("Resistance vs. Time", color=get_colourise(-1), fontsize=38)
     
-    plt.legend()
+    # Legend and layout.
+    if normalise_resistances == 3:
+        lines1, labels1 = ax.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax.legend(lines1 + lines2, labels1 + labels2, fontsize=24)
+    else:
+        ax.legend()
+    
+    # Tight layout.
+    plt.tight_layout()
+    
+    # Save plots?
+    if savepath != '':
+    
+        # Fix path name?
+        thin = ('JJAnneal01C' in filepath[0]) and ('stepped' in filepath[0])
+        thick = ('MPW005A' in filepath[0]) and ('stepped' in filepath[0])
+        base, _ = os.path.splitext(savepath)
+        if thin:
+            new_savepath = f"{base}_soft_stepped.png"
+        elif thick:
+            new_savepath = f"{base}_hard_stepped.png"
+        else:
+            new_savepath = f"{base}.png"
+        plt.savefig(new_savepath, dpi=164, bbox_inches='tight')
+    
+    # Show shits.
     plt.show()
 
 def simulate_frequency_accuracy_of_model_from_RT_resistance(
@@ -1173,7 +1314,7 @@ def plot_trend_for_changing_superconducting_gap(
     plt.show()
 
 def plot_manipulation_plan(
-    expected_resistance_creep = 1.0229,
+    expected_resistance_relaxation = 1.0229,
     E_C_in_Hz = 195e6,
     Delta_cold_eV = 174.28e-6,
     difference_between_RT_and_cold_resistance = 1.1385,
@@ -1254,7 +1395,7 @@ def plot_manipulation_plan(
                 Delta_cold_eV = Delta_cold_eV,
                 original_resistance_of_junction = original_resistances[jj],
                 expected_aging = 0,
-                expected_resistance_creep = expected_resistance_creep,
+                expected_resistance_relaxation = expected_resistance_relaxation,
                 verbose = True
             )
         )
@@ -1289,9 +1430,9 @@ def plot_active_manipulation(
     skip_initial_dip = False,
     plot_fit_parameters_in_legend = False,
     colourise = False,
-    export_plot_to = '',
     title_label = None,
-    enable_mask = False
+    enable_mask = False,
+    savepath = ''
     ):
     ''' Plot soledly only the active manipulation.
         
@@ -1550,11 +1691,12 @@ def plot_active_manipulation(
     
     # Create figure for plotting.
     if colourise:
-        fig1, ax1 = plt.subplots(figsize=(12, 11), facecolor=get_colourise(-2))
-        fig2, ax2 = plt.subplots(figsize=(8, 11), facecolor=get_colourise(-2))
+        fig1, ax1 = plt.subplots(figsize=(12.8, 10), facecolor=get_colourise(-2))
+        fig2, ax2 = plt.subplots(figsize=(9, 11), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(12, 11))
-        fig2, ax2 = plt.subplots(figsize=(8, 11))
+        ##fig1, ax1 = plt.subplots(figsize=(12.8, 10))
+        fig1, ax1 = plt.subplots(figsize=(12.8, 9.14))
+        fig2, ax2 = plt.subplots(figsize=(9, 11))
     
     # Go through the files and add them to the plot.
     ## Also, store fit values for the return statement.
@@ -1574,6 +1716,7 @@ def plot_active_manipulation(
         ## The new time format assumes that all data is set with reference
         ## to some initial time.
         time_0 = -1 # [s] -- Which would be 23:59:59 on December 31st 1969
+        time_at_start = 0.0
         
         # Check whether to begin to store data from this file, i.e., whether
         # the user is requesting to skip the initial resistance dip.
@@ -1602,6 +1745,11 @@ def plot_active_manipulation(
                 print("Data file '"+str(filepath_item)+"' could not be used to identify where the initial dip ends. Ignoring argument.")
                 do_not_save_data_yet = False
             
+            # Old file or not, we take the timestamp in cell [4,1] (0 indx.)
+            # in order to calculate how much initial time was removed.
+            time_value_at_first_entry = float(rows[4][1])
+            time_at_start = -1.0
+            
             # Go through the file.
             for i in range(len(rows)):
                 if i % 6 == 3:
@@ -1614,6 +1762,12 @@ def plot_active_manipulation(
                         if 'START_MANIPULATION' in str(rows[i+1][2]):
                             # Then signal that we may commence.
                             do_not_save_data_yet = False
+                            
+                            # Report how much time passed before this tag
+                            # appeared.
+                            time_at_start = float(rows[i+1][1])
+                            print(filepath_item)
+                            print("Detected that the initial dip was "+str(time_at_start - time_value_at_first_entry)+" [s] long.")
                     
                     # The reason this if-if case is written this way,
                     # is to catch the data in the same data storage event
@@ -1681,6 +1835,11 @@ def plot_active_manipulation(
         else:
             y_label_text = "Resistance [Ω]"
         
+        # At this point, we can identify how much initial dip was removed,
+        # vs. the maximum resistance change.
+        if normalise_resistances == 1:
+            print("Dip removed: "+str(time_at_start - time_value_at_first_entry)+", max change: "+str(resistances[-1]))
+        
         # Add item to plot!
         ## First, let's try to fit the data too.
         fit_results = None
@@ -1708,26 +1867,68 @@ def plot_active_manipulation(
         elif (jj % 5) == 4:
             marker_symbol = 'D'
         if (not colourise):
+            
             # Just plot from a map.
-            ## Legacy colouring?
-            if   'thin'  in file_label.lower():
-                colour_label = 'winter'
+            if 'thin' in file_label.lower():
+                colour_label = 'custom_thin'
+                colors = ['#1cee70', '#1cd89c', '#1cc1c3', '#1ca5da', '#1c88e8', '#1c70ee']
                 
-                # Get the last number.
+                num_items_to_colour = len(filepath)
+                if num_items_to_colour < 6:
+                    colors = colors[:num_items_to_colour]
+                elif num_items_to_colour == 6:
+                    colors = colors
+                else:
+                    raise NotImplementedError("Colouring error.")
+                
+                # Get the last number from the filename
                 match = re.search(r'(\d+)$', file_label)
-                file_label = str(int(match.group(1)) if match else None)+' mV'
-                
+                file_label = str(int(match.group(1)) if match else None) + ' mV'
+            
             elif 'thick' in file_label.lower():
-                colour_label = 'autumn'
+                colour_label = 'custom_thick'
+                colors = ['#ee1c1c', '#f47e1c', '#f6c11c', '#e6df1c', '#d1eb1c', '#c4ee1c']
+                
+                num_items_to_colour = len(filepath)
+                if num_items_to_colour < 6:
+                    colors = colors[:num_items_to_colour]
+                elif num_items_to_colour == 6:
+                    colors = colors
+                else:
+                    raise NotImplementedError("Colouring error.")
+                
+                # Get the last number from the filename
+                match = re.search(r'(\d+)$', file_label)
+                file_label = str(int(match.group(1)) if match else None) + ' mV'
+            
+            elif 'thinLEGACY' in file_label.lower():
+                ## Catch legacy thin.
+                colour_label = 'winter'
+                num_items_to_colour = len(filepath)
+                cmap = plt.cm.get_cmap(colour_label, num_items_to_colour)
+                colors = [cmap(i) for i in range(num_items_to_colour)]
                 
                 # Get the last number.
                 match = re.search(r'(\d+)$', file_label)
                 file_label = str(int(match.group(1)) if match else None)+' mV'
+            
+            elif 'thickLEGACY' in file_label.lower():
+                ## Catch legacy thick.
+                colour_label = 'autumn'
+                num_items_to_colour = len(filepath)
+                cmap = plt.cm.get_cmap(colour_label, num_items_to_colour)
+                colors = [cmap(i) for i in range(num_items_to_colour)]
                 
+                # Get the last number.
+                match = re.search(r'(\d+)$', file_label)
+                file_label = str(int(match.group(1)) if match else None)+' mV'
+            
             else:
+                # Fallback to default colormap if not 'thin' or 'thick'
                 colour_label = 'tab20'
-            num_items_to_colour = len(filepath)
-            colors = plt.cm.get_cmap(colour_label, num_items_to_colour)
+                num_items_to_colour = len(filepath)
+                cmap = plt.cm.get_cmap(colour_label, num_items_to_colour)
+                colors = [cmap(i) for i in range(num_items_to_colour)]
             
             # Mask the scatter plot?
             if enable_mask:
@@ -1739,14 +1940,14 @@ def plot_active_manipulation(
                 resistances_to_plot = resistances.copy()
             
             plt.figure(1) # Set figure 1 as active.
-            plt.scatter(times_to_plot, resistances_to_plot, marker=marker_symbol, label=file_label, color=colors(jj))
+            plt.scatter(times_to_plot, resistances_to_plot, marker=marker_symbol, label=file_label, color=colors[jj])## TODO!! colors[jj])## TODO!! colors(jj))
             
             # Update the largest value present on the y-axis?
             if np.max(resistances) > highest_number_on_the_y_axis:
                 highest_number_on_the_y_axis = np.max(resistances)
             
             ##plt.figure(3) # Set figure 3 as active.
-            ##plt.scatter(times_to_plot, np.log10(resistances_to_plot), marker=marker_symbol, label=file_label, color=colors(jj))
+            ##plt.scatter(times_to_plot, np.log10(resistances_to_plot), marker=marker_symbol, label=file_label, color=colors[jj])## TODO!! colors(jj))
         else:
             
             # Get pseudolegacy filename labels?
@@ -1857,9 +2058,9 @@ def plot_active_manipulation(
             if (not colourise):
                 plt.figure(1) # Set figure 1 as active.
                 if plot_fit_parameters_in_legend:
-                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors(jj))
+                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors[jj])## TODO!! colors(jj))
                 else:
-                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', color=colors(jj))
+                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', color=colors[jj])## TODO!! colors(jj))
             else:
                 plt.figure(1) # Set figure 1 as active.
                 if plot_fit_parameters_in_legend:
@@ -1880,7 +2081,7 @@ def plot_active_manipulation(
             
             if (not colourise):
                 plt.figure(2) # Set figure 2 as active.
-                plt.scatter(times, residuals, marker=marker_symbol, label='Residuals, '+file_label, color=colors(jj))
+                plt.scatter(times, residuals, marker=marker_symbol, label='Residuals, '+file_label, color=colors[jj])## TODO!! colors(jj))
             else:
                 plt.figure(2) # Set figure 2 as active.
                 plt.scatter(times, residuals, marker=marker_symbol, label='Residuals, '+file_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
@@ -1924,12 +2125,15 @@ def plot_active_manipulation(
     # Other figure formatting.
     ## Figure out the label padding.
     if (normalise_resistances == 1):
-        
+        ax1.set_xlim(-10,310)
         if highest_number_on_the_y_axis < 8:
+            ax1.set_ylim(-1,9)
             label_padding = 68
         elif highest_number_on_the_y_axis < 30:
-            label_padding = 20
+            ax1.set_ylim(-1,25)
+            label_padding = 49
         else:
+            ax1.set_ylim(-8,105)
             label_padding = 30
     else:
         label_padding = 30
@@ -1971,9 +2175,9 @@ def plot_active_manipulation(
         else:
             plt.legend()
         # Save plot?
-        if export_plot_to != '':
+        if savepath != '':
             plt.tight_layout()
-            plt.savefig(export_plot_to+"Fig"+str(ll+1), dpi=169, bbox_inches='tight')
+            fig1.savefig(savepath, dpi=164, bbox_inches='tight')
     plt.show()
     
     # Return stuffs.
@@ -1989,6 +2193,7 @@ def analyse_fitted_polynomial_factors(
     skip_initial_dip = False,
     plot_fit_parameters_in_legend = False,
     colourise = False,
+    savepath = '',
     ):
     ''' For a list of files, given as a list of filepath (strings),
         perform a fit for the whole file, and get the fit values
@@ -2057,6 +2262,7 @@ def analyse_fitted_polynomial_factors(
         skip_initial_dip = skip_initial_dip,
         plot_fit_parameters_in_legend = plot_fit_parameters_in_legend,
         colourise = colourise,
+        savepath = savepath
     )
     
     ## The data format here is weird:
@@ -2104,8 +2310,8 @@ def analyse_fitted_polynomial_factors(
             // Christian 2025-03-09'''
             
             def exponential_func_for_alpha(v_mV, alpha_0, gamma):#, v_mott_mV):
-                #return alpha_0 * ((np.e)**((v_mV - v_mott_mV) * gamma))
                 return alpha_0 * ((np.e)**(v_mV * gamma))
+                #return alpha_0 * ((np.e)**((v_mV - v_mott_mV) * gamma))
             
             # Grab the α values and β values.
             alpha_values = y_values[0]
@@ -2163,11 +2369,12 @@ def analyse_fitted_polynomial_factors(
             polynomial_fit_successful = False
     
     # Plot each parameter trace.
-    ## Create figure for plotting.
+    ## Create figure for plotting. Note that this is the plot with
+    ## α₀ and γ fitted in it, that is, not the α(V) fit.
     if colourise:
-        fig1, ax1 = plt.subplots(figsize=(10, 8), facecolor=get_colourise(-2))
+        fig1, ax1 = plt.subplots(figsize=(12.8, 12.8), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(10, 8))
+        fig1, ax1 = plt.subplots(figsize=(12.8, 12.8))
     
     for i in range(num_traces):
         if y_values[i]:
@@ -2225,7 +2432,7 @@ def analyse_fitted_polynomial_factors(
         ax1.spines['right'].set_color(get_colourise(-1))
         ax1.tick_params(axis='both', colors=get_colourise(-1))
     
-    # Show shits.
+    # Show and save shits.
     plt.legend(fontsize=26)
     plt.show()
     
@@ -2244,6 +2451,7 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
     plot_fit_parameters_in_legend = False,
     set_labels = [],
     colourise = False,
+    savepath = '',
     ):
     ''' Analyse multiple sets of active resistance manipulation data.
         
@@ -2260,9 +2468,21 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
     if (len(set_labels) != 0) and (not (len(list_of_filepath_lists) == len(set_labels))):
         raise ValueError("Halted! Unable to determine set labels, ensure that you did provide a set label for each filepath in your arguments.") 
     
+    def insert_counter_before_extension(filepath, counter, default_ext=".png"):
+        directory, filename = os.path.split(filepath)
+        name, ext = os.path.splitext(filename)
+
+        if not ext:
+            ext = default_ext
+
+        new_filename = f"{name}{counter}{ext}"
+        return os.path.join(directory, new_filename)
+    
     # Collect all of the data.
     results_of_sets = []
-    for current_set in list_of_filepath_lists:
+    repeat_counter = 1
+    for i in range(len(list_of_filepath_lists)):
+        current_set = list_of_filepath_lists[i]
         
         # Fit!
         results_of_sets.append(
@@ -2276,6 +2496,7 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
                 skip_initial_dip = skip_initial_dip,
                 plot_fit_parameters_in_legend = plot_fit_parameters_in_legend,
                 colourise = colourise,
+                savepath = insert_counter_before_extension(savepath, i),
             )
         )
     
@@ -2298,16 +2519,19 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
         if expected_number_of_fit_parameters == 3:
             fig3, ax3 = plt.subplots(figsize=(15, 11), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(15, 11))
-        fig2, ax2 = plt.subplots(figsize=(15, 11))
+        fig1, ax1 = plt.subplots(figsize=(14.6, 9))
+        fig2, ax2 = plt.subplots(figsize=(12.8, 9))
         if expected_number_of_fit_parameters == 3:
             fig3, ax3 = plt.subplots(figsize=(15, 11))
     
     # Figure out colours.
     if not colourise:
-        colour_label = 'tab20'
         num_items_to_colour = len(list_of_filepath_lists)
-        colours = plt.cm.get_cmap(colour_label, num_items_to_colour)
+        if num_items_to_colour != 5:
+            colour_label = 'tab20'
+            colours = plt.cm.get_cmap(colour_label, num_items_to_colour)
+        else:
+            colours = ["#EE1C1C", "#C4EE1C", "#1CEE70", "#1C70EE", "#C41CEE"]
     
     # Loop through the data and create plotty things.
     for curr_figure in range(expected_number_of_fit_parameters):
@@ -2335,7 +2559,10 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             if colourise:
                 plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=get_colourise(sets))
             else:
-                plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours(sets))
+                if num_items_to_colour != 5:
+                    plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours(sets))
+                else:
+                    plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours[sets])
             
             # Plot fit trace in the alpha plot?
             if curr_figure == 0:
@@ -2352,7 +2579,10 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
                     else:
                         fit_label = None
                     if not colourise:
-                        plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours(sets))
+                        if num_items_to_colour != 5:
+                            plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours(sets))
+                        else:
+                            plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours[sets])
                     else:
                         plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = get_colourise(sets+0.1))
                 except IndexError:
@@ -2383,14 +2613,17 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
         if fitter != 'none':
-            if fitter == 'second_order':
-                plt.title("Fit parameters, 2nd order polynomial", color=title_colour, fontsize=38)
-            elif fitter == 'third_order':
-                plt.title("Fit parameters, 3rd order polynomial", color=title_colour, fontsize=38)
-            elif fitter == 'exponential':
-                plt.title("Fit parameters, exponential function", color=title_colour, fontsize=38)
-            elif fitter == 'power':
-                plt.title("Fit parameters, power-law", color=title_colour, fontsize=38)
+            if savepath == '':
+                if fitter == 'second_order':
+                    plt.title("Fit parameters, 2nd order polynomial", color=title_colour, fontsize=38)
+                elif fitter == 'third_order':
+                    plt.title("Fit parameters, 3rd order polynomial", color=title_colour, fontsize=38)
+                elif fitter == 'exponential':
+                    plt.title("Fit parameters, exponential function", color=title_colour, fontsize=38)
+                elif fitter == 'power':
+                    plt.title("Fit parameters, power-law", color=title_colour, fontsize=38)
+            else:
+                plt.title("", color=title_colour, fontsize=38)
         else:
             raise ValueError("Error! Could not understand argument provided to 'fitter': "+str(fitter))
         
@@ -2417,7 +2650,13 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
         ax2.spines['right'].set_color(get_colourise(-1))
         ax2.tick_params(axis='both', colors=get_colourise(-1))
     
-    # Show shits.
+    # Save plots?
+    if savepath != '':
+        plt.tight_layout()
+        fig1.savefig(insert_counter_before_extension(savepath, 10000), dpi=164, bbox_inches='tight')
+        fig2.savefig(insert_counter_before_extension(savepath, 20000), dpi=164, bbox_inches='tight')
+    
+    # Show shits.        
     plt.show()
     
     return results_of_sets
@@ -2458,12 +2697,13 @@ def calculate_delta_f01(
     # Return difference.
     return (final_frequency - initial_frequency)
 
-def acquire_creep_data_from_folder(
+def acquire_relaxation_data_from_folder(
     folder_path,
-    take_creep_data_at_this_time_s,
+    take_relaxation_data_at_this_time_s,
     filename_tags = [],
+    verbose = True,
     ):
-    ''' From a supplied folder path, acquire the resistance creep of the
+    ''' From a supplied folder path, acquire the resistance relaxation of the
         files held within.
     '''
     
@@ -2488,9 +2728,9 @@ def acquire_creep_data_from_folder(
                     ## Set some process flags.
                     reference_resistance = 0.0
                     resistance_at_manipulation_finished = 0.0
-                    creep_began_at_time = -1.0
-                    creep_analysed_at_this_time = -1.0
-                    resistance_at_creep_point = 0.0
+                    relaxation_began_at_time = -1.0
+                    relaxation_analysed_at_this_time = -1.0
+                    resistance_at_relaxation_point = 0.0
                     shorted = False
                     
                     # Open file, do the thing.                    
@@ -2571,7 +2811,7 @@ def acquire_creep_data_from_folder(
                                         
                                         # Grab the time at which this happened.
                                         # Every sixth row +4 contains a time value
-                                        creep_began_at_time = float(rows[i+1][1])
+                                        relaxation_began_at_time = float(rows[i+1][1])
                                     
                                     elif 'START_CREEP' in rows[i+1][2]:
                                         # Check whether this is a merged file,
@@ -2595,34 +2835,39 @@ def acquire_creep_data_from_folder(
                                             # Scale to Ohm
                                             resistance_at_manipulation_finished *= si_unit_prefix_scaler
                                             
-                                            # Grab the time at which the creep started.
+                                            # Grab the time at which the relaxation started.
                                             try:
-                                                creep_began_at_time = float(rows[i+1-6][1])
+                                                relaxation_began_at_time = float(rows[i+1-6][1])
                                             except IndexError:
-                                                creep_began_at_time = float(rows[i+1][1])
+                                                relaxation_began_at_time = float(rows[i+1][1])
                                         
                                         # In either case, we continue
                                         # by looking for the user-set
                                         # time at which the resistance
                                         # of interest is located.
-                                        creep_analysed_at_this_time = \
-                                            creep_began_at_time + \
-                                            take_creep_data_at_this_time_s
+                                        relaxation_analysed_at_this_time = \
+                                            relaxation_began_at_time + \
+                                            take_relaxation_data_at_this_time_s
                                     
                                     # Now, we are merely waiting for the
                                     # resistance point taken at the time that
                                     # the user is interested in.
-                                    if creep_analysed_at_this_time != -1:
+                                    if relaxation_analysed_at_this_time != -1:
                                         
                                         # Then, let's look for times.
                                         current_time = float(rows[i+1][1])
-                                        if current_time >= creep_analysed_at_this_time:
+                                        if (current_time >= relaxation_analysed_at_this_time) and (resistance_at_relaxation_point == 0.0):
+                                            
+                                            ## Here, resistance_at_relaxation_point == 0.0 ensures that
+                                            ## we only perform this part if the sample
+                                            ## has not had its relaxation point resistance identified.
+                                            
                                             # Fantastic, this resistance should probably be our final datapoint.
                                             # Let's just check whether the latest datapoint were
                                             # closer in time to that data, first.
                                             previous_time = float(rows[i+1-6][1])
-                                            diff_current  = creep_began_at_time - current_time
-                                            diff_previous = creep_began_at_time - previous_time
+                                            diff_current  = relaxation_began_at_time - current_time
+                                            diff_previous = relaxation_began_at_time - previous_time
                                             if diff_current < diff_previous:
                                                 # The datapoint that passed the
                                                 # timestamp where the user
@@ -2642,7 +2887,7 @@ def acquire_creep_data_from_folder(
                                                 
                                                 if not shorted:
                                                     # Success!
-                                                    resistance_at_creep_point = float(rows[i][1])
+                                                    resistance_at_relaxation_point = float(rows[i][1])
                                             else:
                                                 # The previous datapoint was
                                                 # closer in time to the user-
@@ -2653,7 +2898,7 @@ def acquire_creep_data_from_folder(
                                                 ## point that is a short.
                                                 ## Since, this fact would
                                                 ## have been discovered by now.
-                                                resistance_at_creep_point = float(rows[i-6][1])
+                                                resistance_at_relaxation_point = float(rows[i-6][1])
                                             
                                             # Double-check whether we shorted
                                             # at the finish line.
@@ -2666,25 +2911,33 @@ def acquire_creep_data_from_folder(
                                                     si_unit_prefix_scaler = 1
                                                 
                                                 # Scale to Ohm
-                                                resistance_at_creep_point *= si_unit_prefix_scaler
+                                                resistance_at_relaxation_point *= si_unit_prefix_scaler
                     
                     # At this point, we are done with the file.
                     # Collect values.
                     if reference_resistance != 0.0:
                         if resistance_at_manipulation_finished != 0.0:
-                            if resistance_at_creep_point != 0.0:
-                                print("Ref res: "+str(reference_resistance)+", Res at manip finished: "+str(resistance_at_manipulation_finished)+", Res total: "+str(resistance_at_creep_point))
+                            if resistance_at_relaxation_point != 0.0:
+                                if verbose:
+                                    print("Ref res: "+str(reference_resistance)+", Res at manip finished: "+str(resistance_at_manipulation_finished)+", Res total: "+str(resistance_at_relaxation_point))
                                 active_gain_percent.append((resistance_at_manipulation_finished / reference_resistance -1)*100)
-                                total_gain_percent.append((resistance_at_creep_point / reference_resistance -1)*100)
-                                assert (resistance_at_creep_point / reference_resistance -1) > 0, "ERROR: "+str(filename)
-                                if shorted:
-                                    print(">> Shorted during creep, but after the sought-for data was found: "+str(filename))
+                                total_gain_percent.append((resistance_at_relaxation_point / reference_resistance -1)*100)
+                                
+                                ## Removing this for now; there is no guarantee that the resistance hasn't
+                                ## crept down below zero.
+                                ##assert (resistance_at_relaxation_point / reference_resistance -1) > 0, "ERROR: "+str(filename)
+                                
+                                if (shorted) and (verbose):
+                                    print(">> Shorted during relaxation, but after the sought-for data was found: "+str(filename))
                             else:
-                                print(">> Failed during creep: "+str(filename))
+                                if verbose:
+                                    print(">> Failed during relaxation: "+str(filename))
                         else:
-                            print(">> Failed during manipulation: "+str(filename))
+                            if verbose:
+                                print(">> Failed during manipulation: "+str(filename))
                     else:
-                        print(">> Manipulation failed to start: "+str(filename))
+                        if verbose:
+                            print(">> Manipulation failed to start: "+str(filename))
                 else:
                     print(">> Can't read file '"+str(filename)+"'")
             else:
@@ -2696,16 +2949,166 @@ def acquire_creep_data_from_folder(
     return (active_gain_percent, total_gain_percent)
     
 
-def plot_active_vs_total_resistance_gain(
+def plot_trend_active_vs_total_resistance_gain(
     title_voltage_V,
     title_junction_size_nm,
     folder_path,
-    take_creep_data_at_this_time_s,
+    take_relaxation_data_at_this_time_interval_s,
     filename_tags = [],
     outlier_threshold_in_std_devs = 2.0,
     consider_outliers = True,
     plot_ideal_curve = False,
-    colourise = False
+    colourise = False,
+    savepath = '',
+    plot = True,
+    enforce_n = -1,
+    ):
+    ''' For an interval of times to be observed, get the slope and offset
+        data for the linear fits of the active-vs-total-manipulation
+        experiments.
+        
+        enforce_n:  Set the minimum number of samples taken at some datapoint
+                    to quality as fittable.
+    '''
+    list_of_slopes          = []
+    list_of_slopes_err      = []
+    list_of_offsets         = []
+    list_of_offsets_err     = []
+    list_of_n_samples       = []
+    list_of_rms_deviations  = []
+    latest_progress = 0.0
+    last_progress_printed = -100.0
+    for ii in range(len(take_relaxation_data_at_this_time_interval_s)):
+        # Get progress.
+        latest_progress = int(np.round((100*(ii/len(take_relaxation_data_at_this_time_interval_s)))))
+        if not (latest_progress == last_progress_printed):
+            #print(f"Progress: {100*(ii/len(take_relaxation_data_at_this_time_interval_s)):.1f} % done.")
+            print("Progress: "+str(latest_progress)+" % done.")
+            last_progress_printed = latest_progress
+        
+        # Get time!
+        curr_investigated_time = take_relaxation_data_at_this_time_interval_s[ii]
+        
+        # Get data!
+        curr_k, curr_m, curr_k_err, curr_m_err, n_samples, rms_deviation = plot_active_vs_total_resistance_gain(
+            title_voltage_V = title_voltage_V,
+            title_junction_size_nm = title_junction_size_nm,
+            folder_path = folder_path,
+            take_relaxation_data_at_this_time_s = curr_investigated_time,
+            filename_tags = filename_tags,
+            outlier_threshold_in_std_devs = outlier_threshold_in_std_devs,
+            consider_outliers = consider_outliers,
+            plot_ideal_curve = plot_ideal_curve,
+            colourise = colourise,
+            savepath = '',
+            plot = False,
+        )
+        
+        # Append to lists!
+        list_of_slopes.append(curr_k)
+        list_of_offsets.append(curr_m)
+        list_of_slopes_err.append(curr_k_err)
+        list_of_offsets_err.append(curr_m_err)
+        list_of_n_samples.append(n_samples)
+        list_of_rms_deviations.append(rms_deviation)
+    
+    # Conversions into numpy.
+    k       = np.array(list_of_slopes)
+    m       = np.array(list_of_offsets)
+    k_err   = np.array(list_of_slopes_err)
+    m_err   = np.array(list_of_offsets_err)
+    n       = np.array(list_of_n_samples)
+    rms_dev = np.array(list_of_rms_deviations)
+    
+    ## Plot!
+    
+    # Get time axis, i.e., x-axis.
+    time = np.array(take_relaxation_data_at_this_time_interval_s)
+    
+    # How many datapoints must we have in the fitted point to qualify
+    # as a reliable metric? → enforce_n
+    if enforce_n != -1:
+        # Check descending order
+        for i in range(1, len(n)):
+            if n[i] > n[i - 1]:
+                print(f"Warning: 'n' is not in descending order at index {i}: "
+                      f"n[{i-1}] = {n[i-1]}, n[{i}] = {n[i]}")
+    # Enforce n-threshold for reported data accuracy.
+    for i in range(len(n)):
+        if n[i] < enforce_n:
+            k[i] = None
+            m[i] = None
+            k_err[i] = None
+            m_err[i] = None
+            time[i]  = None
+    
+    # Plotting
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(25.31, 10), sharex=True)
+
+    # Top plot: slope
+    ax1.errorbar(time/3600, k, yerr=k_err, fmt='o', markersize=4, ecolor='gray', capsize=2, label='Slope', color="#EE1C1C")
+    ax1.set_xlabel('Relaxation time [h]', fontsize=33)
+    ax1.set_ylabel('Linear fit slope [-]', fontsize=33)
+    #ax1.set_title('Slope and Offset vs Time')
+    ax1.tick_params(axis='both', labelsize=23)
+    ax1.set_ylim(0,1.1)
+    ax1.grid(True)
+    ax1.legend(fontsize=26, loc='lower right')
+
+    # Bottom plot: offset
+    ax2.errorbar(time/3600, m, yerr=m_err, fmt='o', markersize=4, ecolor='gray', capsize=2, label='Offset', color="#1CEE70")
+    ax2.tick_params(axis='both', labelsize=23)
+    ax2.set_ylim(0,8.5)
+    ax2.set_xlabel('Relaxation time [h]', fontsize=33)
+    ax2.set_ylabel('Linear fit offset [%]', fontsize=33)
+    ax2.grid(True)
+    ax2.legend(fontsize=26, loc='lower right')
+    
+    # Third plot: RMS deviation
+    ax3.plot(time/3600, rms_dev, 'o-', color="#1C70EE", label='RMS deviation')
+    ax3.tick_params(axis='both', labelsize=23)
+    ax3.set_xlabel('Relaxation time [h]', fontsize=33)
+    ax3.set_ylabel('Deviation from fit [%]', fontsize=33)
+    ax3.set_ylim(0,8.5)
+    ax3.grid(True)
+    ax3.legend(fontsize=26, loc='lower right')
+    
+    ## # Insert plot.
+    ## axins = ax2.inset_axes([0.55, 0.55, 0.4, 0.4])  # [x0, y0, width, height] in axes fraction
+    ## axins.plot(time/3600, rms_dev, 'o-', color="#1C70EE", markersize=3)
+    ## axins.set_title("RMS dev.", fontsize=26)
+    ## axins.tick_params(axis='both', labelsize=24)
+    ## axins.grid(True)
+    
+    # Go through the list of samples n, and append vertical lines to where this makes sense.
+    print("TODO: add verical lines showing n of samples left.")
+    
+    # Tight layout!
+    plt.tight_layout()
+    
+    # Save plot?
+    if savepath != '':
+        fig.savefig(savepath, dpi=164, bbox_inches='tight')
+    
+    # Show!
+    plt.show()
+    
+    # Return!
+    return list_of_slopes, list_of_offsets, list_of_slopes_err, list_of_offsets_err, list_of_n_samples, list_of_rms_deviations
+
+
+def plot_active_vs_total_resistance_gain(
+    title_voltage_V,
+    title_junction_size_nm,
+    folder_path,
+    take_relaxation_data_at_this_time_s,
+    filename_tags = [],
+    outlier_threshold_in_std_devs = 2.0,
+    consider_outliers = True,
+    plot_ideal_curve = False,
+    colourise = False,
+    savepath = '',
+    plot = True,
     ):
     ''' Given some set of data, plot the active gain on the X axis in percent,
         and the total gain on the Y axis in percent relative to the
@@ -2713,7 +3116,7 @@ def plot_active_vs_total_resistance_gain(
         
         folder_path: path to folder containing measurement files.
         
-        take_creep_data_at_this_time_s: time in seconds where the datapoint
+        take_relaxation_data_at_this_time_s: time in seconds where the datapoint
         will be taken for the resistance manipulation. The point closest
         in time to the user-supplied value will be chosen.
         
@@ -2729,18 +3132,31 @@ def plot_active_vs_total_resistance_gain(
     # Counter to keep track of colourised patterns.
     colourise_counter = 0
     
+    # Detect special junction sizes for colourisation?
+    dot_colour = "#D63834"
+    if title_junction_size_nm == 200:
+        dot_colour = "#EE1C1C"
+    elif title_junction_size_nm == 350:
+        dot_colour = "#1CEE70"
+    elif title_junction_size_nm == 318:
+        dot_colour = "#1C70EE"
+    elif title_junction_size_nm == 354:
+        dot_colour = "#C41CEE"
+    
     # Acquire dataset.
     ## Rework voltage into something that will be written in the title.
     ## Append this number to the filename_tags to look for.
     filename_tags.append(str(title_voltage_V).replace('.',"p"))
-    (active_gain_percent, total_gain_percent) = acquire_creep_data_from_folder(
+    (active_gain_percent, total_gain_percent) = acquire_relaxation_data_from_folder(
         folder_path = folder_path,
-        take_creep_data_at_this_time_s = take_creep_data_at_this_time_s,
+        take_relaxation_data_at_this_time_s = take_relaxation_data_at_this_time_s,
         filename_tags = filename_tags,
+        verbose = plot,
     )
     
     ##  Here are the two datasets for R01 and R02, i.e., the 354x354nm^2  ##
     ##  and 318x318nm^2 junction sizes from the JJTest100W3 wafer.        ##
+    ##  That is, 354 is 'Compact 2', and 318 is 'Compact 1'.
     #active_gain_percent  = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94, 4.97522988,  6.17057683, 7.01116346] ## THICK354
     #total_gain_percent   = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36, 6.99326582, 10.37398798, 9.57568379] ## THICK354
     #active_gain_percent = [7.0942, 10.0738, 11.8119, 5.0343, 15.0296, 18.0029, 20.0640, 6.0434,  9.0186,  7.6048, 4.040, 10.007, 4.060, 6.020, 21.129, 3.577, 20.741, 3.043, 1.017, 0.78152682, 1.08007167, 2.1641953,  3.4114392 ] ## THICK318
@@ -2754,8 +3170,9 @@ def plot_active_vs_total_resistance_gain(
     sorted_total  = np.array(sorted_total, dtype=np.float64)
     
     # Report!
-    print("Sorted active:", sorted_active)
-    print("Sorted total:",  sorted_total)
+    if plot:
+        print("Sorted active:", sorted_active)
+        print("Sorted total:",  sorted_total)
     
     # Ensure the data sets are of identical length.
     if (len(sorted_active) != len(sorted_total)):
@@ -2777,12 +3194,13 @@ def plot_active_vs_total_resistance_gain(
     total_filtered  = sorted_total[mask]
     
     # Create figure for plotting.
-    if colourise:
-        fig, ax = plt.subplots(figsize=(12, 8), facecolor=get_colourise(-2))
-        #plt.figure(figsize=(10, 5), facecolor=get_colourise(-2))
-    else:
-        fig, ax = plt.subplots(figsize=(12, 8))
-        #plt.figure(figsize=(10, 5))
+    if plot:
+        if colourise:
+            fig, ax = plt.subplots(figsize=(12.8, 10), facecolor=get_colourise(-2))
+            #plt.figure(figsize=(10, 5), facecolor=get_colourise(-2))
+        else:
+            fig, ax = plt.subplots(figsize=(12.5, 9.14))
+            #plt.figure(figsize=(10, 5))
     
     # Let's fit the data and see what we get.
     def linear_func(x, k, m):
@@ -2825,29 +3243,35 @@ def plot_active_vs_total_resistance_gain(
     # Plot the fit curve!
     ## Extend to zero!
     original_fitted_curve, optimal_k, optimal_m, err_k, err_m = linear_fitter(sorted_active, sorted_total)
-    if colourise:
-        plt.plot(np.insert(sorted_active, 0, 0), np.insert(original_fitted_curve, 0, optimal_m), color=get_colourise(colourise_counter), label=f"Linear fit: {optimal_k:.2f} · x + {optimal_m:.2f} [%]\nSlope error: ±{err_k:.2f}\nOffset error: ±{err_m:.2f}")
-        colourise_counter += 1
-    else:
-        plt.plot(np.insert(sorted_active, 0, 0), np.insert(original_fitted_curve, 0, optimal_m), color="#34D2D6", label=f"Linear fit: {optimal_k:.2f} · x + {optimal_m:.2f} [%]\nSlope error: ±{err_k:.2f}\nOffset error: ±{err_m:.2f}")
-    
+    if plot:
+        if colourise:
+            plt.plot(np.insert(sorted_active, 0, 0), np.insert(original_fitted_curve, 0, optimal_m), color=get_colourise(colourise_counter), label=f"Linear fit: {optimal_k:.2f} · x + {optimal_m:.2f} [%]\nSlope error: ±{err_k:.2f}\nOffset error: ±{err_m:.2f}")
+            colourise_counter += 1
+        else:
+            if savepath == '':
+                plt.plot(np.insert(sorted_active, 0, 0), np.insert(original_fitted_curve, 0, optimal_m), color="#34D2D6", label=f"Linear fit: {optimal_k:.2f} · x + {optimal_m:.2f} [%]\nSlope error: ±{err_k:.2f}\nOffset error: ±{err_m:.2f}")
+            else:
+                plt.plot(np.insert(sorted_active, 0, 0), np.insert(original_fitted_curve, 0, optimal_m), color="#222222", label=f"Linear fit: {optimal_k:.2f} · x + {optimal_m:.2f} [%]\nSlope error: ±{err_k:.2f}\nOffset error: ±{err_m:.2f}")
+        
     if consider_outliers:
         # Do the same with the filtered data.
         ## Remember to extend to 0.
         filtered_fitted_curve, filtered_k, filtered_m, filtered_err_k, filtered_err_m = linear_fitter(active_filtered, total_filtered)
-        if colourise:
-            plt.plot(np.insert(active_filtered, 0, 0), np.insert(filtered_fitted_curve, 0, filtered_m), color=get_colourise(colourise_counter), label=f"Trimmed fit: {filtered_k:.2f} · x + {filtered_m:.2f} [%]\nSlope error: ±{filtered_err_k:.2f}\nOffset error: ±{filtered_err_m:.2f}")
-            colourise_counter += 1
-        else:
-            plt.plot(active_filtered, filtered_fitted_curve, color="#81D634", label=f"Trimmed fit: {filtered_k:.2f} · x + {filtered_m:.2f} [%]\nSlope error: ±{filtered_err_k:.2f}\nOffset error: ±{filtered_err_m:.2f}")
-    
+        if plot:
+            if colourise:
+                plt.plot(np.insert(active_filtered, 0, 0), np.insert(filtered_fitted_curve, 0, filtered_m), color=get_colourise(colourise_counter), label=f"Trimmed fit: {filtered_k:.2f} · x + {filtered_m:.2f} [%]\nSlope error: ±{filtered_err_k:.2f}\nOffset error: ±{filtered_err_m:.2f}")
+                colourise_counter += 1
+            else:
+                plt.plot(active_filtered, filtered_fitted_curve, color="#81D634", label=f"Trimmed fit: {filtered_k:.2f} · x + {filtered_m:.2f} [%]\nSlope error: ±{filtered_err_k:.2f}\nOffset error: ±{filtered_err_m:.2f}")
+        
     # Plot an ideal curve?
-    if plot_ideal_curve:
-        if consider_outliers:
-            plt.plot(np.insert(sorted_active, 0, 0), 1.00 * np.insert(sorted_active, 0, filtered_m) + filtered_m, color="#000000", label=f"Ideal trend: 1.0000 · x + {optimal_m:.2f} [%]")
-        else:
-            plt.plot(np.insert(sorted_active, 0, 0), 1.00 * np.insert(sorted_active, 0, optimal_m) + optimal_m, color="#000000", label=f"Ideal trend: 1.0000 · x + {optimal_m:.2f} [%]")
-    
+    if plot:
+        if plot_ideal_curve:
+            if consider_outliers:
+                plt.plot(np.insert(sorted_active, 0, 0), 1.00 * np.insert(sorted_active, 0, filtered_m) + filtered_m, color="#000000", label=f"Ideal trend: 1.0000 · x + {optimal_m:.2f} [%]")
+            else:
+                plt.plot(np.insert(sorted_active, 0, 0), 1.00 * np.insert(sorted_active, 0, optimal_m) + optimal_m, color="#000000", label=f"Ideal trend: 1.0000 · x + {optimal_m:.2f} [%]")
+        
     '''
     ## Now, let's redo that with the outlier-filtered data and the original data.
     plt.plot(sorted_active, slope * sorted_active + intercept, color="#34D2D6", label=f"Fit with outliers: y = {slope:.2f}x + {intercept:.2f}\n±{std_err:.2f}")
@@ -2857,61 +3281,90 @@ def plot_active_vs_total_resistance_gain(
     '''
     
     # Insert datapoints!
-    if (not colourise):
-        if consider_outliers:
-            plt.scatter(sorted_active, sorted_total, color="#8934D6", label=str(outlier_threshold_in_std_devs)+"σ outliers")
-            ## This is a weird way to do this plotting, but it ensures that
-            ## only the outliers are highlighted in the plot legend.
-            ## Even though this dataset is the original! → Result = Good legend!
-            plt.scatter(active_filtered, total_filtered, color="#D63834")
+    if plot:
+        if (not colourise):
+            if consider_outliers:
+                plt.scatter(sorted_active, sorted_total, color="#8934D6", label=str(outlier_threshold_in_std_devs)+"σ outliers")
+                ## This is a weird way to do this plotting, but it ensures that
+                ## only the outliers are highlighted in the plot legend.
+                ## Even though this dataset is the original! → Result = Good legend!
+                plt.scatter(active_filtered, total_filtered, color="#D63834")
+            else:
+                plt.scatter(sorted_active, sorted_total, color=dot_colour)
         else:
-            plt.scatter(sorted_active, sorted_total, color="#D63834")
-    else:
-        if consider_outliers:
-            plt.scatter(sorted_active, sorted_total, color=get_colourise(3), label=str(outlier_threshold_in_std_devs)+"σ outliers")
-            ## This is a weird way to do this plotting, but it ensures that
-            ## only the outliers are highlighted in the plot legend.
-            ## Even though this dataset is the original! → Result = Good legend!
-            plt.scatter(active_filtered, total_filtered, color=get_colourise(2))
+            if consider_outliers:
+                plt.scatter(sorted_active, sorted_total, color=get_colourise(3), label=str(outlier_threshold_in_std_devs)+"σ outliers")
+                ## This is a weird way to do this plotting, but it ensures that
+                ## only the outliers are highlighted in the plot legend.
+                ## Even though this dataset is the original! → Result = Good legend!
+                plt.scatter(active_filtered, total_filtered, color=get_colourise(2))
+            else:
+                plt.scatter(sorted_active, sorted_total, color=get_colourise(2))
+        
+        # Labels and such.
+        plt.grid()
+        if colourise:
+            fig.patch.set_alpha(0)
+            ax.grid(color=get_colourise(-1))
+            ax.set_facecolor(get_colourise(-2))
+            ax.spines['bottom'].set_color(get_colourise(-1))
+            ax.spines['top'].set_color(get_colourise(-1))
+            ax.spines['left'].set_color(get_colourise(-1))
+            ax.spines['right'].set_color(get_colourise(-1))
+            ax.tick_params(axis='both', colors=get_colourise(-1))
+        
+        # Bump up the size of the ticks' numbers on the axes.
+        ax.tick_params(axis='both', labelsize=23)
+        
+        # Extend axes to include the origin?
+        if np.all(sorted_active >= 0):
+            ax.set_xlim(xmin=0, xmax=26.0)
+        if np.all(sorted_total >= 0):
+            ax.set_ylim(ymin=0, ymax=36.0)
+        
+        # Fancy colours?
+        if (not colourise):
+            plt.xlabel("Active manipulation [%]", fontsize=33)
+            plt.ylabel("Total manipulation [%]", fontsize=33)
+            #plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=38)
+            if savepath == '':
+                plt.title(f"Active vs. total manipulation\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=38)
         else:
-            plt.scatter(sorted_active, sorted_total, color=get_colourise(2))
+            plt.xlabel("Active manipulation [%]", color=get_colourise(-1), fontsize=33)
+            plt.ylabel("Total manipulation [%]",  color=get_colourise(-1), fontsize=33)
+            print("WARNING: CHANGE BACK")
+            if savepath == '':
+                plt.title(f"Active vs. total manipulation\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", color=get_colourise(-1), fontsize=38)
+        
+        # Bump up legend.
+        plt.legend(fontsize=26, loc='lower right')
+        
+        # Save plots?
+        if savepath != '':
+            plt.tight_layout()
+            # Fix path name.
+            base, _ = os.path.splitext(savepath)
+            new_savepath = f"{base}_{title_junction_size_nm}nm.png"
+            plt.savefig(new_savepath, dpi=164, bbox_inches='tight')
+            
+        # Show shits.
+        plt.show()
     
-    # Labels and such.
-    plt.grid()
-    if colourise:
-        fig.patch.set_alpha(0)
-        ax.grid(color=get_colourise(-1))
-        ax.set_facecolor(get_colourise(-2))
-        ax.spines['bottom'].set_color(get_colourise(-1))
-        ax.spines['top'].set_color(get_colourise(-1))
-        ax.spines['left'].set_color(get_colourise(-1))
-        ax.spines['right'].set_color(get_colourise(-1))
-        ax.tick_params(axis='both', colors=get_colourise(-1))
+    # How many samples were in the set?
+    n_samples = len(sorted_active)
     
-    # Bump up the size of the ticks' numbers on the axes.
-    ax.tick_params(axis='both', labelsize=23)
+    # Let's calculate the RMS deviation.
+    ## TODO: filtered_xx currently not supported here.
     
-    # Extend axes to include the origin?
-    if np.all(sorted_active >= 0):
-        ax.set_xlim(xmin=0, xmax=26.0)
-    if np.all(sorted_total >= 0):
-        ax.set_ylim(ymin=0, ymax=36.0)
+    ## Non-weighted RMS version here.
+    residuals = sorted_total - (optimal_k * sorted_active + optimal_m)
+    rms_deviation = np.sqrt(np.mean(residuals**2))
+    return optimal_k, optimal_m, err_k, err_m, n_samples, rms_deviation
+    ## Weighted RMS version here.
+    ##residuals = sorted_total - (optimal_k * sorted_active + optimal_m)
+    ##weighted_rms = np.sqrt(np.sum(n_samples * residuals**2) / np.sum(n_samples))
+    ##return optimal_k, optimal_m, err_k, err_m, n_samples, weighted_rms
     
-    # Fancy colours?
-    if (not colourise):
-        plt.xlabel("Active manipulation [%]", fontsize=33)
-        plt.ylabel("Total manipulation [%]", fontsize=33)
-        #plt.title(f"Active vs. total manipulation\n30 minutes after stopping\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=38)
-        plt.title(f"Active vs. total manipulation\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", fontsize=38)
-    else:
-        plt.xlabel("Active manipulation [%]", color=get_colourise(-1), fontsize=33)
-        plt.ylabel("Total manipulation [%]",  color=get_colourise(-1), fontsize=33)
-        print("WARNING: CHANGE BACK")
-        plt.title(f"Active vs. total manipulation\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", color=get_colourise(-1), fontsize=38)
-    
-    # Show shits.
-    plt.legend(fontsize=26)
-    plt.show()
     
 def plot_ac_voltage_for_biased_junction(
     dc_current,
@@ -3071,6 +3524,603 @@ def plot_barplot_comparing_qubit_quality_factors(
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
 
+def plot_quality_factor_vs_manipulation(
+    savepath = '',
+    plot_difference_plot = False
+    ):
+    ''' Given a set of quality factors, plot these against how much the
+        qubits were manipulated.
+    '''
+    qubits = ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8"]
+    
+    ch3_quality_reference = [1676534, 1190290, 2487886, 1500422, 1014434, 1123330, 1186250, 1122872]
+    ch5_quality_single    = [840215,  None,    1337651, None,    1297704, None,    1212784, None   ]
+    ch3_quality_single    = [1302120, None,    1375136, None,    None,    365889,  1397712, 1116143]
+    ch5_quality_twice     = [None,    None,    1341931, None,    1860994, None,    163470,  None   ]
+    
+    ch3_manipulated_first_percent  = [0, 0, 0, 0, 0, 0, 0, 0]
+    ch5_manipulated_first_percent  = [-8.004, 7.679, 9.126, 1.780, 6.760, 6.682, 6.677, -0.510]
+    ch3_manipulated_second_percent = [3.912, 0.145, 1.765, 2.207, 11.123, 9.152, 4.108, 4.010]
+    ch5_manipulated_second_percent = [0, 0, 1.315, 0, 0.545, 0, 0.517, 0]
+    
+    # Ch5 round 1:
+    # Q1: 12-02-2025_17-01_JJTest100W3_Ch5_Q1_0p70V_MANIPULATE_7855p085_KriK.csv
+    # Q2: 14-02-2025_14-03_JJTest100W3_Ch5_Q2_0p85V_MANIPULATE_AND_CREEP_9754p432_KriK.csv
+    # Q3: 14-02-2025_17-26_JJTest100W3_Ch5_Q3_0p85V_MANIPULATE_AND_CREEP_8494p915_KriK.csv
+    # Q4: 13-02-2025_17-32_JJTest100W3_Ch5_Q4_0p85V_MANIPULATE_AND_CREEP_KriK.csv
+    # Q5: 16-02-2025_17-53_JJTest100W3_Ch5_Q5_0p85V_MANIPULATE_AND_CREEP_6692p460_KriK.csv
+    # Q6: 17-02-2025_10-55_JJTest100W3_Ch5_Q8_0p85V_MANIPULATE_AND_CREEP_6836p235_KriK.csv
+    # Q7: 17-02-2025_11-40_JJTest100W3_Ch5_Q7_0p85V_MANIPULATE_AND_CREEP_7341p045_KriK.csv
+    # Q8: 17-02-2025_10-55_JJTest100W3_Ch5_Q8_0p85V_MANIPULATE_AND_CREEP_6836p235_KriK.csv
+    
+    # Ch5 round 2:
+    # Q1: 2025-04-02_17-01_Ch5_Q1_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q2: -
+    # Q3: 2025-04-02_18-17_Ch5_Q3_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q4: -
+    # Q5: 2025-04-02_19-56_Ch5_Q5_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q6: -
+    # Q7: 2025-04-02_20-15_Ch5_Q7_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q8: -
+    
+    # Ch3 round 2:
+    # Q1: 2025-04-02_21-00_Ch3_Q1_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q2: 2025-04-03_18-47_Ch3_Q2_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q3: 2025-04-03_12-52_Ch3_Q3_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q4: 2025-04-03_18-09_Ch3_Q4_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q5: 2025-04-03_15-36_Ch3_Q5_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q6: 2025-04-03_17-52_Ch3_Q6_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q7: 2025-04-03_16-24_Ch3_Q7_ROUND2_0p85V_MANIPULATE_KriK.csv
+    # Q8: 2025-04-03_16-58_Ch3_Q8_ROUND2_0p85V_MANIPULATE_KriK.csv
+    
+    # Convert all data to numpy arrays, replacing None with np.nan
+    def to_np_array(data):
+        return np.array([np.nan if x is None else x for x in data])
+    
+    ref_y = to_np_array(ch3_quality_reference)
+    single_ch5_y = to_np_array(ch5_quality_single)
+    single_ch3_y = to_np_array(ch3_quality_single)
+    twice_ch5_y = to_np_array(ch5_quality_twice)
+    
+    ref_x = np.array(ch3_manipulated_first_percent)
+    single_ch5_x = np.array(ch5_manipulated_first_percent)
+    single_ch3_x = np.array(ch3_manipulated_second_percent)
+    twice_ch5_x = np.array(ch3_manipulated_second_percent)
+    
+    # Compute qubit quality factor difference plots
+    ch3_difference_quality = single_ch3_y - ref_y
+    ch5_difference_quality = twice_ch5_y - single_ch5_y
+    
+    # Start figure with two subplots side by side
+    if plot_difference_plot:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.8, 11), sharey=False)
+    else:
+        fig, ax1 = plt.subplots(1, figsize=(12.8, 11), sharey=False)
+    
+    symbol_list = ['s', '^', 'o', 'v', 'd', '*', 'x', 'p']
+    for ii in range(len(qubits)):
+        if ii == 0:
+            label_to_use_1 = "Quantum device 1, unmanipulated"
+            label_to_use_2 = "Quantum device 1, once manipulated"
+            label_to_use_3 = "Quantum device 2, once manipulated"
+            label_to_use_4 = "Quantum device 2, twice manipulated"
+        else:
+            label_to_use_1 = None
+            label_to_use_2 = None
+            label_to_use_3 = None
+            label_to_use_4 = None
+        
+        if (ii == 6):
+            bump_up_size = 140
+        else:
+            bump_up_size = 0
+        
+        ax1.scatter(ref_x[ii],        ref_y[ii]/1e6,        s=130+bump_up_size, label=label_to_use_1,  marker=symbol_list[ii], color="#EE1C1C")
+        ax1.scatter(single_ch3_x[ii], single_ch3_y[ii]/1e6, s=130+bump_up_size, label=label_to_use_2,  marker=symbol_list[ii], color="#1CEE70")
+        ax1.scatter(single_ch5_x[ii], single_ch5_y[ii]/1e6, s=130+bump_up_size, label=label_to_use_3,  marker=symbol_list[ii], color="#1C70EE")
+        ax1.scatter(twice_ch5_x[ii],  twice_ch5_y[ii]/1e6,  s=130+bump_up_size, label=label_to_use_4,  marker=symbol_list[ii], color="#C41CEE")
+    
+    # Bump up the size of the ticks' numbers on the axes.
+    ax1.tick_params(axis='both', labelsize=23)
+    
+    # Set up additional plot stuff.
+    ## There is one datapoint that underwent negative active maipulation,
+    ## that is, I knowingly performed the resistance manipulation such that
+    ## it had a lower resistance by the time I stopped the manipulation.
+    ## My examiner said that we should not put this datapoint in the upcoming
+    ## paper, because we do not delve into the mechanism behind the negative
+    ## resistance manipulation, that we do not understand what is going on,
+    ## and putting this data in the paper is asking for trouble.
+    #ax1.set_xlim(xmin=-13.0, xmax=13.0)
+    
+    ax1.set_xlim(xmin=-0.5, xmax=13.0)
+    ax1.set_ylim(ymin=0)
+    ax1.set_xlabel("Active manipulation [%]", fontsize=33)
+    ax1.set_ylabel("Qubit quality factor [10⁶]", fontsize=33)
+    ax1.legend(fontsize=26)
+    ax1.grid(True)
+    
+    # --- Difference Plot (right) ---
+    if plot_difference_plot:
+        ax2.scatter(single_ch3_x, ch3_difference_quality/1e6, s=120, label="Sample 1: once manip. - no manip.",    marker='o', color="#EE1C1C")
+        ax2.scatter(twice_ch5_x,  ch5_difference_quality/1e6, s=120, label="Sample 2: twice manip. - once manip.", marker='s', color="#1CEE70")
+        
+        ax2.axhline(0, color='gray', linewidth=1.2, linestyle='--')  # Zero-line
+        ax2.tick_params(axis='both', labelsize=23)
+        ax2.set_xlim(xmin=-13.0, xmax=13.0)
+        ax2.set_xlabel("Active manipulation [%]", fontsize=33)
+        ax2.set_ylabel("Δ Qubit quality factor [10⁶]", fontsize=33)
+        ax2.legend(fontsize=26)
+        ax2.grid(True)
+    
+    # Tight layout.    
+    plt.tight_layout()
+    
+    # Save plots?
+    if savepath != '':
+        plt.savefig(savepath, dpi=164, bbox_inches='tight')
+    
+    # Show shit.
+    plt.show()
+    
+
+def perform_stepped_manipulation_analysis(
+    filepath_list,
+    normalise_time = 1,
+    study_relaxation_here_idx = 30,
+    savepath = ''
+    ):
+    ''' Take a stepped manipulation measurement, and perform various
+        analyses on it.
+        
+        normalise_time:
+        0 = X axis will be in UNIX timestamp.
+        1 = X axis is now a duration, with t₀ set at the timestamp of the
+            very first datapoint.
+    '''
+    
+    def unit_multiplier(unit_str):
+        ''' Analyse the unit prefix for each datapoint.
+        '''
+        # Begin with the most common (and expected) resistance unit prefix.
+        # Then, test a few other not-impossible alternatives.
+        if 'kOhm' in unit_str:
+            return 1e3
+        elif 'MOhm' in unit_str:
+            return 1e6
+        elif 'GOhm' in unit_str:
+            return 1e9
+        elif 'TOhm' in unit_str:
+            return 1e12
+        elif 'TOhm' in unit_str:
+            return 1e12
+        
+        elif 'hOhm' in unit_str:
+            return 1e2
+        elif 'daOhm' in unit_str:
+            return 1e1
+        elif 'dOhm' in unit_str:
+            return 1e-1
+        elif 'cOhm' in unit_str:
+            return 1e-2
+        elif 'mOhm' in unit_str:
+            return 1e-3
+        elif (('uOhm' in unit_str) or ('µOhm' in unit_str)):
+            return 1e-6
+        elif 'nOhm' in unit_str:
+            return 1e-9
+        
+        elif 'Ohm' in unit_str:
+            return 1
+        else:
+            raise ValueError("Halted! Cannot identify resistance prefix from datapoint: "+str(unit_str))
+    
+    def dump_csv(filepath):
+        ''' For some .csv file containing resistance manipulation data,
+            analyse this file and dump its contents.
+        '''
+        
+        # Get CSV data.
+        df = pd.read_csv(filepath, sep=';', header=None, dtype=str)
+        
+        resistances = []
+        errorbars = []
+        timestamps = []
+        resistance_added = []
+        annotations = {
+            "START_MANIPULATION": [],
+            "STOP_MANIPULATION": [],
+            "START_CREEP": [],
+            "STOP_CREEP": [],
+            "SHORTED": []
+        }
+        
+        for start_row in range(3, len(df), 6):  # 0-indexed, so row 4 is index 3
+            # Extract unit and apply multiplier
+            unit_cell = str(df.iat[start_row, 0])  # A4, A10, A16, etc.
+            multiplier = unit_multiplier(unit_cell)
+            
+            # Extract resistance value and apply multiplier
+            try:
+                resistance_value = float(df.iat[start_row, 1]) * multiplier
+            except (ValueError, TypeError):
+                print("WARNING! Failed reading resistance value at data row "+str(start_row)+" (0-indexed).")
+                resistance_value = np.nan  # Set to NaN
+            resistances.append(resistance_value)
+            
+            # Extract error bar and apply multiplier
+            try:
+                errorbar_value = float(df.iat[start_row, 2]) * multiplier
+            except (ValueError, TypeError):
+                print("WARNING! Failed reading resistance error bar value at data row "+str(start_row)+" (0-indexed).")
+                errorbar_value = np.nan  # Set to NaN
+            errorbars.append(errorbar_value)
+            
+            # Extract timestamp
+            try:
+                timestamp_value = float(df.iat[start_row + 1, 1])  # B5, B11, etc.
+            except (ValueError, TypeError):
+                timestamp_value = np.nan
+            timestamps.append(timestamp_value)
+            
+            # Check annotation string
+            try:
+                annotation = str(df.iat[start_row + 1, 2])  # C5, C11, etc.
+            except IndexError:
+                annotation = ""
+            for keyword in annotations:
+                if keyword in annotation:
+                    annotations[keyword].append(len(resistances) - 1)
+                    ##
+                    ## Note: there is no guarantee that the target resistance
+                    ##       was the resistance that was reached. Hence,
+                    ##       this code snippet has been commented out.
+                    ##
+                    ##if keyword == 'START_MANIPULATION':
+                    ##    try:
+                    ##        suffix = annotation.strip().split('_')[-1]
+                    ##        addition = float(suffix)
+                    ##    except (IndexError, ValueError):
+                    ##        print(f"WARNING! Failed to parse resistance addition from annotation: '{annotation}'")
+                    ##        addition = np.nan
+                    ##    resistance_added.append(addition)
+        
+        dumped_resistances = np.array(resistances)
+        dumped_resistance_errorbars = np.array(errorbars)
+        dump_timestamps = np.array(timestamps)
+        ##resistance_added = np.array(resistance_added)
+        
+        return dumped_resistances, dumped_resistance_errorbars, dump_timestamps, annotations
+    
+    # Go through the entries.
+    ## Let's instantiate the figure already at this point.
+    if len( filepath_list ) == 2:
+        fig1, axs1 = plt.subplots(1, 2, figsize=(31.1, 13))
+        fig2, axs2 = plt.subplots(2, 2, figsize=(31.1, 13))
+        fig3, axs3 = plt.subplots(1, 2, figsize=(25.4, 13))
+    else:
+        raise NotImplementedError("Todo!")
+        fig1, axs1 = plt.subplots(2, 2, figsize=(12.8, 13))
+    
+    # During the process, we will try to figure out the y limit for plots
+    # showing resistance increase values.
+    y_lim_top = 0
+    y_lim_top_relaxation = 0
+    
+    # Go through the selected files.
+    for kk in range(len( filepath_list )):
+    
+        # Set filepath.
+        filepath = filepath_list[kk]
+    
+        # Dump data!
+        dumped_resistances, dumped_resistance_errorbars, dump_timestamps, annotations = dump_csv(filepath)
+        
+        ## Plot 1 logic goes here.
+        
+        # Check whether to update the resistances.
+        resistance_added_ohm = []
+        time_taken_for_manipulation = []
+
+        # Number of valid manipulation intervals is the minimum of the lengths.
+        n_intervals = min(len(annotations['START_MANIPULATION']), len(annotations['STOP_MANIPULATION']))
+
+        # Loop through each valid pair, that is, we are on the lookout for
+        # erroneous entries that could happen if the device broke during
+        # manipulation.
+        for i in range(n_intervals):
+            start_idx = annotations['START_MANIPULATION'][i]
+            stop_idx  = annotations['STOP_MANIPULATION' ][i]
+            
+            # Get resistance at start and stop indices
+            start_res = dumped_resistances[start_idx]
+            stop_res  = dumped_resistances[stop_idx ]
+            
+            # Get timestamp at start and stop indices
+            start_time = dump_timestamps[start_idx]
+            stop_time  = dump_timestamps[stop_idx ]
+            
+            # Get differences.
+            delta_res  = stop_res  - start_res
+            delta_time = stop_time - start_time
+            
+            # Store.
+            resistance_added_ohm.append(delta_res)
+            time_taken_for_manipulation.append(delta_time)
+        
+        # Numpy conversion.
+        resistance_added_ohm = np.array(resistance_added_ohm)
+        time_taken_for_manipulation = np.array(time_taken_for_manipulation)
+        
+        # Calculate resistance as percentages of increase relative
+        # to the original resistance value.
+        resistance_added_percent = 100 * (resistance_added_ohm/dumped_resistances[0])
+        ## Important! The math here has been checked.
+        ## There is not supposed to be a -1 anywhere;
+        ## the statement here is correct as-is.
+        
+        # Set new y axis limits?
+        print("Weird Y limits found for MPW005A, see code.")
+        if kk < 1:
+            if np.max(resistance_added_percent) > y_lim_top:
+                y_lim_top = np.max(resistance_added_percent)*1.1
+        
+        ## Plot 2 logic goes here.
+        relaxation_trace_data_xy = []
+        relaxation_stack_xy = []
+        
+        # Number of valid manipulation intervals is the minimum of the lengths.
+        n_intervals = min(len(annotations['START_CREEP']), len(annotations['STOP_CREEP']))
+        
+        # Loop through each valid pair, that is, we are on the lookout for
+        # erroneous entries that could happen if the device broke during
+        # manipulation.
+        for i in range(n_intervals):
+            start_relaxation_idx = annotations['START_CREEP'][i]
+            stop_relaxation_idx  = annotations['STOP_CREEP' ][i]
+            
+            # Get time snippet from these indices.
+            ## Here, we want to normalise the time. So, subtract time[0]
+            ## for all entries.
+            relaxation_x = dump_timestamps[start_relaxation_idx:stop_relaxation_idx] - dump_timestamps[start_relaxation_idx]
+            
+            # Get resistance snippet from these indices.
+            ## Here, we want to perform a percent conversion.
+            ## Then, we want to move all entries down to y = 0.
+            
+            relaxation_y = 100*(dumped_resistances[start_relaxation_idx:stop_relaxation_idx]/dumped_resistances[0])
+            relaxation_y -= relaxation_y[0] # Move down to y = 0
+            
+            # Append!
+            relaxation_trace_data_xy.append( (relaxation_x,relaxation_y) )
+            
+            ## Plot 2b logic goes here!
+            relaxation_stack_xy.append( (dump_timestamps[start_relaxation_idx +study_relaxation_here_idx] - dump_timestamps[0], relaxation_y[study_relaxation_here_idx]) )
+            
+            # Figure out y axis for the plot later.
+            if np.max(relaxation_y) > y_lim_top_relaxation:
+                y_lim_top_relaxation = np.max(relaxation_y)*1.1
+        
+        ## Plot 3 logic goes here.
+        # Here, we want to find the deepest trench of the dip,
+        # for each manipulation.
+        resistance_trench_depth_percent = []
+        resistance_increase_at_start_of_trench_percent = []
+        
+        # Number of valid manipulation intervals is the minimum of the lengths.
+        n_intervals = min(len(annotations['START_MANIPULATION']), len(annotations['STOP_MANIPULATION']))
+        
+        # Loop through each valid pair, that is, we are on the lookout for
+        # erroneous entries that could happen if the device broke during
+        # manipulation.
+        for i in range(n_intervals):
+            start_idx = annotations['START_MANIPULATION'][i]
+            stop_idx  = annotations['STOP_MANIPULATION' ][i]
+            
+            # For the dip, we are interested in how much "resistance percent"
+            # had been added at the beginning of the dip.
+            start_res = dumped_resistances[start_idx]
+            
+            # Grab the lowest point in the resistance interval, and compare
+            # it to the starting value.
+            dip_value = dumped_resistances[start_idx:stop_idx].min()
+            dip_value_percent = ((start_res - dip_value) / dumped_resistances[0])*100
+            
+            # Store!
+            resistance_increase_at_start_of_trench_percent.append( ((start_res / dumped_resistances[0])-1)*100 )
+            resistance_trench_depth_percent.append(dip_value_percent)
+        
+        # Numpy conversion.
+        resistance_increase_at_start_of_trench_percent = np.array(resistance_increase_at_start_of_trench_percent)
+        resistance_trench_depth_percent = np.array(resistance_trench_depth_percent)
+        
+        
+        ## Plot 4 logic goes here.
+        # Compute time derivative of the resistances.
+        # The gradient analysis will yield better results for evenly spaced data.
+        # Thus, let's try to interpolate the data given the timestamps they were
+        # collected on.
+        
+        # Array conversion.
+        dump_timestamps    = np.array(dump_timestamps)
+        dumped_resistances = np.array(dumped_resistances)
+        
+        # Calculate median time step.
+        dt = np.median(np.diff(dump_timestamps))
+        uniform_time = np.arange(dump_timestamps[0], dump_timestamps[-1], dt)
+        
+        # Interpolate resistance onto uniform time grid
+        interp_func = interp1d(dump_timestamps, dumped_resistances, kind='linear', fill_value="extrapolate")
+        uniform_resistance = interp_func(uniform_time)
+        
+        # Compute time derivatives
+        dR_dt   = np.gradient(uniform_resistance, dt)
+        d2R_dt2 = np.gradient(dR_dt, dt)
+        d3R_dt3 = np.gradient(d2R_dt2, dt)
+        
+        ## Figure stuff!
+        # Figure out colours and label tags.
+        if ('mpw005a' in filepath.lower()):
+            label_tag = '350 nm dense-oxide'
+            colour_list = interpolate_hsv_colours("#C4EE1C", "#EE1C1C", len(relaxation_trace_data_xy))
+        elif ('jjanneal01c' in filepath.lower()):
+            label_tag = '200 nm sparse-oxide'
+            colour_list = interpolate_hsv_colours("#1C70EE", "#1CEE70", len(relaxation_trace_data_xy))
+        else:
+            label_tag = None
+            colour_list = interpolate_hsv_colours("#1C70EE", "#1CEE70", len(relaxation_trace_data_xy))
+        
+        ## Subplot 1: Time needed to add X resistance.
+        
+        axs1[0].scatter(time_taken_for_manipulation/60, resistance_added_percent, s=160, color=colour_list[-1], label=label_tag)
+        axs1[0].plot(time_taken_for_manipulation/60, resistance_added_percent, '--', color="#000000")
+        #axs1[0].set_title("Time derivatives of resistance")
+        axs1[0].set_xlabel("Time needed for step [min]", fontsize=33)
+        axs1[0].set_ylabel("Resistance increase during step [%]", fontsize=33)
+        axs1[0].legend(fontsize=24)
+        axs1[0].grid(True)
+        
+        # Set limits, scales, ticks.
+        axs1[0].set_ylim(-0.5, y_lim_top)
+        axs1[0].set_xscale('log')
+        axs1[0].tick_params(axis='both', labelsize=23)
+        
+        ## Subplot 2:
+        
+        # Plot!
+        for ii in range(len(relaxation_trace_data_xy)):
+            axs2[0,kk].scatter(relaxation_trace_data_xy[ii][0]/60, relaxation_trace_data_xy[ii][1], color=colour_list[ii])
+        
+        # Grid.
+        axs2[0,kk].grid(True)
+        
+        # Axis labels.
+        axs2[0,kk].set_xlabel("Duration [min]", fontsize=33)
+        axs2[0,kk].set_ylabel("Resistance increase [%]", fontsize=33)
+        axs2[0,kk].tick_params(axis='both', labelsize=23)
+        
+        ## Subplot 3:
+        
+        # Plot!
+        axs1[1].scatter(resistance_increase_at_start_of_trench_percent, resistance_trench_depth_percent, s=80, color=colour_list[-1], label=label_tag)
+        #axs1[1].plot(   resistance_increase_at_start_of_trench_percent, resistance_trench_depth_percent,       color=colour_list[-1]                 )
+        
+        # Axis labels.
+        axs1[1].set_xlabel("Resistance increase at manipulation start [%]", fontsize=33)
+        axs1[1].set_ylabel("Largest resistance drop [%]", fontsize=33)
+        
+        # Grid and stuff!
+        axs1[1].grid(True)
+        axs1[1].tick_params(axis='both', labelsize=23)
+        axs1[1].legend(fontsize=24)
+        
+        ## Subplot 4: Does the relaxation effect stack?
+        
+        # Figure out time axis.
+        if normalise_time == 1:
+            time_axis = uniform_time - uniform_time[0]
+        else:
+            time_axis = uniform_time
+        
+        # Plot!
+        axs2[1,kk].plot(time_axis, dR_dt,   label=r"$\frac{dR}{dt}$",     color='tab:red')
+        axs2[1,kk].plot(time_axis, d2R_dt2, label=r"$\frac{d^2R}{dt^2}$", color='tab:orange')
+        axs2[1,kk].plot(time_axis, d3R_dt3, label=r"$\frac{d^3R}{dt^3}$", color='tab:purple')
+        #axs2[1,kk].set_title("Time derivatives of resistance")
+        axs2[1,kk].set_xlabel("Time [s]", fontsize=33)
+        axs2[1,kk].set_ylabel("Rate of resistance change [$\Omega / s$, $\Omega^2 / s^2$, $\Omega^3 / s^3$]", fontsize=33)
+        axs2[1,kk].legend(fontsize=24)
+        axs2[1,kk].grid(True)
+        axs2[1,kk].tick_params(axis='both', labelsize=23)
+        
+        # Set axis limits.
+        axs2[1,kk].set_ylim(-15.0, +15.0)
+        
+        # Insert vertical lines for manipulation events
+        plotted_labels = set()
+        for idx in annotations.get("START_MANIPULATION", []):
+            ts = dump_timestamps[idx]
+            
+            # Plot duration instead?
+            if normalise_time == 1:
+                ts -= dump_timestamps[0]
+            
+            label = "Start manipulation" if "start" not in plotted_labels else None
+            axs2[1,kk].axvline(ts, color='cyan', linestyle='--', linewidth=1.5, label=label)
+            plotted_labels.add("start")
+        for idx in annotations.get("STOP_MANIPULATION", []):
+            ts = dump_timestamps[idx]
+            
+            # Plot duration instead?
+            if normalise_time == 1:
+                ts -= dump_timestamps[0]
+            
+            label = "Stop manipulation" if "stop" not in plotted_labels else None
+            axs2[1,kk].axvline(ts, color='magenta', linestyle='--', linewidth=1.5, label=label)
+            plotted_labels.add("stop")
+        
+        ## Fig 3 i.e. subplot 5
+        # Plot!
+        for ii in range(len(relaxation_trace_data_xy)):
+            if kk < 1:
+                if ii == 0:
+                    axs3[0].scatter(relaxation_trace_data_xy[ii][0]/60, relaxation_trace_data_xy[ii][1], color=colour_list[ii], label=label_tag)
+                else:
+                    axs3[0].scatter(relaxation_trace_data_xy[ii][0]/60, relaxation_trace_data_xy[ii][1], color=colour_list[ii], label="_something")
+            
+            # Add line to show where the relaxation is being studied.
+            if ii == 0:
+                axs3[0].axvline(relaxation_trace_data_xy[ii][0][study_relaxation_here_idx]/60, color="#EE1C1C", linestyle='--', linewidth=1.5, label="_something")
+            
+            # Right plot.
+            axs3[1].plot(relaxation_stack_xy[ii][0]/3600, relaxation_stack_xy[ii][1], color=colour_list[ii])
+            if ii == len(relaxation_stack_xy)-1:
+                axs3[1].scatter(relaxation_stack_xy[ii][0]/3600, relaxation_stack_xy[ii][1], s=90, color=colour_list[ii], label=label_tag)
+            else:
+                axs3[1].scatter(relaxation_stack_xy[ii][0]/3600, relaxation_stack_xy[ii][1], s=90, color=colour_list[ii], label="_something")
+            
+            # Limits.
+            ## Use same axes for the (a) subplot.
+            axs3[0].set_ylim(-0.5, y_lim_top)
+            axs3[1].set_ylim(-0.5, y_lim_top)
+            ##axs3[0].set_ylim(-0.5,y_lim_top_relaxation)
+            ##axs3[1].set_ylim(-0.5,y_lim_top_relaxation)
+            
+            # Grid.
+            axs3[0].grid(True)
+            axs3[1].grid(True)
+            
+            # Axis labels.
+            axs3[0].set_xlabel("Duration [min]", fontsize=33)
+            axs3[0].set_ylabel("Resistance increase [%]", fontsize=33)
+            axs3[0].tick_params(axis='both', labelsize=23)
+            axs3[1].set_xlabel("Time since beginning [h]", fontsize=33)
+            axs3[1].set_ylabel("Resistance increase [%]", fontsize=33)
+            axs3[1].tick_params(axis='both', labelsize=23)
+            
+            # Legends!
+            axs3[0].legend(fontsize=24)
+            axs3[1].legend(fontsize=24)
+    
+    # Tight!
+    plt.tight_layout()
+    
+    # Save plots?
+    if savepath != '':
+        plt.figure(1)
+        plt.savefig(savepath, dpi=164, bbox_inches='tight')
+        
+        plt.figure(3)
+        plt.savefig(savepath.replace(".png","_excerpt3.png"), dpi=164, bbox_inches='tight')
+    
+    # Plot shits!
+    plt.show()
+    
+    
+    # Return shits.
+    return dumped_resistances, dumped_resistance_errorbars, dump_timestamps, annotations
+    
+
 def compare_junction_oxidation_dose_to_known_dataset(
     path_to_reference_data_file,
     list_of_normal_resistances_times_area_ohm_micrometer_squared = [],
@@ -3099,6 +4149,8 @@ def compare_junction_oxidation_dose_to_known_dataset(
         "len(list_of_oxidation_times_in_minutes): "+str(len(list_of_oxidation_times_in_minutes))+"\n"+\
         "len(list_of_oxidation_pressures_in_mbar): "+str(len(list_of_oxidation_pressures_in_mbar))
         )
+    if not (len(user_label_list) == len(list_of_oxidation_pressures_in_mbar)):
+        raise ValueError("Halted! The user-provided label list has an unexpected size. Did you forget something?")
     
     ## Calculate effective oxygen dose, using an empirical model:
     ## Fig. 4 in L. J. Zeng et al. 2015, J. Phys. D: Appl. Phys. 48 395308
@@ -3159,6 +4211,8 @@ def compare_junction_oxidation_dose_to_known_dataset(
                 marker_string = '^'
             elif ii == 4:
                 marker_string = 'x'
+            elif ii == 5:
+                marker_string = 'v'
             else:
                 marker_string = 'o'
             plt.loglog(user_dose, normal_resistances_ohm_micrometer_squared, marker_string, markersize = 8, label=user_label_list[ii])
@@ -3171,8 +4225,8 @@ def compare_junction_oxidation_dose_to_known_dataset(
         plt.plot(x_fit, fit_func(x_fit), ':', color="red")
     
     # Axes adjustments.
-    plt.ylim(2e0, 3e3)
-    plt.xlim(1e-1, 1e2)
+    #plt.ylim(2e0, 3e10)#3e3)
+    #plt.xlim(1e-1, 3e6)#1e2)
     ax.tick_params(axis='both', labelsize=23)
     
     # Grid and legend.
@@ -3183,22 +4237,353 @@ def compare_junction_oxidation_dose_to_known_dataset(
     # Show stuff!
     plt.show()
 
-def compare_aging_vs_junction_sizes():
-    ''' Reconstruct plot from Maurizio Toselli's thesis,
-        but adjust for reported inaccuracy of thick-oxide x axis.
+def compare_aging_vs_junction_sizes(
+    savepath = ''
+    ):
+    ''' Reconstruct plots from Maurizio Toselli's thesis and his raw data,
+        but adjust for his later reported inaccuracy, that is, the x-axis
+        in the thick-oxide plot is incorrect due to him being given the
+        wrong junction size numbers.
         
         Important: the Y data is extracted from the rastered plot,
         this Y data is thus accurate when viewed in print, but less accurate
         when worked with digitally.
     '''
+    
+    def transform(data):
+        ''' Changes reference from 1.00 being the start, into [%] of increase.
+            That is, 20 means that the sample has increased its resistance
+            by 20 %'''
+        return [(x, (y - 1) * 100) for x, y in data]
+
+    def shift_data(data, reference_day_timestamp, shift_with_this_many_days):
+        ''' Accounts for the thick-oxide being measured
+            <shift_with_this_many_days> days after the wafer's manufacture.
+            AND, also convert the time entry into decimal-days.
+        '''
+        def convert_string_into_timestamp(string_format):
+            dt = datetime.strptime(string_format, "%Y_%m_%d__%H_%M_%S")
+            return dt.timestamp()
+        
+        # Get reference.
+        reference = convert_string_into_timestamp(reference_day_timestamp)
+        
+        # Fix the number! Remember that the X of the double (i.e., entry 0)
+        # is supposed to be a number in days, not seconds.
+        # Hence, divide by 86400
+        return [((convert_string_into_timestamp(x) -reference)/86400 +shift_with_this_many_days, y) for x, y in data]
+    
+    def unpack(data):
+        return zip(*data)
+    
+    ## Junction size data!
+    
     thin_x  = np.array([100, 150, 200, 250, 300, 350, 400, 450, 500, 550])
     thin_y  = np.array([33.247058823529414, 28.2, 22.41176470588235, 21.24705882352941, 18.03529411764706, 16.129411764705882, 15.494117647058824, 13.905882352941177, 12.882352941176471, 12.458823529411765])
     thick_x = np.array([150, 200, 250, 300, 350, 400, 450, 500, 550, 600])
     thick_y = np.array([3.2823529411764705, 3.0352941176470587, 2.788235294117647, 2.611764705882353, 2.2588235294117647, 1.9058823529411764, 1.9058823529411764, 1.7647058823529411, 1.2352941176470589, 1.2352941176470589])
     
-    fig, ax = plt.subplots(figsize=(12, 7))
-    plt.scatter(thin_x,  thin_y,  s=60, color="#0BB5F4", label="Aging, soft oxide")
-    plt.scatter(thick_x, thick_y, s=80, color="#F44A0B", label="Aging, hard oxide")
+    ## Time data!
+    
+    # Thin 1!
+    '''aging_vs_time_100nm_daily_25nA = transform([
+        (1, 1.0),
+        (2, 1.0629310344827585),
+        (3, 1.118103448275862),
+        (4, 1.1534482758620688),
+        (5, 1.171551724137931),
+        (6, 1.2293103448275862),
+        (7, 1.2551724137931033),
+        (8, 1.2698275862068964),
+        (9, 1.285344827586207),
+        (10, 1.3060344827586206),
+        (11, 1.314655172413793),
+        (12, 1.3275862068965516),
+        (13, 1.3370689655172412),
+        (14, 1.3474137931034482),
+        (15, 1.3568965517241378)
+    ])
+    aging_vs_time_100nm_weekly_25nA = transform([
+        (1, 1.0),
+        (9, 1.2672413793103448),
+        (15, 1.3206896551724137)
+    ])
+    aging_vs_time_100nm_biweekly_25nA = transform([
+        (1, 1.0),
+        (4, 1.139655172413793),
+        (9, 1.2784482758620688),
+        (12, 1.311206896551724),
+        (15, 1.3353448275862068)
+    ])
+    aging_vs_time_100nm_bimonthly_25nA = transform([
+        (1, 1.0),
+        (15, 1.3681034482758618)
+    ])'''
+    reference_day_thin1 = "2024_05_14__15_40_00" # Estimate from fabrication logs.
+    aging_vs_time_100nm_daily_25nA = transform([ #C12R0
+        ("2024_05_16__18_53_31", 1.0),
+        ("2024_05_17__14_42_13", 1.0629310344827585),
+        ("2024_05_18__10_57_36", 1.118103448275862),
+        ("2024_05_19__12_44_11", 1.1534482758620688),
+        ("2024_05_20__09_59_14", 1.171551724137931),
+        ("2024_05_21__17_59_17", 1.2293103448275862),
+        ("2024_05_22__14_15_12", 1.2551724137931033),
+        ("2024_05_23__18_25_15", 1.2698275862068964),
+        ("2024_05_24__18_00_44", 1.285344827586207),
+        ("2024_05_25__15_39_32", 1.3060344827586206),
+        ("2024_05_26__17_24_21", 1.314655172413793),
+        ("2024_05_27__16_37_56", 1.3275862068965516),
+        ("2024_05_28__13_35_14", 1.3370689655172412),
+        ("2024_05_29__17_43_22", 1.3474137931034482),
+        ("2024_05_30__09_50_49", 1.3568965517241378)
+    ])
+    aging_vs_time_100nm_weekly_25nA = transform([ #C20R0
+        ("2024_05_16__19_02_33", 1.0),
+        ("2024_05_24__18_44_14", 1.2672413793103448),
+        ("2024_05_30__11_00_02", 1.3206896551724137)
+    ])
+    aging_vs_time_100nm_biweekly_25nA = transform([ #C16R0
+        ("2024_05_16__18_59_23", 1.0),
+        ("2024_05_19__12_46_39", 1.139655172413793),
+        ("2024_05_24__18_05_19", 1.2784482758620688),
+        ("2024_05_27__16_35_34", 1.311206896551724),
+        ("2024_05_30__09_56_09", 1.3353448275862068)
+    ])
+    aging_vs_time_100nm_bimonthly_25nA = transform([ #C8R1
+        ("2024_05_16__19_06_03", 1.0),
+        ("2024_05_30__09_53_56", 1.3681034482758618)
+    ])
+    #C17R0:
+    ## Day 09: 2024_05_24__18_41_00
+    ## Day 12: 2024_05_27__17_08_39
+    ## D1y 15: 2024_05_30__10_58_21
+    
+    
+    # Thin 2!
+    '''aging_vs_time_500nm_daily_1uA = transform([
+        (1, 1.0),
+        (2, 1.0192307692307692),
+        (3, 1.0365384615384614),
+        (4, 1.0466346153846153),
+        (5, 1.05625),
+        (6, 1.0860576923076923),
+        (7, 1.0923076923076922),
+        (8, 1.0985576923076923),
+        (9, 1.103846153846154),
+        (10, 1.1091346153846153),
+        (11, 1.1139423076923076),
+        (12, 1.1173076923076923),
+        (13, 1.1216346153846153),
+        (15, 1.1264423076923076)
+    ])
+    aging_vs_time_500nm_weekly_1uA = transform([
+        (1, 1.0),
+        (9, 1.1028846153846152),
+        (15, 1.1245192307692307)
+    ])
+    aging_vs_time_500nm_biweekly_1uA = transform([
+        (1, 1.0),
+        (9, 1.1004807692307692),
+        (12, 1.1115384615384616),
+        (15, 1.1206730769230768)
+    ])
+    aging_vs_time_500nm_bimonthly_1uA = transform([
+        (1, 1.0),
+        (15, 1.1245192307692307)
+    ])'''
+    reference_day_thin2 = "2024_05_14__15_40_00" # Estimate from fabrication logs.
+    aging_vs_time_500nm_daily_1uA = transform([ #C12R3
+        ("2024_05_16__19_28_35", 1.0), # Suffix C18EZNR
+        ("2024_05_17__14_48_41", 1.0192307692307692),
+        ("2024_05_18__11_08_32", 1.0365384615384614),
+        ("2024_05_19__13_22_13", 1.0466346153846153),
+        ("2024_05_20__10_08_57", 1.05625),
+        ("2024_05_21__18_14_36", 1.0860576923076923),
+        ("2024_05_22__14_23_06", 1.0923076923076922),
+        ("2024_05_23__18_53_42", 1.0985576923076923),
+        ("2024_05_24__18_22_49", 1.103846153846154),
+        ("2024_05_25__15_48_05", 1.1091346153846153),
+        ("2024_05_26__17_29_55", 1.1139423076923076),
+        ("2024_05_27__16_50_06", 1.1173076923076923),
+        ("2024_05_28__13_46_16", 1.1216346153846153),
+        ("2024_05_30__10_15_26", 1.1264423076923076)
+    ])
+    aging_vs_time_500nm_weekly_1uA = transform([ #C20R3
+        ("2024_05_16__19_30_39", 1.0), ## C8R5?? ## Double-check this entry.
+        ("2024_05_24__18_55_53", 1.1028846153846152),
+        ("2024_05_30__10_46_12", 1.1245192307692307)
+    ])
+    aging_vs_time_500nm_biweekly_1uA = transform([ #C17R3
+        ("2024_05_16__19_32_35", 1.0), ## C8R5?? ## Double-check this entry.
+        ("2024_05_24__18_57_36", 1.1004807692307692),
+        ("2024_05_27__17_17_59", 1.1115384615384616),
+        ("2024_05_30__10_48_25", 1.1206730769230768)
+    ])
+    aging_vs_time_500nm_bimonthly_1uA = transform([ #C16R3
+        ("2024_05_16__19_34_48", 1.0), ## C8R5?? ## Double-check this entry.
+        ("2024_05_30__10_19_11", 1.1245192307692307)
+    ])
+    
+    # Thick 1
+    reference_day_thick1 = "2023_11_14__10_40_00" # Estimate from deposition start +2h 20' = (1h 10' per leg)
+    aging_vs_time_200nm_daily_25nA = transform([ #C0R1
+        ("2023_12_03__17_14_08", 1.0),
+        ("2023_12_04__11_38_57", 1.003953934740883),
+        ("2023_12_05__12_58_10", 1.0056429942418426),
+        ("2023_12_06__10_34_38", 1.0016506717850289),
+        ("2023_12_07__11_34_43", 1.0070249520153551),
+        ("2023_12_08__14_51_25", 1.010556621880998),
+        ("2023_12_09__12_11_53", 1.0222264875239924),
+        ("2023_12_10__16_34_42", 1.0260652591170825),
+        ("2023_12_11__18_15_21", 1.0252975047984645),
+        ("2023_12_12__17_12_24", 1.02468330134357),
+        ("2023_12_13__11_53_18", 1.022380038387716),
+        ("2023_12_14__13_41_19", 1.0259117082533589),
+        ("2023_12_15__13_37_40", 1.031439539347409),
+        ("2023_12_16__12_26_33", 1.0325143953934741)
+    ])
+    aging_vs_time_200nm_weekly_25nA = transform([ # C4R1
+        ("2023_12_03__17_19_20", 1.0),
+        ("2023_12_10__17_01_03", 1.023147792706334),
+        ("2023_12_16__12_28_58", 1.0252975047984645)
+    ])
+    aging_vs_time_200nm_biweekly_25nA = transform([ # C2R1
+        ("2023_12_03__17_17_27", 1.0)
+    ])
+    aging_vs_time_200nm_bimonthly_25nA = transform([ #C6R1
+        ("2023_12_03__17_21_27", 1.0),
+        ("2023_12_16__12_30_08", 1.0268330134357007)
+    ])
+    
+    # Thick 2
+    reference_day_thick2 = "2023_11_14__10_40_00" # Estimate from deposition start +2h 20' = (1h 10' per leg)
+    aging_vs_time_600nm_daily_1uA = transform([ # C0R4
+        ("2023_12_03__17_43_31", 1.0),
+        ("2023_12_04__11_47_28", 1.0018809980806143),
+        ("2023_12_05__13_09_55", 1.0046449136276392),
+        ("2023_12_06__11_16_50", 1.0009596928982725),
+        ("2023_12_07__12_06_06", 1.003953934740883),
+        ("2023_12_08__14_57_22", 1.0057965451055662),
+        ("2023_12_09__12_23_49", 1.0113243761996162),
+        ("2023_12_10__16_42_54", 1.0159309021113243),
+        ("2023_12_11__18_22_06", 1.017658349328215),
+        ("2023_12_12__17_18_23", 1.0163915547024953),
+        ("2023_12_13__12_05_27", 1.0155854126679462),
+        ("2023_12_14__13_48_46", 1.0154702495201535),
+        ("2023_12_15__13_42_58", 1.0159309021113243),
+        ("2023_12_16__12_42_15", 1.019616122840691)
+    ])
+    aging_vs_time_600nm_weekly_1uA = transform([ # C4R4
+        ("2023_12_03__17_47_19", 1.0),
+        ("2023_12_10__16_49_49", 1.0133973128598848),
+        ("2023_12_16__12_44_32", 1.0140882917466412)
+    ])
+    aging_vs_time_600nm_biweekly_1uA = transform([ # C2R4
+        ("2023_12_03__17_44_58", 1.0),
+        ("2023_12_06__11_19_26", 1.0025719769673704),
+        ("2023_12_10__16_45_43", 1.0163915547024953),
+        ("2023_12_13__12_06_50", 1.0152399232245681),
+        ("2023_12_16__12_43_23", 1.0190403071017275)
+    ])
+    aging_vs_time_600nm_bimonthly_1uA = transform([ # C6R4
+        ("2023_12_03__17_49_24", 1.0),
+        ("2023_12_16__12_45_43", 1.0120153550863724)
+    ])
+    
+    ## Account for the old dense-oxide devices being much older
+    ## than the old sparse-oxide devices.
+    aging_vs_time_100nm_daily_25nA     = shift_data( aging_vs_time_100nm_daily_25nA,     reference_day_thin1,  shift_with_this_many_days = 0)
+    aging_vs_time_100nm_weekly_25nA    = shift_data( aging_vs_time_100nm_weekly_25nA,    reference_day_thin1,  shift_with_this_many_days = 0)
+    aging_vs_time_100nm_biweekly_25nA  = shift_data( aging_vs_time_100nm_biweekly_25nA,  reference_day_thin1,  shift_with_this_many_days = 0)
+    aging_vs_time_100nm_bimonthly_25nA = shift_data( aging_vs_time_100nm_bimonthly_25nA, reference_day_thin1,  shift_with_this_many_days = 0)
+    aging_vs_time_500nm_daily_1uA      = shift_data( aging_vs_time_500nm_daily_1uA,      reference_day_thin2,  shift_with_this_many_days = 0)
+    aging_vs_time_500nm_weekly_1uA     = shift_data( aging_vs_time_500nm_weekly_1uA,     reference_day_thin2,  shift_with_this_many_days = 0)
+    aging_vs_time_500nm_biweekly_1uA   = shift_data( aging_vs_time_500nm_biweekly_1uA,   reference_day_thin2,  shift_with_this_many_days = 0)
+    aging_vs_time_500nm_bimonthly_1uA  = shift_data( aging_vs_time_500nm_bimonthly_1uA,  reference_day_thin2,  shift_with_this_many_days = 0)
+    aging_vs_time_200nm_daily_25nA     = shift_data( aging_vs_time_200nm_daily_25nA,     reference_day_thick1, shift_with_this_many_days = 0)#20)
+    aging_vs_time_200nm_weekly_25nA    = shift_data( aging_vs_time_200nm_weekly_25nA,    reference_day_thick1, shift_with_this_many_days = 0)#20)
+    aging_vs_time_200nm_biweekly_25nA  = shift_data( aging_vs_time_200nm_biweekly_25nA,  reference_day_thick1, shift_with_this_many_days = 0)#20)
+    aging_vs_time_200nm_bimonthly_25nA = shift_data( aging_vs_time_200nm_bimonthly_25nA, reference_day_thick1, shift_with_this_many_days = 0)#20)
+    aging_vs_time_600nm_daily_1uA      = shift_data( aging_vs_time_600nm_daily_1uA,      reference_day_thick2, shift_with_this_many_days = 0)#20)
+    aging_vs_time_600nm_weekly_1uA     = shift_data( aging_vs_time_600nm_weekly_1uA,     reference_day_thick2, shift_with_this_many_days = 0)#20)
+    aging_vs_time_600nm_biweekly_1uA   = shift_data( aging_vs_time_600nm_biweekly_1uA,   reference_day_thick2, shift_with_this_many_days = 0)#20)
+    aging_vs_time_600nm_bimonthly_1uA  = shift_data( aging_vs_time_600nm_bimonthly_1uA,  reference_day_thick2, shift_with_this_many_days = 0)#20)
+    
+    # Create figure.
+    fig = plt.figure(figsize=(31.09, 19.75))
+    gs = fig.add_gridspec(1, 2, width_ratios=[1, 2], wspace=0.25)
+    
+    # Axes: left is subplot 1, right is merged 2+3
+    ax1 = fig.add_subplot(gs[0])
+    ax2_3 = fig.add_subplot(gs[1])
+    
+    # --- Subplot 1 (junction size vs resistance) ---
+    ax1.scatter(thin_x, thin_y, s=80, color="#1C70EE", label="Aging, sparse-oxide")
+    ax1.scatter(thick_x, thick_y, s=80, color="#EE1C1C", label="Aging, dense-oxide")
+    ax1.set_xlim(0, 700)
+    ax1.set_ylim(-1, 55)
+    ax1.tick_params(axis='both', labelsize=23)
+    ax1.grid(True, which="both", ls="--")
+    ax1.set_xlabel("Junction width [nm]", fontsize=33)
+    ax1.set_ylabel("Resistance increase [%]", fontsize=33)
+    ax1.legend(fontsize=26)
+    
+    thin_colour_large_HSV  = ['#1cee70', '#1ceea4', '#1ceecb', '#1cddee', '#1cc0ee', '#1c9fee', '#1c84ee', '#1c70ee']
+    thick_colour_large_HSV = ['#ee1c1c', '#ee5d1c', '#ee9d1c', '#eec01c', '#e6dd1c', '#d1ec1c', '#b9ee1c', '#c4ee1c']
+    
+    '''
+    ax2.scatter(*unpack(aging_vs_time_100nm_daily_25nA),     marker='o', label="25 nA, soft 100 nm, daily",     color=thin_colour_large_HSV[0], s=80)
+    ax2.scatter(*unpack(aging_vs_time_100nm_weekly_25nA),    marker='^', label="25 nA, soft 100 nm, weekly",    color=thin_colour_large_HSV[1], s=80)
+    ax2.scatter(*unpack(aging_vs_time_100nm_biweekly_25nA),  marker='s', label="25 nA, soft 100 nm, biweekly",  color=thin_colour_large_HSV[2], s=80)
+    ax2.scatter(*unpack(aging_vs_time_100nm_bimonthly_25nA), marker='*', label="25 nA, soft 100 nm, bimonthly", color=thin_colour_large_HSV[3], s=80)
+    
+    ax2.scatter(*unpack(aging_vs_time_500nm_daily_1uA),     marker='o', label="1 µA, soft 500 nm, daily",     color=thin_colour_large_HSV[4], s=80)
+    ax2.scatter(*unpack(aging_vs_time_500nm_weekly_1uA),    marker='^', label="1 µA, soft 500 nm, weekly",    color=thin_colour_large_HSV[5], s=80)
+    ax2.scatter(*unpack(aging_vs_time_500nm_biweekly_1uA),  marker='s', label="1 µA, soft 500 nm, biweekly",  color=thin_colour_large_HSV[6], s=80)
+    ax2.scatter(*unpack(aging_vs_time_500nm_bimonthly_1uA), marker='*', label="1 µA, soft 500 nm, bimonthly", color=thin_colour_large_HSV[7], s=80)
+    
+    ax2.grid(True, which="both", ls="--")
+    ax2.set_xlabel("Time [days]", fontsize=33)
+    ax2.set_ylabel("Resistance increase [%]", fontsize=33)
+    ax2.tick_params(axis='both', labelsize=23)
+    ax2.legend(fontsize=24)
+    ax2.set_xlim(0, 16)
+    ax2.set_ylim(-1, 55)
+    
+    
+    # ... Third subplot.
+    ax3.scatter(*unpack(aging_vs_time_200nm_daily_25nA),     marker='o', label="25 nA, hard 200 nm, daily",     color=thick_colour_large_HSV[0], s=80)
+    ax3.scatter(*unpack(aging_vs_time_200nm_weekly_25nA),    marker='^', label="25 nA, hard 200 nm, weekly",    color=thick_colour_large_HSV[1], s=80)
+    ax3.scatter(*unpack(aging_vs_time_200nm_biweekly_25nA),  marker='s', label="25 nA, hard 200 nm, biweekly",  color=thick_colour_large_HSV[2], s=80)
+    ax3.scatter(*unpack(aging_vs_time_200nm_bimonthly_25nA), marker='*', label="25 nA, hard 200 nm, bimonthly", color=thick_colour_large_HSV[3], s=80)
+    
+    ax3.scatter(*unpack(aging_vs_time_600nm_daily_1uA),     marker='o', label="1 µA, hard 600 nm, daily",     color=thick_colour_large_HSV[4], s=80)
+    ax3.scatter(*unpack(aging_vs_time_600nm_weekly_1uA),    marker='^', label="1 µA, hard 600 nm, weekly",    color=thick_colour_large_HSV[5], s=80)
+    ax3.scatter(*unpack(aging_vs_time_600nm_biweekly_1uA),  marker='s', label="1 µA, hard 600 nm, biweekly",  color=thick_colour_large_HSV[6], s=80)
+    ax3.scatter(*unpack(aging_vs_time_600nm_bimonthly_1uA), marker='*', label="1 µA, hard 600 nm, bimonthly", color=thick_colour_large_HSV[7], s=80)
+    
+    ax3.grid(True, which="both", ls="--")
+    ax3.set_xlabel("Time [days]", fontsize=33)
+    ax3.set_ylabel("Resistance increase [%]", fontsize=33)
+    ax3.tick_params(axis='both', labelsize=23)
+    ax3.legend(fontsize=24)
+    ax3.set_xlim(0, 16)
+    ax3.set_ylim(-1, 55)
+    
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0.1)
+
+    if savepath != '':
+        fig.savefig(savepath, dpi=164, bbox_inches='tight')
+        print("Figure saved to: " + str(savepath))'''
+    
+    '''
+    YE OLDE
+    
+    ##plt.scatter(thin_x,  thin_y,  s=60, color="#0BB5F4", label="Aging, soft oxide")
+    ##plt.scatter(thick_x, thick_y, s=80, color="#F44A0B", label="Aging, hard oxide")
+    plt.scatter(thin_x,  thin_y,  s=80, color="#1C70EE", label="Aging, soft oxide")
+    plt.scatter(thick_x, thick_y, s=80, color="#EE1C1C", label="Aging, hard oxide")
     
     # Axes adjustments.
     plt.ylim(0, 40)
@@ -3211,11 +4596,62 @@ def compare_aging_vs_junction_sizes():
     plt.xlabel("Junction width [nm]", fontsize=33)
     plt.ylabel("Resistance increase [%]", fontsize=33)
     
-    #  Show stuff!
     ## As of writing, pope Leo XIV got announced. Random.
     plt.tight_layout()
-    plt.show()
+    
+    # Save?
+    if savepath != '':
+        plt.savefig(savepath, dpi=164, bbox_inches='tight')
+        print("Figure saved to: "+str(savepath))
+    
+    '''
+    
+    ## --- Subplot 2+3 combined (log-time aging) ---
+    # --- Subplot 2+3 combined (lin-time aging) ---
+    # Plot thin oxide datasets
+    thin_sets = [
+        aging_vs_time_100nm_daily_25nA, aging_vs_time_100nm_weekly_25nA,
+        aging_vs_time_100nm_biweekly_25nA, aging_vs_time_100nm_bimonthly_25nA,
+        aging_vs_time_500nm_daily_1uA, aging_vs_time_500nm_weekly_1uA,
+        aging_vs_time_500nm_biweekly_1uA, aging_vs_time_500nm_bimonthly_1uA
+    ]
+    thick_sets = [
+        aging_vs_time_200nm_daily_25nA, aging_vs_time_200nm_weekly_25nA,
+        aging_vs_time_200nm_biweekly_25nA, aging_vs_time_200nm_bimonthly_25nA,
+        aging_vs_time_600nm_daily_1uA, aging_vs_time_600nm_weekly_1uA,
+        aging_vs_time_600nm_biweekly_1uA, aging_vs_time_600nm_bimonthly_1uA
+    ]
+    
+    markers = ['o', '^', 's', '*']
+    labels  = ['daily', 'weekly', 'biweekly', 'bimonthly']
+    sizes_thin  = ['25 nA, 100 nm,','25 nA, 100 nm,','25 nA, 100 nm,','25 nA, 100 nm,','1 µA, 500 nm,','1 µA, 500 nm,','1 µA, 500 nm,','1 µA, 500 nm,']
+    sizes_thick = ['25 nA, 200 nm,','25 nA, 200 nm,','25 nA, 200 nm,','25 nA, 200 nm,','1 µA, 600 nm,','1 µA, 600 nm,','1 µA, 600 nm,','1 µA, 600 nm,']
+    thin_colors  = thin_colour_large_HSV
+    thick_colors = thick_colour_large_HSV
 
+    for i, (data, color) in enumerate(zip(thin_sets, thin_colors)):
+        marker = markers[i % 4]
+        ax2_3.scatter(*unpack(data), marker=marker, color=color, s=80, label=f"Sparse {sizes_thin[i]} {labels[i % 4]}")
+
+    for i, (data, color) in enumerate(zip(thick_sets, thick_colors)):
+        marker = markers[i % 4]
+        ax2_3.scatter(*unpack(data), marker=marker, color=color, s=80, label=f"Dense {sizes_thick[i]} {labels[i % 4]}")
+
+    ##ax2_3.set_xscale('log') # Log unnecessary
+    ax2_3.set_ylim(-1, 55)
+    ax2_3.set_xlim(-0.8, 32.8)
+    ax2_3.grid(True, which="both", ls="--")
+    ax2_3.tick_params(axis='both', labelsize=23)
+    ax2_3.set_xlabel("Time since manufacture [days]", fontsize=33)
+    ax2_3.set_ylabel("Resistance increase [%]", fontsize=33)
+    ax2_3.legend(fontsize=26, ncol=2, loc='upper right')
+    
+    plt.tight_layout()
+    if savepath:
+        fig.savefig(savepath, dpi=164, bbox_inches='tight')
+        print("Saved to ", savepath)
+    plt.show()
+    
 def plot_free_energy_vs_total_current_of_rf_squid():
     
     # Assume zero externally applied magnetic field.
@@ -3254,8 +4690,232 @@ def plot_free_energy_vs_total_current_of_rf_squid():
     plt.legend(fontsize=20)
     plt.show()
     
+def plot_dip_removed(
+    savepath = ''
+    ):
+    ''' Illustrate how much dip [s] was removed from the beginning of the active manipulation data traces.
+    '''
     
+    # Data: Dip removed vs. Voltage
+    datasets = [
+        {"voltages": [950, 900, 850, 800, 750], "dip_removed": [0, 0, 0, 0, 0]},
+        {"voltages": [950, 900, 850, 800, 750], "dip_removed": [3.856, 0, 0, 0, 0]},
+        {"voltages": [1000, 950, 925, 900, 850, 800], "dip_removed": [10.307, 7.097, 65.764, 30.316, 218.010, 146.505]},
+        {"voltages": [1000, 950, 925, 900, 850, 800], "dip_removed": [7.063, 65.427, 26.532, 52.200, 133.327, 143.178]},
+        {"voltages": [1050, 1000, 950, 900], "dip_removed": [0, 0, 0, 0]},
+    ]
+    colours = ['#C41CEE', '#1C70EE', '#1CEE70', '#C4EE1C', '#EE1C1C']
+    #labels = ["Set (a): 200x200 nm, soft", "Set (b): 300x300 nm, soft", "Set (c): 318x318 nm, hard", "Set (d): 354x354 nm, hard", "Set (e): 350x350 nm, medium"]
+    labels = ["Sparse 1", "Sparse 2", "Compact 1", "Compact 2", "Dense 1"]
+
+    # Data: dip removed vs. max resistance change
+    additional_dataset = [
+        {"max_res_change": [96.22063964205007, 44.99158976805173, 25.279942849287096, 12.360495955953477, 5.968368957966308], "dip_removed": [0, 0, 0, 0, 0]},
+        {"max_res_change": [76.9063451288274, 39.94898308378969, 16.76463788989173, 7.11048591268908, 3.934905378623821], "dip_removed": [3.856360673904419, 0, 0, 0, 0]},
+        {"max_res_change": [7.577167605507995, 2.899798807851095, 2.333199200214886, 2.00698761012863, 0.5836589957764815, 0.4579783734475429], "dip_removed": [10.307, 7.097, 65.764, 30.316, 218.010, 146.505]},
+        {"max_res_change": [7.604564690048288, 2.6164501359842163, 2.2059728006996515, 1.37511, 0.6087130768012594, 0.41831299658590115], "dip_removed": [7.063, 65.427, 26.532, 52.200, 133.327, 143.178]},
+        {"max_res_change": [20.241740738032178, 14.231358388694026, 7.15015084526569, 3.849712062876298], "dip_removed": [0, 0, 0, 0]},
+    ]
     
+    # Create 2-row subplot
+    ##fig1, (ax1, ax2) = plt.subplots(nrows=2, figsize=(12.8, 9.81), sharey=False)
+    fig1, (ax1, ax2) = plt.subplots(nrows=2, figsize=(12.8, 8.70), sharey=False)
+
+    # === First subplot: Dip removed vs. Voltage ===
+    for i, data in enumerate(datasets):
+        ax1.scatter(data["voltages"], data["dip_removed"], s=80, color=colours[i], label=labels[i])
+
+    ax1.set_xlabel("Voltage [mV]", fontsize=33)
+    ax1.set_ylabel("Dip removed [s]", fontsize=33, labelpad=36.3)
+    ax1.set_xlim(-35, 1085)
+    ax1.set_ylim(-10, 250)
+    ax1.tick_params(axis='both', labelsize=30)
+    ax1.legend(fontsize=26)
+    ax1.grid()
+
+    # === Second subplot: Dip removed vs. Max resistance change ===
+    for i, data in enumerate(additional_dataset):
+        ax2.scatter(data["max_res_change"], data["dip_removed"], s=80, color=colours[i], label=labels[i])
+
+    ax2.set_xlabel("Max resistance change in plot [%]", fontsize=33, labelpad=18)
+    ax2.set_ylabel("Dip removed [s]", fontsize=33, labelpad=36.3)
+    ax2.set_xlim(-3.125, 103.125)
+    ax2.set_ylim(-10, 250)
+    ax2.tick_params(axis='both', labelsize=30)
+    ax2.legend(fontsize=26)
+    ax2.grid()
+
+    # Final layout and save
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0.32)  # Space between subplots
+
+    # Save shits?
+    if savepath != '':
+        fig1.savefig(savepath, dpi=164, bbox_inches='tight')
     
+    # Show shits.
+    plt.show()
+
+
+def increase_in_percent_per_second_exponential(
+    lower_voltage,
+    higher_voltage,
+    initial_resistance,
+    alpha_0,
+    gamma,
+    ):
+    ''' Calculate how many extra "percents per second" you get from
+        cranking the manipulation voltage from lower_voltage
+        to higher_voltage.
+    '''
     
+    def exponential_voltage_dependency( V, alpha_0, gamma ):
+        return alpha_0 * ((np.e)**(gamma * V))
     
+    # Get (linear) resistance manipulation rates.
+    old_resistance_per_second = exponential_voltage_dependency( lower_voltage, alpha_0, gamma )
+    new_resistance_per_second = exponential_voltage_dependency( higher_voltage, alpha_0, gamma )
+    
+    # In 1 second, I get 100 % more resistance, if old_resistance_per_second is initial_resistance.
+    old_resistance_per_second_percent = (old_resistance_per_second / initial_resistance) * 100
+    new_resistance_per_second_percent = (new_resistance_per_second / initial_resistance) * 100
+    
+    # Return the increase: "I get these many more percents per second"
+    return new_resistance_per_second_percent / old_resistance_per_second_percent
+
+def plot_dielectric_breakdown_data(
+    folder_path,
+    number_of_junction_sizes_probed,
+    plot_broken_data = False,
+    resistance_limit_for_shorted_junction_ohm = 260,
+    legend_list = [],
+    savepath = ''
+    ):
+    ''' Reads all .txt files in folder_path, extracts Voltage and Current data,
+        and plots them on the same figure.
+        
+        Parameters
+        ----------
+        folder_path : str
+            Path to folder containing .txt data files.
+        plot_broken_data : boolean
+            If true, plot the entire data line, including datapoints
+            after which the junction broke.
+        savepath : str, optional
+            Path to save the plot. If just an empty string '',
+            then the plot will not be saved.
+    '''
+    
+    # Set up a colour table given how many junction sizes there were.
+    # Define start and end hex colors
+    start_hex   = "#EE1C1C"
+    end_hex     = "#C4EE1C"
+    
+    # Function to convert hex to RGB (0-1 range)
+    def hex_to_rgb(hex_color):
+        hex_color = hex_color.lstrip("#")
+        return tuple(int(hex_color[i:i+2], 16) / 255 for i in (0, 2, 4))
+    
+    # Function to convert RGB (0-1) to hex
+    def rgb_to_hex(rgb):
+        return "#{:02X}{:02X}{:02X}".format(int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255))
+    
+    # Convert start and end to HLS
+    start_rgb = hex_to_rgb(start_hex)
+    end_rgb   = hex_to_rgb(end_hex)
+
+    start_hls = colorsys.rgb_to_hls(*start_rgb)
+    end_hls   = colorsys.rgb_to_hls(*end_rgb)
+    
+    # Generate 10 evenly spaced HSL-adjusted colors
+    colours = []
+    for i in range(number_of_junction_sizes_probed):
+        t = i / (number_of_junction_sizes_probed-1)  # Interpolation factor
+        h = start_hls[0] + (end_hls[0] - start_hls[0]) * t
+        l = start_hls[1] + (end_hls[1] - start_hls[1]) * t
+        s = start_hls[2] + (end_hls[2] - start_hls[2]) * t
+        rgb = colorsys.hls_to_rgb(h, l, s)
+        colours.append(rgb_to_hex(rgb))
+    
+    ## Colours is now a list where junction size colours can be chosen from,
+    ## in the big plot.
+    
+    def trim_after_max_voltage(voltage_mV, current_uA):
+        voltage_mV = np.array(voltage_mV)
+        current_uA = np.array(current_uA)
+        
+        # Find index of the maximum voltage_mV
+        max_index = np.argmax(voltage_mV)
+
+        # Slice up to and including max_index
+        return voltage_mV[:max_index+1], current_uA[:max_index+1]
+    
+    # Create figure.
+    fig, ax = plt.subplots(figsize=(12.8, 8.70))
+    
+    # Go through all .txt files in the folder.
+    colour_counter = 0
+    number_of_traces_plotted = 0
+    for filename in os.listdir(folder_path):
+        if filename.lower().endswith(".txt"):
+            filepath = os.path.join(folder_path, filename)
+            
+            with open(filepath, 'r') as f:
+                lines = f.readlines()
+
+            # Expecting exactly two rows: voltage_mV and current_uA.
+            voltage_mV_line = lines[0].strip().split(",")[1:]  # Skip header text.
+            current_uA_line = lines[1].strip().split(",")[1:]  # Skip header text.
+
+            # Convert to floats.
+            voltage_mV = np.array(list(map(float, voltage_mV_line)))
+            current_uA = np.array(list(map(float, current_uA_line)))
+            
+            # Plot data after the junction is broken?
+            if not plot_broken_data:
+                ## No.
+                voltage_mV, current_uA = trim_after_max_voltage(voltage_mV, current_uA)
+            
+            # Shorted junction?
+            max_voltage_mV_idx = np.argmax(voltage_mV)
+            resistance = (voltage_mV[max_voltage_mV_idx] / 1000) / (current_uA[max_voltage_mV_idx] / 1e6)
+            
+            # Check if shorted.
+            if not(resistance < resistance_limit_for_shorted_junction_ohm):
+            
+                ## Insert stuffs into plot!
+                
+                # What label should be used?
+                if (legend_list == []):
+                    label_tag = filename
+                elif (number_of_traces_plotted >= len(legend_list)):
+                    # Then, stop plotting.
+                    label_tag = None
+                else:
+                    # In this case, use the user-provided legend list.
+                    label_tag = legend_list[number_of_traces_plotted]
+                
+                # Plot shits.
+                ax.plot(current_uA, voltage_mV, label=label_tag, color = colours[colour_counter], alpha=0.6)
+                
+                # Increase counter.
+                number_of_traces_plotted += 1
+                
+            # Whether or not we plotted the curve, keep track of the colour
+            # counter.
+            colour_counter += 1
+            colour_counter %= number_of_junction_sizes_probed
+    
+    # Formatting.
+    ax.grid()
+    ax.tick_params(axis='both', labelsize=23)
+    ax.set_xlabel("Current [µA]", fontsize=33)
+    ax.set_ylabel("Voltage [mV]", fontsize=33)
+    #ax.set_title("Dielectric breakdown data")
+    ax.legend(fontsize=26)
+    
+    plt.tight_layout()
+    if not (savepath == ''):
+        fig.savefig(savepath, dpi=164, bbox_inches='tight')
+        print("Figure saved to: " + str(savepath))
+    plt.show()
