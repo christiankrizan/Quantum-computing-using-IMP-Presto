@@ -14,11 +14,13 @@ import sys
 import os
 import re
 import colorsys # Used for generating curve colours.
+import time as time_module
 from scipy.optimize import curve_fit
 from scipy.stats import moment
 from scipy.stats import linregress
 from scipy.interpolate import interp1d
 from datetime import datetime
+from collections import deque
 
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip("#")
@@ -1503,6 +1505,7 @@ def plot_active_manipulation(
         ## interesting, and run np.polyfit, to fit a 2nd and 3rd order
         ## polynomial.
         ## Then, fit.
+        
         t_0_guess = time[0]
         R_0_guess = resistances[0] # Should be R_0, will be overwritten if better numbers exist below.
         if fitter == 'second_order':
@@ -1827,6 +1830,9 @@ def plot_active_manipulation(
         # At this point we may just as well numpy-ify the lists.
         times = np.array(times, dtype=np.float64)
         resistances = np.array(resistances, dtype=np.float64)
+        
+        # Report detected R(t=0).
+        print("R₀ of trace: "+str(resistances[0]))
         
         # Normalise resistance axis?
         if normalise_resistances == 1:
@@ -2520,7 +2526,7 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             fig3, ax3 = plt.subplots(figsize=(15, 11), facecolor=get_colourise(-2))
     else:
         fig1, ax1 = plt.subplots(figsize=(14.6, 9))
-        fig2, ax2 = plt.subplots(figsize=(12.8, 9))
+        fig2, ax2 = plt.subplots(figsize=(12.5, 9))
         if expected_number_of_fit_parameters == 3:
             fig3, ax3 = plt.subplots(figsize=(15, 11))
     
@@ -2722,6 +2728,16 @@ def acquire_relaxation_data_from_folder(
             full_path = os.path.join(folder_path, filename)
             # Catch whether there are nasty subfolders.
             if os.path.isfile(full_path):
+                
+                ## TODO: Below, there is no catch to see whether
+                ##       the user simply inserted a very very long time
+                ##       for relaxation, and then simply let the sample run
+                ##       for this very very long time. A "STOP_CREEP" is
+                ##       inserted by the measurement apparatur.
+                ##       Then, typically there is a new resistance
+                ##       manipulation that triggers. So the file gets
+                ##       'corrupted' into containing two manipulations.
+                ##       In one case, such a file was discovered.
                 
                 # We only want .csv files.
                 if filename.endswith(".csv"):
@@ -2978,12 +2994,41 @@ def plot_trend_active_vs_total_resistance_gain(
     list_of_rms_deviations  = []
     latest_progress = 0.0
     last_progress_printed = -100.0
+    
+    # Keep last 5 timing intervals between progress prints
+    progress_timestamps = deque(maxlen=10)
+    
     for ii in range(len(take_relaxation_data_at_this_time_interval_s)):
         # Get progress.
         latest_progress = int(np.round((100*(ii/len(take_relaxation_data_at_this_time_interval_s)))))
         if not (latest_progress == last_progress_printed):
-            #print(f"Progress: {100*(ii/len(take_relaxation_data_at_this_time_interval_s)):.1f} % done.")
-            print("Progress: "+str(latest_progress)+" % done.")
+            ## #print(f"Progress: {100*(ii/len(take_relaxation_data_at_this_time_interval_s)):.1f} % done.")
+            ## print("Progress: "+str(latest_progress)+" % done.")
+            ## last_progress_printed = latest_progress
+            
+            now = time_module.time()
+            
+            # Calculate estimated remaining time if we have enough data
+            eta_str = ""
+            if last_progress_printed != -100.0:
+                progress_timestamps.append(now)
+                if len(progress_timestamps) >= 2:
+                    # Compute average seconds per progress step
+                    intervals = [
+                        progress_timestamps[i] - progress_timestamps[i-1]
+                        for i in range(1, len(progress_timestamps))
+                    ]
+                    avg_interval = sum(intervals) / len(intervals)
+                    
+                    remaining_steps = 100 - latest_progress
+                    remaining_seconds = int(avg_interval * remaining_steps)
+                    
+                    # Convert to h, m, s
+                    h, rem = divmod(remaining_seconds, 3600)
+                    m, s = divmod(rem, 60)
+                    eta_str = f", {h}h {m}' {s}\" remaining."
+            
+            print(f"{latest_progress} %{eta_str}")
             last_progress_printed = latest_progress
         
         # Get time!
@@ -3051,7 +3096,7 @@ def plot_trend_active_vs_total_resistance_gain(
     ax1.set_ylabel('Linear fit slope [-]', fontsize=33)
     #ax1.set_title('Slope and Offset vs Time')
     ax1.tick_params(axis='both', labelsize=23)
-    ax1.set_ylim(0,1.1)
+    ax1.set_ylim(0,1.21)
     ax1.grid(True)
     ax1.legend(fontsize=26, loc='lower right')
 
@@ -4788,7 +4833,8 @@ def plot_dielectric_breakdown_data(
     number_of_junction_sizes_probed,
     plot_broken_data = False,
     resistance_limit_for_shorted_junction_ohm = 260,
-    legend_list = [],
+    area_list = [],
+    max_voltage_for_defining_R_in_mV = 50,
     savepath = ''
     ):
     ''' Reads all .txt files in folder_path, extracts Voltage and Current data,
@@ -4840,6 +4886,10 @@ def plot_dielectric_breakdown_data(
     ## Colours is now a list where junction size colours can be chosen from,
     ## in the big plot.
     
+    # Create data table, that will hold the averages of the breakdown data.
+    ##list_of_violins = [[]] * number_of_junction_sizes_probed  ## Apparently this is classic Python bullshit :P
+    list_of_violins = [[] for _ in range(number_of_junction_sizes_probed)]
+    
     def trim_after_max_voltage(voltage_mV, current_uA):
         voltage_mV = np.array(voltage_mV)
         current_uA = np.array(current_uA)
@@ -4851,7 +4901,7 @@ def plot_dielectric_breakdown_data(
         return voltage_mV[:max_index+1], current_uA[:max_index+1]
     
     # Create figure.
-    fig, ax = plt.subplots(figsize=(12.8, 8.70))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.7 * 2, 11))
     
     # Go through all .txt files in the folder.
     colour_counter = 0
@@ -4878,44 +4928,311 @@ def plot_dielectric_breakdown_data(
             
             # Shorted junction?
             max_voltage_mV_idx = np.argmax(voltage_mV)
-            resistance = (voltage_mV[max_voltage_mV_idx] / 1000) / (current_uA[max_voltage_mV_idx] / 1e6)
-            
-            # Check if shorted.
-            if not(resistance < resistance_limit_for_shorted_junction_ohm):
+            end_resistance = (voltage_mV[max_voltage_mV_idx] / 1000) / (current_uA[max_voltage_mV_idx] / 1e6)
+            if not(end_resistance < resistance_limit_for_shorted_junction_ohm):
             
                 ## Insert stuffs into plot!
                 
                 # What label should be used?
-                if (legend_list == []):
-                    label_tag = filename
-                elif (number_of_traces_plotted >= len(legend_list)):
+                if (area_list == []):
+                    ##label_tag = filename
+                    raise ValueError("Halted! The user has to define the junction areas. A simple side-length will suffice, like \"600 nm\".")
+                elif (number_of_traces_plotted >= len(area_list)):
                     # Then, stop plotting.
                     label_tag = None
                 else:
                     # In this case, use the user-provided legend list.
-                    label_tag = legend_list[number_of_traces_plotted]
+                    label_tag = area_list[number_of_traces_plotted]
                 
                 # Plot shits.
-                ax.plot(current_uA, voltage_mV, label=label_tag, color = colours[colour_counter], alpha=0.6)
+                ax1.plot(current_uA, voltage_mV, label=label_tag, color = colours[colour_counter], alpha=0.6)
                 
-                # Increase counter.
+                ## At this point, we can take statistics.
+                
+                # 1. Find the dU/dI rate to get R.
+                idx = np.argmax(voltage_mV > max_voltage_for_defining_R_in_mV)
+                if voltage_mV[idx] > max_voltage_for_defining_R_in_mV:
+                    linear_domain_mV = voltage_mV[:idx]
+                    linear_domain_uA = current_uA[:idx]
+                else:
+                    linear_domain_mV = voltage_mV
+                    linear_domain_uA = current_uA
+                slope, intercept, r_value, p_value, std_err = linregress(linear_domain_uA/1e6, linear_domain_mV/1e3)
+                # ... the slope is R.
+                trace_resistance = slope # [Ω]
+                
+                # 2. (R·A) goes on the X axis.
+                ## TODO: handle cases when the user has not provided areas.
+                ## Convert sidelength to area.
+                side_length_m = int(area_list[colour_counter].replace(' nm', '')) * 1e-9
+                area_m2 = side_length_m ** 2
+                resistivity_length = trace_resistance * area_m2
+                
+                # 3. Collect datapoint.
+                ## Note here that the colour counter can be used to keep track of which set this datapoint belongs to.
+                (list_of_violins[colour_counter]).append( (resistivity_length , (voltage_mV[max_voltage_mV_idx] / 1000)) )
+                
+                # Increase counters.
                 number_of_traces_plotted += 1
                 
-            # Whether or not we plotted the curve, keep track of the colour
-            # counter.
+            # Whether or not we plotted the curve, keep track of counters.
             colour_counter += 1
             colour_counter %= number_of_junction_sizes_probed
     
-    # Formatting.
-    ax.grid()
-    ax.tick_params(axis='both', labelsize=23)
-    ax.set_xlabel("Current [µA]", fontsize=33)
-    ax.set_ylabel("Voltage [mV]", fontsize=33)
-    #ax.set_title("Dielectric breakdown data")
-    ax.legend(fontsize=26)
+    ## We can now treat list_of_violins.
+    
+    # Prepare data for the violin plot.
+    mean_res_lengths = []  # Mean resistivity-length for each group.
+    x_stds = []            # Standard deviation of resistivity-length for each group.
+    y_data = []            # Voltage data for violin.
+    y_means = []           # Mean voltages.
+    y_stds = []            # Standard deviation for voltages.
+    
+    for group in list_of_violins:
+        if len(group) == 0:
+            continue  # Skip empty sets!
+
+        # Group is a list of tuples: (resistivity_length, voltage)
+        resistivities = [item[0] for item in group]
+        voltages      = [item[1] for item in group]
+        
+        mean_res = np.mean(resistivities)
+        std_res  = np.std(resistivities)
+
+        mean_res_lengths.append(mean_res)
+        x_stds.append(std_res)
+
+        y_data.append(voltages)
+        y_means.append(np.mean(voltages))
+        y_stds.append(np.std(voltages))
+    
+    # Plot violin plots at mean resistivity positions
+    ##parts = ax2.violinplot(y_data, positions=mean_res_lengths, showmeans=False, showextrema=False) # This is very messy. Don't.
+    ## # Colour the things to match ax1.
+    ## for pc, col in zip(parts['bodies'], colours):
+    ##     pc.set_facecolor(col)
+    ##     pc.set_alpha(0.4)
+    
+    # Overlay mean and error bars.
+    ## for item in range(len(mean_res_lengths)):
+    ##     ## Note the 1e3, to divide the y-axis into millivolts.
+    ##     ax2.errorbar(mean_res_lengths[item] * 1e9, y_means[item] * 1e3, yerr=y_stds[item] * 1e3, color=colours[item], fmt='o', capsize=5, markersize=8)
+    for item in range(len(mean_res_lengths)):
+        ax2.errorbar(
+            mean_res_lengths[item] * 1e9, # X value
+            y_means[item] * 1e3,          # Y value
+            xerr  = x_stds[item] * 1e9,   # Horizontal error bar
+            yerr  = y_stds[item] * 1e3,   # Vertical error bar
+            color = colours[item],
+            fmt='o',
+            capsize=5,
+            markersize=8,
+            label=area_list[item]
+        )
+    
+    ax2.grid()
+    ax2.tick_params(axis='both', labelsize=23)
+    ##ax2.set_xlabel("Mean resistivity-length [nΩ·m²]", fontsize=33)
+    ax2.set_xlabel(r'$\overline{\mathrm{R} \!\cdot\! \mathrm{A}}$ [n$\Omega$·m$^2$]', fontsize=33)
+    ax2.set_ylabel("Breakdown voltage [mV]", fontsize=33)
+    ax2.set_ylim(-65, 1400) ## TODO fix proper limits.
+    ax2.legend(fontsize=26, loc='lower right')
+    ax2.set_xlim(-0.06, 1.26)
+    
+    # Formatting for the regular breakdown voltage plot.
+    ax1.grid()
+    ax1.tick_params(axis='both', labelsize=23)
+    ax1.set_xlabel("Current [µA]", fontsize=33)
+    ax1.set_ylabel("Voltage [mV]", fontsize=33)
+    #ax1.set_title("Dielectric breakdown data")
+    ax1.legend(fontsize=26)
+    ax1.set_ylim(-65, 1400) ## TODO fix proper limits.
     
     plt.tight_layout()
     if not (savepath == ''):
         fig.savefig(savepath, dpi=164, bbox_inches='tight')
         print("Figure saved to: " + str(savepath))
     plt.show()
+
+def plot_ln2_data(
+    file_path,
+    experimentally_found_G0 = (0.8824 + 0.8799 + 0.8751)/3, ## This number was found through Maurizio Toselli's 2024 experiments.
+    experimentally_found_T0 = (783.1 + 792.9 + 762.4)/3,    ## This number was found through Maurizio Toselli's 2024 experiments.
+    normalise_resistances = 0,
+    savepath = '',
+    plot = True,
+    plot_no_junction_resistance_under_ohm = 260,
+    error_factor_threshold = 0.005
+    ):
+    ''' Plot the resistance manipulation and relaxation from electrical
+        annealing performed onto a junction bathing in liquid nitrogen.
+        Any datapoints where the error bar is absurd, that is, too large
+        relative to the resistance, will be filtered out.
+        
+        plot_no_junction_resistance_under_ohm: threshold for where you
+        know the junction to be shorted. Experimentally, I have found
+        that 260 Ω is a good indicator.
+    '''
+    # Storage
+    resistances = []   # in kΩ
+    errors = []        # std_err of slope, in kΩ
+    times_min = []     # time in minutes
+    temperatures = []  # in K
+
+    # Read and split into blocks by blank lines (works with CRLF too)
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    blocks = [b.strip() for b in re.split(r'\r?\n\s*\r?\n', content) if b.strip()]
+
+    for blk in blocks:
+        lines = [ln.strip() for ln in blk.splitlines() if ln.strip()]
+        I_vals = None
+        V_vals = None
+        t_val = None
+        T_val = None
+        
+        # Parse!
+        for ln in lines:
+            parts = ln.split(';')
+            key = parts[0].strip()
+            vals = parts[1:]
+
+            # Robust identification by the header text
+            if 'I [' in key and 'nA' in key:
+                try:
+                    I_vals = np.array([float(x) for x in vals], dtype=float)
+                except ValueError:
+                    I_vals = None
+            elif 'V [' in key and 'uV' in key:
+                try:
+                    V_vals = np.array([float(x) for x in vals], dtype=float)
+                except ValueError:
+                    V_vals = None
+            elif 'Time' in key:
+                try:
+                    t_val = float(vals[0])
+                except (IndexError, ValueError):
+                    t_val = None
+            elif 'Temperature' in key:
+                try:
+                    T_val = float(vals[0])
+                except (IndexError, ValueError):
+                    T_val = None
+
+        # Only attempt fit if we have both arrays and they match in length
+        if I_vals is None or V_vals is None:
+            # skip block if data missing
+            continue
+        if I_vals.size != V_vals.size:
+            # skip if mismatched lengths
+            continue
+        
+        # Linear regression V [µV] vs I [nA] → slope in [µV/nA] == kΩ
+        try:
+            slope, intercept, r_value, p_value, std_err = linregress(I_vals, V_vals)
+        except Exception:
+            slope = np.nan
+            std_err = np.nan
+
+        R_kOhm = slope         # Slope is already in kΩ
+        err_kOhm = std_err     # std_err same units → kΩ
+        
+        # Filter: remove datapoints with absurd error values
+        if np.isnan(R_kOhm) or np.isnan(err_kOhm):
+            continue
+        if (abs(err_kOhm) > abs(R_kOhm) * error_factor_threshold) or (abs(R_kOhm) < plot_no_junction_resistance_under_ohm/1000):
+            # Skip this point
+            continue
+        
+        # Append!
+        resistances.append(R_kOhm)
+        errors.append(err_kOhm)
+
+        # Time in minutes (if missing, store NaN)
+        times_min.append((t_val / 60.0) if (t_val is not None) else np.nan)
+        temperatures.append(T_val if (T_val is not None) else np.nan)
+
+    # Convert to numpy arrays
+    resistances = np.array(resistances, dtype=float)
+    errors = np.array(errors, dtype=float)
+    times_min = np.array(times_min, dtype=float)
+    temperatures = np.array(temperatures, dtype=float)
+
+    # Store the initial resistance (before any normalization)
+    res_initial = resistances[0] if resistances.size > 0 else np.nan
+    
+    # There will be another trace that is normalised
+    # from cryogenic to room-temperature.
+    ## The idea from this comes from Maurizio Toselli:
+    ## The junction is a MIM diode whose resistance vs. temperature
+    ## can be mapped as it cools. That way, it can be mapped to
+    ## Simmon's model, and through the average of three fits (or more)
+    ## one knows the temperature translation for that junction.
+    ## Specifically, G_0 and T_0 for the equation.
+    def simmons_model( T, T_0, G_0 ):
+        ''' Convert the observed resistance for some temperature,
+            into a room-temperature equivalent resistance.
+            
+            G(T) = G₀ · (1 + ( T / T₀ )^2)
+        '''
+        return G_0 * ( 1 + (T/T_0)**2 )
+    
+    
+    
+    
+
+    # Normalise if requested (divide resistances and errors by res_initial)
+    if normalise_resistances == 1 and not np.isnan(res_initial) and res_initial != 0:
+        resistances = ((resistances / res_initial) - 1) * 100
+        errors = (errors / res_initial) * 100
+        ylabel_res = "Resistance increase [%]"
+    elif normalise_resistances == 0:
+        ylabel_res = "Resistance [kΩ]"
+    else:
+        raise ValueError("Unknown argument given for normalise_resistances: "+str(normalise_resistances))
+    
+
+    # Plotting
+    if plot:
+        fig, ax1 = plt.subplots(figsize=(12.5, 10))
+
+        # Temperature on left y-axis (red)
+        ax1.plot(times_min, temperatures, '-', linewidth=2, color="#1CEE70", label="Temperature [K]")
+        ax1.set_xlabel("Time [min]", fontsize=33)
+        ax1.set_ylabel("Temperature [K]", fontsize=33)##, color="#EE1C1C")
+        ax1.set_ylim(bottom=-14.77625)
+        ##ax1.tick_params(axis='y', labelcolor="#EE1C1C")
+
+        # Resistance on right y-axis (blue)
+        ax2 = ax1.twinx()
+        ax2.errorbar(times_min, resistances, yerr=errors,
+                     fmt='o-', markersize=6, ecolor="#EE1C1C", color="#EE1C1C",
+                     capsize=3, label=ylabel_res)
+        ax2.set_ylabel(ylabel_res, fontsize=33)##, color="#1C70EE")
+        ##ax2.tick_params(axis='y', labelcolor="#1C70EE")
+        
+        # Bump up ticks. Add grid.
+        ax1.tick_params(axis='both', labelsize=23)
+        ax2.tick_params(axis='both', labelsize=23)
+        
+        # Combined legend.
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        
+        # Grid and legend.
+        plt.grid()
+        ## Important: setting ax1.legend here,
+        ## will make the grid very visible through the legend box.
+        ## But using ax2.legend solves this problem, for now.
+        ax2.legend(lines1 + lines2, labels1 + labels2, loc='lower right', fontsize=26)##, frameon=True, facecolor='white', framealpha=0.8)
+        
+        plt.tight_layout()
+        if not (savepath == ''):
+            fig.savefig(savepath, dpi=164, bbox_inches='tight')
+            print("Figure saved to: " + str(savepath))
+        plt.show()
+
+    # Return (time[min], resistance[kΩ or normalised], error[same units], temperature[K], res_initial[kΩ])
+    return times_min, resistances, errors, temperatures, res_initial
+    
