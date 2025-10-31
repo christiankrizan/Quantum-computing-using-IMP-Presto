@@ -16,6 +16,7 @@ import re
 import colorsys # Used for generating curve colours.
 import time as time_module
 from scipy.optimize import curve_fit
+from scipy.stats import ttest_rel
 from scipy.stats import moment
 from scipy.stats import linregress
 from scipy.interpolate import interp1d
@@ -44,16 +45,16 @@ def interpolate_hsv_colours(start_hex, end_hex, n):
         else:
             h1 += 1
 
-    colors = []
+    colours = []
     for i in range(n):
         t = i / (n - 1) if n > 1 else 0
         h = (h1 + t * (h2 - h1)) % 1.0
         s = start_hsv[1] + t * (end_hsv[1] - start_hsv[1])
         v = start_hsv[2] + t * (end_hsv[2] - start_hsv[2])
         rgb = colorsys.hsv_to_rgb(h, s, v)
-        colors.append(rgb_to_hex(rgb))
+        colours.append(rgb_to_hex(rgb))
 
-    return colors
+    return colours
 
 def get_colourise(
     colourised_counter
@@ -767,7 +768,7 @@ def plot_fourier_transform_of_resistance_relaxation(
         else:
             # Just plot from a map.
             num_items_to_colour = len(filepath)
-            colors = plt.cm.get_cmap('tab20', num_items_to_colour)
+            colours = plt.cm.get_cmap('tab20', num_items_to_colour)
             
             ## Perform Fourier transform things.
             # Define zero-padding factor
@@ -793,7 +794,7 @@ def plot_fourier_transform_of_resistance_relaxation(
             plt.grid()
             plt.show()
             
-            ##plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colors[jj])## TODO!! colors(jj))
+            ##plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colours[jj])## TODO!! colours(jj))
         
     ##plt.xlabel("Duration [s]")
     ##plt.title("Resistance vs. Time")
@@ -846,8 +847,12 @@ def plot_josephson_junction_resistance_manipulation_and_relaxation(
         fig, ax = plt.subplots(figsize=(12.8, 13), facecolor=get_colourise(-2))
         #plt.figure(figsize=(10, 5), facecolor=get_colourise(-2))
     else:
-        fig, ax = plt.subplots(figsize=(12.8, 9.75))
-        ##fig, ax = plt.subplots(figsize=(12.8, 13))
+        # Used for methods example demonstration.
+        ##fig, ax = plt.subplots(figsize=(13.58, 9.78)) #### (b) ####
+        fig, ax = plt.subplots(figsize=(14.045, 9.75)) #### (d) ####
+        
+        # Used for the stepped_active_manipulation data (sub)plots.
+        ##fig, ax = plt.subplots(figsize=(12.65, 13))
     
     # Create list that will keep track of where the "time = 0" points are
     # in the files.
@@ -955,6 +960,7 @@ def plot_josephson_junction_resistance_manipulation_and_relaxation(
                 else:
                     # In that case, just take the last value and normalise to that.
                     resistances = (resistances / resistances[-1]) - 1
+                    y_label_text = "Resistance increase [%]"
             elif normalise_resistances == 1:
                 resistances = ((resistances / resistances[0]) - 1) * 100
                 y_label_text = "Resistance increase [%]"
@@ -1019,32 +1025,38 @@ def plot_josephson_junction_resistance_manipulation_and_relaxation(
             else:
                 # Just plot from a map.
                 num_items_to_colour = len(filepath)
-                colors = plt.cm.get_cmap('tab20', num_items_to_colour)
+                colours = plt.cm.get_cmap('tab20', num_items_to_colour)
                 if savepath == '':
                     ## TODO remove this try-catch bs.
                     try:
-                        plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colors[jj])## TODO!! colors(jj))
+                        plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colours[jj])## TODO!! colours(jj))
                     except TypeError:
-                        plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colors(jj)) ## TODO!!
+                        plt.plot(times, resistances, marker='o', linestyle='-', label=file_label, color=colours(jj)) ## TODO!!
                 else:
                     #dot_color = "#C4EE1C" ## TODO!
+                    #dot_color = "#1CEE70" ## TODO!
                     dot_color = "#EE1C1C" ## TODO!
                     if normalise_resistances == 3:
                         ##ax.plot(times, resistances_ohm, marker='o', linestyle='-', label=file_label + " [Ω]", color=dot_color)
                         print("TODO: dividing the time axis by 3600 to put it in hours instead of seconds.")
-                        #ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="200x200 nm sparse-oxide", color=dot_color)
-                        #ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="350x350 nm dense-oxide", color=dot_color)
-                        ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="318x318 nm compact-oxide", color=dot_color)
+                        ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="Low-dose 1", color=dot_color) ##label="200x200 nm low_dose-oxide", color=dot_color)
+                        #ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="Medium-dose 1", color=dot_color) ## label="350x350 nm medium_dose-oxide", color=dot_color)
+                        #ax.plot(times/3600, resistances_ohm, marker='o', linestyle='-', label="High-dose 1", color=dot_color) ## label="318x318 nm high_dose-oxide", color=dot_color)
                         
                         if 'ax2' not in locals():
                             ax2 = ax.twinx()
                             ax2.set_ylabel("Resistance increase [%]", fontsize=33)
                             
                             # Set ylim limits!
-                            ###bottom_percent = -5
-                            ###top_percent = 280
-                            bottom_percent = -1
-                            top_percent = 6
+                            ##bottom_percent = -5
+                            ##top_percent = 280
+                            
+                            # Used for the (b) illustration example.
+                            ##bottom_percent = -0.9
+                            ##top_percent = 6.1
+                            # Used for the (d) illustration example.
+                            bottom_percent = -5
+                            top_percent = 58
                             
                             # Begin with the percent axis. Simple, just set the numbers.
                             ax2.set_ylim(bottom_percent,top_percent)
@@ -1097,9 +1109,9 @@ def plot_josephson_junction_resistance_manipulation_and_relaxation(
             ax2.tick_params(axis='y', colors=get_colourise(-1), labelsize=23)
             ax2.spines['right'].set_color(get_colourise(-1))
             ax2.yaxis.label.set_color(get_colourise(-1))
-        ax.tick_params(axis='y', labelsize=23)
+        ax.tick_params(axis='y', labelsize=26)
         if 'ax2' in locals():
-            ax2.tick_params(axis='y', labelsize=23)
+            ax2.tick_params(axis='y', labelsize=26)
     else:
         ax.set_ylabel(y_label_text, fontsize=33)
         ax.grid()
@@ -1116,7 +1128,7 @@ def plot_josephson_junction_resistance_manipulation_and_relaxation(
         ax.set_xlabel("Time [s]", fontsize=33)
     
     # Bump up the size of the ticks' numbers on the axes.
-    ax.tick_params(axis='both', labelsize=23)
+    ax.tick_params(axis='both', labelsize=26)
     
     plt.xlabel("Duration [s]", color=get_colourise(-1), fontsize=33)
     ##plt.ylabel(y_label_text, color=get_colourise(-1), fontsize=33)
@@ -1127,12 +1139,18 @@ def plot_josephson_junction_resistance_manipulation_and_relaxation(
     if normalise_resistances == 3:
         lines1, labels1 = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
-        ax.legend(lines1 + lines2, labels1 + labels2, fontsize=24)
+        ax.legend(lines1 + lines2, labels1 + labels2, fontsize=26)
     else:
         ax.legend()
     
     # Tight layout.
     plt.tight_layout()
+    
+    # Adjust x-axis?
+    ## Normally, leave this commented-out.
+    ## For the (b) figure in the resistance manipulation curves methods
+    ## example, use the following settings to reproduce the plot:
+    #ax.set_xlim(-0.86, 5.90)
     
     # Save plots?
     if savepath != '':
@@ -1230,8 +1248,8 @@ def simulate_frequency_accuracy_of_model_from_RT_resistance(
     
     # Plot histogram of the calculated frequency values
     if plot:
-        plt.figure(figsize=(8,5))
-        plt.hist(frequencies_calculated, bins=bins_calculated, density=True, alpha=0.6, color='b', edgecolor='black', rwidth = 0.9)
+        plt.figure(figsize=(18,6))
+        plt.hist(frequencies_calculated, bins=bins_calculated, density=True, alpha=0.6, color="#1C70EE", edgecolor='black', rwidth = 0.9)
         num_sigmas_in_expected_pdf = 5
         
         # Create trace for the expected probability distribution
@@ -1242,13 +1260,16 @@ def simulate_frequency_accuracy_of_model_from_RT_resistance(
         )
         pdf = (1 / (frequencies_calculated_standard_deviation * np.sqrt(2 * np.pi))) * \
             np.exp(-0.5 * ((x - np.mean(frequencies_calculated)) / frequencies_calculated_standard_deviation) ** 2)
-        plt.plot(x, pdf, 'r-', label="Expected normal distribution")
+        plt.plot(x, pdf, '-', color="#EE1C1C", label="Expected normal\ndistribution")
         
         # Labels and title
-        plt.xlabel("Calculated frequencies [Hz]")
-        plt.ylabel("Probability density")
-        plt.title("Distribution about frequency target:\n±"+str(resistance_measurement_error_std_deviation)+" Ω measurement error, ±"+str(E_C_error_std_deviation_in_Hz/1e6)+" MHz E_C,\n±"+str(error_Delta_in_text)+"% Δ, ±"+str(error_temperature_in_text)+" mK T, ±"+str(error_diff_R_in_text)+"% R vs R_T")
-        plt.legend()
+        plt.xlabel("Calculated frequencies [GHz]", fontsize=33)
+        plt.ylabel("Probability density", fontsize=33)
+        plt.title("Distribution about frequency target:\n±"+str(resistance_measurement_error_std_deviation)+" Ω measurement error, ±"+str(E_C_error_std_deviation_in_Hz/1e6)+" MHz E_C,\n±"+str(error_Delta_in_text)+"% Δ, ±"+str(error_temperature_in_text)+" mK T, ±"+str(error_diff_R_in_text)+"% R vs R_T", fontsize=18)
+        plt.tick_params(axis='both', labelsize=24)
+        plt.legend(fontsize=26)
+        plt.xlim(2.5e9, 5.0e9)
+        plt.ylim(0, 1.25e-8)
         plt.show()
     
     # Print some things.
@@ -1429,7 +1450,7 @@ def plot_active_manipulation(
     normalise_time = True,
     plot_no_junction_resistance_under_ohm = 0,
     fitter = 'none',
-    skip_initial_dip = False,
+    skip_initial_drop = False,
     plot_fit_parameters_in_legend = False,
     colourise = False,
     title_label = None,
@@ -1455,7 +1476,7 @@ def plot_active_manipulation(
             'exponential':  Attempt fit to R(t) = R_0 + epsilon·e( t/t_0 · gamma)
             'power':        Attempt fit to R(t) = R_0 + A·t^B
         
-        skip_initial_dip:
+        skip_initial_drop:
             If false, look for the string "START_MANIPULATION" in column 3
             of the .csv format.
     '''
@@ -1722,8 +1743,8 @@ def plot_active_manipulation(
         time_at_start = 0.0
         
         # Check whether to begin to store data from this file, i.e., whether
-        # the user is requesting to skip the initial resistance dip.
-        do_not_save_data_yet = skip_initial_dip
+        # the user is requesting to skip the initial resistance drop.
+        do_not_save_data_yet = skip_initial_drop
         
         # Open file.
         with open(os.path.abspath(filepath_item), newline='') as csvfile:
@@ -1744,8 +1765,8 @@ def plot_active_manipulation(
                     pass
             if old_file:
                 # Thus, we (TODO: currently) have no reliable way of
-                # determining where the initial dip ends, if this happens.
-                print("Data file '"+str(filepath_item)+"' could not be used to identify where the initial dip ends. Ignoring argument.")
+                # determining where the initial drop ends, if this happens.
+                print("Data file '"+str(filepath_item)+"' could not be used to identify where the initial drop ends. Ignoring argument.")
                 do_not_save_data_yet = False
             
             # Old file or not, we take the timestamp in cell [4,1] (0 indx.)
@@ -1770,7 +1791,7 @@ def plot_active_manipulation(
                             # appeared.
                             time_at_start = float(rows[i+1][1])
                             print(filepath_item)
-                            print("Detected that the initial dip was "+str(time_at_start - time_value_at_first_entry)+" [s] long.")
+                            print("Detected that the initial drop was "+str(time_at_start - time_value_at_first_entry)+" [s] long.")
                     
                     # The reason this if-if case is written this way,
                     # is to catch the data in the same data storage event
@@ -1841,10 +1862,10 @@ def plot_active_manipulation(
         else:
             y_label_text = "Resistance [Ω]"
         
-        # At this point, we can identify how much initial dip was removed,
+        # At this point, we can identify how much initial drop was removed,
         # vs. the maximum resistance change.
         if normalise_resistances == 1:
-            print("Dip removed: "+str(time_at_start - time_value_at_first_entry)+", max change: "+str(resistances[-1]))
+            print("Drop removed: "+str(time_at_start - time_value_at_first_entry)+", max change: "+str(resistances[-1]))
         
         # Add item to plot!
         ## First, let's try to fit the data too.
@@ -1877,13 +1898,13 @@ def plot_active_manipulation(
             # Just plot from a map.
             if 'thin' in file_label.lower():
                 colour_label = 'custom_thin'
-                colors = ['#1cee70', '#1cd89c', '#1cc1c3', '#1ca5da', '#1c88e8', '#1c70ee']
+                colours = ['#1cee70', '#1cd89c', '#1cc1c3', '#1ca5da', '#1c88e8', '#1c70ee']
                 
                 num_items_to_colour = len(filepath)
                 if num_items_to_colour < 6:
-                    colors = colors[:num_items_to_colour]
+                    colors = colours[:num_items_to_colour]
                 elif num_items_to_colour == 6:
-                    colors = colors
+                    colors = colours
                 else:
                     raise NotImplementedError("Colouring error.")
                 
@@ -1893,13 +1914,13 @@ def plot_active_manipulation(
             
             elif 'thick' in file_label.lower():
                 colour_label = 'custom_thick'
-                colors = ['#ee1c1c', '#f47e1c', '#f6c11c', '#e6df1c', '#d1eb1c', '#c4ee1c']
+                colours = ['#ee1c1c', '#f47e1c', '#f6c11c', '#e6df1c', '#d1eb1c', '#c4ee1c']
                 
                 num_items_to_colour = len(filepath)
                 if num_items_to_colour < 6:
-                    colors = colors[:num_items_to_colour]
+                    colors = colours[:num_items_to_colour]
                 elif num_items_to_colour == 6:
-                    colors = colors
+                    colors = colours
                 else:
                     raise NotImplementedError("Colouring error.")
                 
@@ -1912,7 +1933,7 @@ def plot_active_manipulation(
                 colour_label = 'winter'
                 num_items_to_colour = len(filepath)
                 cmap = plt.cm.get_cmap(colour_label, num_items_to_colour)
-                colors = [cmap(i) for i in range(num_items_to_colour)]
+                colours = [cmap(i) for i in range(num_items_to_colour)]
                 
                 # Get the last number.
                 match = re.search(r'(\d+)$', file_label)
@@ -1923,7 +1944,7 @@ def plot_active_manipulation(
                 colour_label = 'autumn'
                 num_items_to_colour = len(filepath)
                 cmap = plt.cm.get_cmap(colour_label, num_items_to_colour)
-                colors = [cmap(i) for i in range(num_items_to_colour)]
+                colours = [cmap(i) for i in range(num_items_to_colour)]
                 
                 # Get the last number.
                 match = re.search(r'(\d+)$', file_label)
@@ -1934,7 +1955,7 @@ def plot_active_manipulation(
                 colour_label = 'tab20'
                 num_items_to_colour = len(filepath)
                 cmap = plt.cm.get_cmap(colour_label, num_items_to_colour)
-                colors = [cmap(i) for i in range(num_items_to_colour)]
+                colours = [cmap(i) for i in range(num_items_to_colour)]
             
             # Mask the scatter plot?
             if enable_mask:
@@ -1946,14 +1967,14 @@ def plot_active_manipulation(
                 resistances_to_plot = resistances.copy()
             
             plt.figure(1) # Set figure 1 as active.
-            plt.scatter(times_to_plot, resistances_to_plot, marker=marker_symbol, label=file_label, color=colors[jj])## TODO!! colors[jj])## TODO!! colors(jj))
+            plt.scatter(times_to_plot, resistances_to_plot, marker=marker_symbol, label=file_label, color=colours[jj])## TODO!! colours[jj])## TODO!! colours(jj))
             
             # Update the largest value present on the y-axis?
             if np.max(resistances) > highest_number_on_the_y_axis:
                 highest_number_on_the_y_axis = np.max(resistances)
             
             ##plt.figure(3) # Set figure 3 as active.
-            ##plt.scatter(times_to_plot, np.log10(resistances_to_plot), marker=marker_symbol, label=file_label, color=colors[jj])## TODO!! colors(jj))
+            ##plt.scatter(times_to_plot, np.log10(resistances_to_plot), marker=marker_symbol, label=file_label, color=colours[jj])## TODO!! colours(jj))
         else:
             
             # Get pseudolegacy filename labels?
@@ -2064,9 +2085,9 @@ def plot_active_manipulation(
             if (not colourise):
                 plt.figure(1) # Set figure 1 as active.
                 if plot_fit_parameters_in_legend:
-                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colors[jj])## TODO!! colors(jj))
+                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', label='Fit '+str(jj)+': '+fit_label, color=colours[jj])## TODO!! colours(jj))
                 else:
-                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', color=colors[jj])## TODO!! colors(jj))
+                    plt.plot(times_to_plot, fit_to_plot, linestyle='--', color=colours[jj])## TODO!! colours(jj))
             else:
                 plt.figure(1) # Set figure 1 as active.
                 if plot_fit_parameters_in_legend:
@@ -2085,9 +2106,13 @@ def plot_active_manipulation(
             ##       residual: actual_y - predicted_y
             residuals = resistances - fit_results[0]
             
+            MSE  = np.mean(residuals**2)
+            RMSE = np.sqrt(MSE)
+            print("RMSE is: "+str(RMSE))
+            
             if (not colourise):
                 plt.figure(2) # Set figure 2 as active.
-                plt.scatter(times, residuals, marker=marker_symbol, label='Residuals, '+file_label, color=colors[jj])## TODO!! colors(jj))
+                plt.scatter(times, residuals, marker=marker_symbol, label='Residuals, '+file_label, color=colours[jj])## TODO!! colours(jj))
             else:
                 plt.figure(2) # Set figure 2 as active.
                 plt.scatter(times, residuals, marker=marker_symbol, label='Residuals, '+file_label, color=get_colourise((jj // 4) + ((jj % 4) + 1) / 10))
@@ -2196,7 +2221,7 @@ def analyse_fitted_polynomial_factors(
     normalise_time = True,
     plot_no_junction_resistance_under_ohm = 0,
     fitter = 'second_order',
-    skip_initial_dip = False,
+    skip_initial_drop = False,
     plot_fit_parameters_in_legend = False,
     colourise = False,
     savepath = '',
@@ -2265,7 +2290,7 @@ def analyse_fitted_polynomial_factors(
         normalise_time = normalise_time,
         plot_no_junction_resistance_under_ohm = plot_no_junction_resistance_under_ohm,
         fitter = fitter,
-        skip_initial_dip = skip_initial_dip,
+        skip_initial_drop = skip_initial_drop,
         plot_fit_parameters_in_legend = plot_fit_parameters_in_legend,
         colourise = colourise,
         savepath = savepath
@@ -2453,7 +2478,7 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
     normalise_time = True,
     plot_no_junction_resistance_under_ohm = 0,
     fitter = 'second_order',
-    skip_initial_dip = False,
+    skip_initial_drop = False,
     plot_fit_parameters_in_legend = False,
     set_labels = [],
     colourise = False,
@@ -2499,7 +2524,7 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
                 normalise_time = normalise_time,
                 plot_no_junction_resistance_under_ohm = plot_no_junction_resistance_under_ohm,
                 fitter = fitter,
-                skip_initial_dip = skip_initial_dip,
+                skip_initial_drop = skip_initial_drop,
                 plot_fit_parameters_in_legend = plot_fit_parameters_in_legend,
                 colourise = colourise,
                 savepath = insert_counter_before_extension(savepath, i),
@@ -2518,15 +2543,19 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
         expected_number_of_fit_parameters = 2
     
     # Make plots.
-    ## Create figures for plotting.
+    ## Create figures for plotting. First, clear all of the previous junk.
+    plt.close('all')
+    plt.ioff()
     if colourise:
         fig1, ax1 = plt.subplots(figsize=(15, 11), facecolor=get_colourise(-2))
         fig2, ax2 = plt.subplots(figsize=(15, 11), facecolor=get_colourise(-2))
         if expected_number_of_fit_parameters == 3:
             fig3, ax3 = plt.subplots(figsize=(15, 11), facecolor=get_colourise(-2))
     else:
-        fig1, ax1 = plt.subplots(figsize=(14.6, 9))
-        fig2, ax2 = plt.subplots(figsize=(12.5, 9))
+        #fig1, ax1 = plt.subplots(figsize=(14.6, 9))
+        fig1, ax1 = plt.subplots(figsize=(10.9, 9))
+        #fig2, ax2 = plt.subplots(figsize=(12.5, 9))
+        fig2, ax2 = plt.subplots(figsize=(10.9, 9))
         if expected_number_of_fit_parameters == 3:
             fig3, ax3 = plt.subplots(figsize=(15, 11))
     
@@ -2540,8 +2569,77 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             colours = ["#EE1C1C", "#C4EE1C", "#1CEE70", "#1C70EE", "#C41CEE"]
     
     # Loop through the data and create plotty things.
+    axes = [ax1, ax2]
+    figs = [fig1, fig2]
+
     for curr_figure in range(expected_number_of_fit_parameters):
-        plt.figure( curr_figure+1 ) # Set figure "curr_figure" as active.
+        ax = axes[curr_figure]
+        fig = figs[curr_figure]
+
+        # Go through the data.
+        for sets in range(len(list_of_filepath_lists)):
+            # Get the fitted parameter's voltages, data, label, and error bars.
+            voltage_list_mV = results_of_sets[sets][curr_figure][0]
+            parameter_data = results_of_sets[sets][curr_figure][1]
+
+            if len(set_labels) > 0:
+                label_string = str(set_labels[sets])
+            else:
+                label_string = str(sets + 1)
+
+            errors = results_of_sets[sets][curr_figure][3]
+
+            # Choose linestyle
+            linestyle = '' if curr_figure == 0 else '-'
+
+            # Plot data points
+            if colourise:
+                ax.errorbar(
+                    voltage_list_mV, parameter_data, yerr=errors,
+                    marker='o', linestyle=linestyle, capsize=3,
+                    label=label_string, color=get_colourise(sets)
+                )
+            else:
+                if num_items_to_colour != 5:
+                    ax.errorbar(
+                        voltage_list_mV, parameter_data, yerr=errors,
+                        marker='o', linestyle=linestyle, capsize=3,
+                        label=label_string, color=colours(sets)
+                    )
+                else:
+                    ax.errorbar(
+                        voltage_list_mV, parameter_data, yerr=errors,
+                        marker='o', linestyle=linestyle, capsize=3,
+                        label=label_string, color=colours[sets]
+                    )
+
+            # Plot fit trace in the alpha plot (first parameter only)
+            if curr_figure == 0:
+                try:
+                    fit_x_axis = results_of_sets[sets][curr_figure + expected_number_of_fit_parameters][0]
+                    fit_y_axis = results_of_sets[sets][curr_figure + expected_number_of_fit_parameters][1]
+                    if plot_fit_parameters_in_legend:
+                        fit_label = results_of_sets[sets][curr_figure + expected_number_of_fit_parameters][2]
+                    else:
+                        fit_label = None
+
+                    if colourise:
+                        ax.plot(fit_x_axis, fit_y_axis, label=fit_label, color=get_colourise(sets + 0.1))
+                    else:
+                        if num_items_to_colour != 5:
+                            ax.plot(fit_x_axis, fit_y_axis, label=fit_label, color=colours(sets))
+                        else:
+                            ax.plot(fit_x_axis, fit_y_axis, label=fit_label, color=colours[sets])
+                except IndexError:
+                    print("No fit data found in set " + str(sets) + ".")
+
+    """# Loop through the data and create plotty things.
+    axes = [ax1, ax2]
+    figs = [fig1, fig2]
+    for curr_figure in range(expected_number_of_fit_parameters):
+        ax = axes[curr_figure]
+        fig = figs[curr_figure]
+        ##plt.figure( curr_figure+1 ) # Set figure "curr_figure" as active.
         
         # Go through the data.
         for sets in range(len(list_of_filepath_lists)):
@@ -2563,12 +2661,15 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             else:
                 linestyle = '-'
             if colourise:
-                plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=get_colourise(sets))
+                ax.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=get_colourise(sets))
+                ##plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=get_colourise(sets))
             else:
                 if num_items_to_colour != 5:
-                    plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours(sets))
+                    ax.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours(sets))
+                    ##plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours(sets))
                 else:
-                    plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours[sets])
+                    ax.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours[sets])
+                    ##plt.errorbar(voltage_list_mV, parameter_data, yerr=errors, marker='o', linestyle=linestyle, capsize=3, label=label_string, color=colours[sets])
             
             # Plot fit trace in the alpha plot?
             if curr_figure == 0:
@@ -2586,18 +2687,72 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
                         fit_label = None
                     if not colourise:
                         if num_items_to_colour != 5:
-                            plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours(sets))
+                            ax.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours(sets))
+                            ##plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours(sets))
                         else:
-                            plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours[sets])
+                            ax.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours[sets])
+                            ##plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = colours[sets])
                     else:
-                        plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = get_colourise(sets+0.1))
+                        ax.plot(fit_x_axis, fit_y_axis, label = fit_label, color = get_colourise(sets+0.1))
+                        ##plt.plot(fit_x_axis, fit_y_axis, label = fit_label, color = get_colourise(sets+0.1))
                 except IndexError:
-                    print("No fit data found in set "+str(sets)+".")
+                    print("No fit data found in set "+str(sets)+".")"""
     
     # Include the origin and such.
     ax1.set_xlim(xmin=0.0, xmax=1100)
+    ax2.set_xlim(xmin=0.0, xmax=1100)
     
-    # Make title.
+    # Apply axis labels, titles, grid, and legend using explicit axes
+    axes = [ax1, ax2]
+    figs = [fig1, fig2]
+
+    for ll in range(expected_number_of_fit_parameters):
+        ax = axes[ll]
+        fig = figs[ll]
+
+        # Grid
+        ax.grid(True)
+
+        # Title colour
+        title_colour = "#000000" if not colourise else get_colourise(-1)
+
+        # Axis labels
+        ax.set_xlabel("Voltage [mV]", fontsize=33)
+        if fitter == 'second_order':
+            if ll == 0:
+                ax.set_ylabel("Parameter α", fontsize=33)
+            else:
+                ax.set_ylabel("Parameter β", fontsize=33)
+        else:
+            print("WARNING: Unable to select appropriate Y-axis labels at this time.")
+            ax.set_ylabel("Parameter value", fontsize=33)
+
+        # Tick sizes
+        ax.tick_params(axis='both', labelsize=26)
+
+        # Titles
+        if fitter != 'none':
+            if savepath == '':
+                if fitter == 'second_order':
+                    title_text = "Fit parameters, 2nd order polynomial"
+                elif fitter == 'third_order':
+                    title_text = "Fit parameters, 3rd order polynomial"
+                elif fitter == 'exponential':
+                    title_text = "Fit parameters, exponential function"
+                elif fitter == 'power':
+                    title_text = "Fit parameters, power-law"
+                else:
+                    title_text = "Fit parameters"
+                ax.set_title(title_text, color=title_colour, fontsize=38)
+            else:
+                ax.set_title("", color=title_colour, fontsize=38)
+        else:
+            raise ValueError(f"Error! Could not understand argument provided to 'fitter': {fitter}")
+
+        # Legend
+        ax.legend(fontsize=26)
+    
+    """# Make title.
     for ll in range(expected_number_of_fit_parameters):
         plt.figure(ll+1) # Set figure ll+1 as active.
         plt.grid()
@@ -2616,8 +2771,8 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             print("WARNING: Unable to select appropriate Y-axis labels at this time.")
             plt.ylabel("Parameter value", fontsize=33)
         
-        plt.xticks(fontsize=20)
-        plt.yticks(fontsize=20)
+        plt.xticks(fontsize=26)
+        plt.yticks(fontsize=26)
         if fitter != 'none':
             if savepath == '':
                 if fitter == 'second_order':
@@ -2634,7 +2789,7 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
             raise ValueError("Error! Could not understand argument provided to 'fitter': "+str(fitter))
         
         # Show legends.
-        plt.legend(fontsize=26)
+        plt.legend(fontsize=26)"""
     
     # Grid colourisation?
     if colourise:
@@ -2657,8 +2812,10 @@ def analyse_multiple_sets_of_fitted_polynomial_factors(
         ax2.tick_params(axis='both', colors=get_colourise(-1))
     
     # Save plots?
-    if savepath != '':
-        plt.tight_layout()
+    """if savepath != '':
+        plt.tight_layout()"""
+    for fig in figs:
+        fig.tight_layout()
         fig1.savefig(insert_counter_before_extension(savepath, 10000), dpi=164, bbox_inches='tight')
         fig2.savefig(insert_counter_before_extension(savepath, 20000), dpi=164, bbox_inches='tight')
     
@@ -2986,17 +3143,18 @@ def plot_trend_active_vs_total_resistance_gain(
         enforce_n:  Set the minimum number of samples taken at some datapoint
                     to quality as fittable.
     '''
-    list_of_slopes          = []
-    list_of_slopes_err      = []
-    list_of_offsets         = []
-    list_of_offsets_err     = []
-    list_of_n_samples       = []
-    list_of_rms_deviations  = []
+    list_of_slopes              = []
+    list_of_slopes_err          = []
+    list_of_offsets             = []
+    list_of_offsets_err         = []
+    list_of_n_samples           = []
+    list_of_rms_deviations      = []
+    list_of_rms_standard_errors = []
     latest_progress = 0.0
     last_progress_printed = -100.0
     
-    # Keep last 5 timing intervals between progress prints
-    progress_timestamps = deque(maxlen=10)
+    # Keep last 10 timing intervals between progress prints
+    progress_timestamps = deque(maxlen=15)
     
     for ii in range(len(take_relaxation_data_at_this_time_interval_s)):
         # Get progress.
@@ -3035,7 +3193,7 @@ def plot_trend_active_vs_total_resistance_gain(
         curr_investigated_time = take_relaxation_data_at_this_time_interval_s[ii]
         
         # Get data!
-        curr_k, curr_m, curr_k_err, curr_m_err, n_samples, rms_deviation = plot_active_vs_total_resistance_gain(
+        curr_k, curr_m, curr_k_err, curr_m_err, n_samples, rms_deviation, rms_se = plot_active_vs_total_resistance_gain(
             title_voltage_V = title_voltage_V,
             title_junction_size_nm = title_junction_size_nm,
             folder_path = folder_path,
@@ -3056,14 +3214,16 @@ def plot_trend_active_vs_total_resistance_gain(
         list_of_offsets_err.append(curr_m_err)
         list_of_n_samples.append(n_samples)
         list_of_rms_deviations.append(rms_deviation)
+        list_of_rms_standard_errors.append(rms_se)
     
     # Conversions into numpy.
-    k       = np.array(list_of_slopes)
-    m       = np.array(list_of_offsets)
-    k_err   = np.array(list_of_slopes_err)
-    m_err   = np.array(list_of_offsets_err)
-    n       = np.array(list_of_n_samples)
-    rms_dev = np.array(list_of_rms_deviations)
+    k        = np.array(list_of_slopes)
+    m        = np.array(list_of_offsets)
+    k_err    = np.array(list_of_slopes_err)
+    m_err    = np.array(list_of_offsets_err)
+    n        = np.array(list_of_n_samples)
+    rms_dev  = np.array(list_of_rms_deviations)
+    rms_serr = np.array(list_of_rms_standard_errors)
     
     ## Plot!
     
@@ -3095,26 +3255,27 @@ def plot_trend_active_vs_total_resistance_gain(
     ax1.set_xlabel('Relaxation time [h]', fontsize=33)
     ax1.set_ylabel('Linear fit slope [-]', fontsize=33)
     #ax1.set_title('Slope and Offset vs Time')
-    ax1.tick_params(axis='both', labelsize=23)
-    ax1.set_ylim(0,1.21)
+    ax1.tick_params(axis='both', labelsize=26)
+    ax1.set_ylim(0,1.31)
     ax1.grid(True)
     ax1.legend(fontsize=26, loc='lower right')
 
     # Bottom plot: offset
     ax2.errorbar(time/3600, m, yerr=m_err, fmt='o', markersize=4, ecolor='gray', capsize=2, label='Offset', color="#1CEE70")
-    ax2.tick_params(axis='both', labelsize=23)
-    ax2.set_ylim(0,8.5)
+    ax2.tick_params(axis='both', labelsize=26)
+    ax2.set_ylim(0,4.1)
     ax2.set_xlabel('Relaxation time [h]', fontsize=33)
     ax2.set_ylabel('Linear fit offset [%]', fontsize=33)
     ax2.grid(True)
     ax2.legend(fontsize=26, loc='lower right')
     
     # Third plot: RMS deviation
-    ax3.plot(time/3600, rms_dev, 'o-', color="#1C70EE", label='RMS deviation')
-    ax3.tick_params(axis='both', labelsize=23)
+    ##ax3.plot(time/3600, rms_dev, 'o-', color="#1C70EE", label='RMS deviation')
+    ax3.errorbar(time/3600, rms_dev, yerr=rms_serr, fmt='o', markersize=4, ecolor='gray', capsize=2, label='RMS deviation', color="#1C70EE")
+    ax3.tick_params(axis='both', labelsize=26)
     ax3.set_xlabel('Relaxation time [h]', fontsize=33)
     ax3.set_ylabel('Deviation from fit [%]', fontsize=33)
-    ax3.set_ylim(0,8.5)
+    ax3.set_ylim(0,4.1)
     ax3.grid(True)
     ax3.legend(fontsize=26, loc='lower right')
     
@@ -3124,6 +3285,41 @@ def plot_trend_active_vs_total_resistance_gain(
     ## axins.set_title("RMS dev.", fontsize=26)
     ## axins.tick_params(axis='both', labelsize=24)
     ## axins.grid(True)
+    
+    '''## Perform ln-fits and add these to plots.
+    # Define decaying logarithm function
+    def log_decay(t, a, b):
+        return a - b * np.log(t)
+    ##def log_decay(t, a, b, c):
+    ##    return a - b * np.log(t + c)
+
+    # After k, m, etc. are computed and converted to numpy arrays:
+    time_hours = time / 3600  # Use hours for plotting
+
+    # Fit slope (k)
+    mask_k = ~np.isnan(k) & (time_hours > 0)
+    if np.sum(mask_k) > 3:  # Need enough points
+        popt_k, _ = curve_fit(log_decay, time_hours[mask_k], k[mask_k],
+                              p0=[np.max(k), 1.0], maxfev=10000)
+        fit_k = log_decay(time_hours, *popt_k)
+        ax1.plot(time_hours, fit_k, '-.', color="black", lw=2,
+                 label=f"Log fit: {popt_k[0]:.2f} {popt_k[1]:+.2f}·ln(t)", zorder=10)
+        print("Optimal k:\n"+str(popt_k)+"\n")
+
+    # Fit offset (m)
+    mask_m = ~np.isnan(m) & (time_hours > 0)
+    if np.sum(mask_m) > 3:
+        popt_m, _ = curve_fit(log_decay, time_hours[mask_m], m[mask_m],
+                              p0=[np.max(m), 1.0, 1.0], maxfev=10000)
+        fit_m = log_decay(time_hours, *popt_m)
+        ax2.plot(time_hours, fit_m, '-.', color="black", lw=2,
+                 label=f"Log fit: {popt_m[0]:.2f} {popt_m[1]:+.2f}·ln(t)", zorder=10)
+        print("Optimal m:\n"+str(popt_m)+"\n")
+    
+    # Update legends to include fits
+    ax1.legend(fontsize=26, loc='lower right')
+    ax2.legend(fontsize=26, loc='lower right')
+    '''
     
     # Go through the list of samples n, and append vertical lines to where this makes sense.
     print("TODO: add verical lines showing n of samples left.")
@@ -3154,6 +3350,7 @@ def plot_active_vs_total_resistance_gain(
     colourise = False,
     savepath = '',
     plot = True,
+    legend_string = 'Manipulated junctions'
     ):
     ''' Given some set of data, plot the active gain on the X axis in percent,
         and the total gain on the Y axis in percent relative to the
@@ -3201,7 +3398,7 @@ def plot_active_vs_total_resistance_gain(
     
     ##  Here are the two datasets for R01 and R02, i.e., the 354x354nm^2  ##
     ##  and 318x318nm^2 junction sizes from the JJTest100W3 wafer.        ##
-    ##  That is, 354 is 'Compact 2', and 318 is 'Compact 1'.
+    ##  That is, 354 is 'High-dose 2', and 318 is 'High-dose 1'.
     #active_gain_percent  = [2.45,  0.71,  10.05,  1.79,  5.02, 0.61, 3.52, 0.77, 1.01,  8.26, 2.39, 4.22, 4.15,  9.02,  7.71, 2.58, 1.77, 16.51, 5.13, 6.07, 11.03, 7.01, 0.28, 8.11, 2.75, 12.53, 13.16, 5.42, 1.60, 1.94, 4.97522988,  6.17057683, 7.01116346] ## THICK354
     #total_gain_percent   = [3.587, 2.180, 11.969, 2.999, 7.30, 2.76, 6.76, 2.17, 3.06, 10.55, 4.61, 5.70, 6.10, 10.85, 11.78, 6.45, 5.91, 19.07, 6.61, 8.23, 13.13, 8.93, 1.77, 9.74, 5.66, 14.68, 15.84, 7.13, 2.75, 3.36, 6.99326582, 10.37398798, 9.57568379] ## THICK354
     #active_gain_percent = [7.0942, 10.0738, 11.8119, 5.0343, 15.0296, 18.0029, 20.0640, 6.0434,  9.0186,  7.6048, 4.040, 10.007, 4.060, 6.020, 21.129, 3.577, 20.741, 3.043, 1.017, 0.78152682, 1.08007167, 2.1641953,  3.4114392 ] ## THICK318
@@ -3335,7 +3532,7 @@ def plot_active_vs_total_resistance_gain(
                 ## Even though this dataset is the original! → Result = Good legend!
                 plt.scatter(active_filtered, total_filtered, color="#D63834")
             else:
-                plt.scatter(sorted_active, sorted_total, color=dot_colour)
+                plt.scatter(sorted_active, sorted_total, color=dot_colour, label=legend_string)
         else:
             if consider_outliers:
                 plt.scatter(sorted_active, sorted_total, color=get_colourise(3), label=str(outlier_threshold_in_std_devs)+"σ outliers")
@@ -3359,11 +3556,11 @@ def plot_active_vs_total_resistance_gain(
             ax.tick_params(axis='both', colors=get_colourise(-1))
         
         # Bump up the size of the ticks' numbers on the axes.
-        ax.tick_params(axis='both', labelsize=23)
+        ax.tick_params(axis='both', labelsize=26)
         
         # Extend axes to include the origin?
         if np.all(sorted_active >= 0):
-            ax.set_xlim(xmin=0, xmax=26.0)
+            ax.set_xlim(xmin=0, xmax=26.35)
         if np.all(sorted_total >= 0):
             ax.set_ylim(ymin=0, ymax=36.0)
         
@@ -3381,8 +3578,19 @@ def plot_active_vs_total_resistance_gain(
             if savepath == '':
                 plt.title(f"Active vs. total manipulation\n±{title_voltage_V:.2f} V, {title_junction_size_nm}x{title_junction_size_nm} nm", color=get_colourise(-1), fontsize=38)
         
-        # Bump up legend.
-        plt.legend(fontsize=26, loc='lower right')
+        ## # Bump up legend.
+        ## plt.legend(fontsize=26, loc='lower right')
+        
+        # Get current legend handles and labels.
+        handles, labels = plt.gca().get_legend_handles_labels()
+
+        # Reorder them so the scatter entry (like 'Low-dose 1') comes first.
+        order = np.argsort([0 if legend_string in l else 1 for l in labels])
+        handles = [handles[i] for i in order]
+        labels = [labels[i] for i in order]
+
+        # Now draw the legend.
+        plt.legend(handles, labels, fontsize=26, loc='lower right')
         
         # Save plots?
         if savepath != '':
@@ -3404,7 +3612,8 @@ def plot_active_vs_total_resistance_gain(
     ## Non-weighted RMS version here.
     residuals = sorted_total - (optimal_k * sorted_active + optimal_m)
     rms_deviation = np.sqrt(np.mean(residuals**2))
-    return optimal_k, optimal_m, err_k, err_m, n_samples, rms_deviation
+    rms_se = rms_deviation / np.sqrt(2 * n_samples)
+    return optimal_k, optimal_m, err_k, err_m, n_samples, rms_deviation, rms_se
     ## Weighted RMS version here.
     ##residuals = sorted_total - (optimal_k * sorted_active + optimal_m)
     ##weighted_rms = np.sqrt(np.sum(n_samples * residuals**2) / np.sum(n_samples))
@@ -3640,7 +3849,7 @@ def plot_quality_factor_vs_manipulation(
     if plot_difference_plot:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.8, 11), sharey=False)
     else:
-        fig, ax1 = plt.subplots(1, figsize=(12.8, 11), sharey=False)
+        fig, ax1 = plt.subplots(1, figsize=(12.6, 11), sharey=False)
     
     symbol_list = ['s', '^', 'o', 'v', 'd', '*', 'x', 'p']
     for ii in range(len(qubits)):
@@ -3666,7 +3875,7 @@ def plot_quality_factor_vs_manipulation(
         ax1.scatter(twice_ch5_x[ii],  twice_ch5_y[ii]/1e6,  s=130+bump_up_size, label=label_to_use_4,  marker=symbol_list[ii], color="#C41CEE")
     
     # Bump up the size of the ticks' numbers on the axes.
-    ax1.tick_params(axis='both', labelsize=23)
+    ax1.tick_params(axis='both', labelsize=26)
     
     # Set up additional plot stuff.
     ## There is one datapoint that underwent negative active maipulation,
@@ -3691,7 +3900,7 @@ def plot_quality_factor_vs_manipulation(
         ax2.scatter(twice_ch5_x,  ch5_difference_quality/1e6, s=120, label="Sample 2: twice manip. - once manip.", marker='s', color="#1CEE70")
         
         ax2.axhline(0, color='gray', linewidth=1.2, linestyle='--')  # Zero-line
-        ax2.tick_params(axis='both', labelsize=23)
+        ax2.tick_params(axis='both', labelsize=26)
         ax2.set_xlim(xmin=-13.0, xmax=13.0)
         ax2.set_xlabel("Active manipulation [%]", fontsize=33)
         ax2.set_ylabel("Δ Qubit quality factor [10⁶]", fontsize=33)
@@ -3947,7 +4156,7 @@ def perform_stepped_manipulation_analysis(
                 y_lim_top_relaxation = np.max(relaxation_y)*1.1
         
         ## Plot 3 logic goes here.
-        # Here, we want to find the deepest trench of the dip,
+        # Here, we want to find the deepest trench of the drop,
         # for each manipulation.
         resistance_trench_depth_percent = []
         resistance_increase_at_start_of_trench_percent = []
@@ -3962,18 +4171,18 @@ def perform_stepped_manipulation_analysis(
             start_idx = annotations['START_MANIPULATION'][i]
             stop_idx  = annotations['STOP_MANIPULATION' ][i]
             
-            # For the dip, we are interested in how much "resistance percent"
-            # had been added at the beginning of the dip.
+            # For the drop, we are interested in how much "resistance percent"
+            # had been added at the beginning of the drop.
             start_res = dumped_resistances[start_idx]
             
             # Grab the lowest point in the resistance interval, and compare
             # it to the starting value.
-            dip_value = dumped_resistances[start_idx:stop_idx].min()
-            dip_value_percent = ((start_res - dip_value) / dumped_resistances[0])*100
+            drop_value = dumped_resistances[start_idx:stop_idx].min()
+            drop_value_percent = ((start_res - drop_value) / dumped_resistances[0])*100
             
             # Store!
             resistance_increase_at_start_of_trench_percent.append( ((start_res / dumped_resistances[0])-1)*100 )
-            resistance_trench_depth_percent.append(dip_value_percent)
+            resistance_trench_depth_percent.append(drop_value_percent)
         
         # Numpy conversion.
         resistance_increase_at_start_of_trench_percent = np.array(resistance_increase_at_start_of_trench_percent)
@@ -4006,10 +4215,12 @@ def perform_stepped_manipulation_analysis(
         ## Figure stuff!
         # Figure out colours and label tags.
         if ('mpw005a' in filepath.lower()):
-            label_tag = '350 nm dense-oxide'
+            #label_tag = '350 nm medium_dose-oxide'
+            label_tag = 'Medium-dose 1'
             colour_list = interpolate_hsv_colours("#C4EE1C", "#EE1C1C", len(relaxation_trace_data_xy))
         elif ('jjanneal01c' in filepath.lower()):
-            label_tag = '200 nm sparse-oxide'
+            #label_tag = '200 nm low_dose-oxide'
+            label_tag = 'Low-dose 1'
             colour_list = interpolate_hsv_colours("#1C70EE", "#1CEE70", len(relaxation_trace_data_xy))
         else:
             label_tag = None
@@ -4028,7 +4239,7 @@ def perform_stepped_manipulation_analysis(
         # Set limits, scales, ticks.
         axs1[0].set_ylim(-0.5, y_lim_top)
         axs1[0].set_xscale('log')
-        axs1[0].tick_params(axis='both', labelsize=23)
+        axs1[0].tick_params(axis='both', labelsize=26)
         
         ## Subplot 2:
         
@@ -4042,7 +4253,7 @@ def perform_stepped_manipulation_analysis(
         # Axis labels.
         axs2[0,kk].set_xlabel("Duration [min]", fontsize=33)
         axs2[0,kk].set_ylabel("Resistance increase [%]", fontsize=33)
-        axs2[0,kk].tick_params(axis='both', labelsize=23)
+        axs2[0,kk].tick_params(axis='both', labelsize=26)
         
         ## Subplot 3:
         
@@ -4056,7 +4267,7 @@ def perform_stepped_manipulation_analysis(
         
         # Grid and stuff!
         axs1[1].grid(True)
-        axs1[1].tick_params(axis='both', labelsize=23)
+        axs1[1].tick_params(axis='both', labelsize=26)
         axs1[1].legend(fontsize=24)
         
         ## Subplot 4: Does the relaxation effect stack?
@@ -4076,7 +4287,7 @@ def perform_stepped_manipulation_analysis(
         axs2[1,kk].set_ylabel("Rate of resistance change [$\Omega / s$, $\Omega^2 / s^2$, $\Omega^3 / s^3$]", fontsize=33)
         axs2[1,kk].legend(fontsize=24)
         axs2[1,kk].grid(True)
-        axs2[1,kk].tick_params(axis='both', labelsize=23)
+        axs2[1,kk].tick_params(axis='both', labelsize=26)
         
         # Set axis limits.
         axs2[1,kk].set_ylim(-15.0, +15.0)
@@ -4138,10 +4349,10 @@ def perform_stepped_manipulation_analysis(
             # Axis labels.
             axs3[0].set_xlabel("Duration [min]", fontsize=33)
             axs3[0].set_ylabel("Resistance increase [%]", fontsize=33)
-            axs3[0].tick_params(axis='both', labelsize=23)
+            axs3[0].tick_params(axis='both', labelsize=26)
             axs3[1].set_xlabel("Time since beginning [h]", fontsize=33)
             axs3[1].set_ylabel("Resistance increase [%]", fontsize=33)
-            axs3[1].tick_params(axis='both', labelsize=23)
+            axs3[1].tick_params(axis='both', labelsize=26)
             
             # Legends!
             axs3[0].legend(fontsize=24)
@@ -4535,8 +4746,8 @@ def compare_aging_vs_junction_sizes(
         ("2023_12_16__12_45_43", 1.0120153550863724)
     ])
     
-    ## Account for the old dense-oxide devices being much older
-    ## than the old sparse-oxide devices.
+    ## Account for the old medium_dose-oxide devices being much older
+    ## than the old low_dose-oxide devices.
     aging_vs_time_100nm_daily_25nA     = shift_data( aging_vs_time_100nm_daily_25nA,     reference_day_thin1,  shift_with_this_many_days = 0)
     aging_vs_time_100nm_weekly_25nA    = shift_data( aging_vs_time_100nm_weekly_25nA,    reference_day_thin1,  shift_with_this_many_days = 0)
     aging_vs_time_100nm_biweekly_25nA  = shift_data( aging_vs_time_100nm_biweekly_25nA,  reference_day_thin1,  shift_with_this_many_days = 0)
@@ -4555,21 +4766,22 @@ def compare_aging_vs_junction_sizes(
     aging_vs_time_600nm_bimonthly_1uA  = shift_data( aging_vs_time_600nm_bimonthly_1uA,  reference_day_thick2, shift_with_this_many_days = 0)#20)
     
     # Create figure.
-    fig = plt.figure(figsize=(31.09, 19.75))
-    gs = fig.add_gridspec(1, 2, width_ratios=[1, 2], wspace=0.25)
-    
-    # Axes: left is subplot 1, right is merged 2+3
-    ax1 = fig.add_subplot(gs[0])
-    ax2_3 = fig.add_subplot(gs[1])
+    ##fig = plt.figure(figsize=(31.09, 19.75))
+    fig = plt.figure(figsize=(30.9, 19.75))
+    gs = fig.add_gridspec(1, 2, width_ratios=[3.21, 1], wspace=0.12)
+
+    # Swap: ax2_3 is left, ax1 is right
+    ax2_3 = fig.add_subplot(gs[0])
+    ax1   = fig.add_subplot(gs[1])
     
     # --- Subplot 1 (junction size vs resistance) ---
-    ax1.scatter(thin_x, thin_y, s=80, color="#1C70EE", label="Aging, sparse-oxide")
-    ax1.scatter(thick_x, thick_y, s=80, color="#EE1C1C", label="Aging, dense-oxide")
-    ax1.set_xlim(0, 700)
+    ax1.scatter(thin_x, thin_y, s=80, color="#1C70EE", label="Aging, Low-dose")
+    ax1.scatter(thick_x, thick_y, s=80, color="#EE1C1C", label="Aging, Medium-dose")
+    ax1.set_xlim(-25, 675)
     ax1.set_ylim(-1, 55)
-    ax1.tick_params(axis='both', labelsize=23)
+    ax1.tick_params(axis='both', labelsize=26)
     ax1.grid(True, which="both", ls="--")
-    ax1.set_xlabel("Junction width [nm]", fontsize=33)
+    ax1.set_xlabel("Electrode width [nm]", fontsize=33)
     ax1.set_ylabel("Resistance increase [%]", fontsize=33)
     ax1.legend(fontsize=26)
     
@@ -4671,23 +4883,23 @@ def compare_aging_vs_junction_sizes(
     labels  = ['daily', 'weekly', 'biweekly', 'bimonthly']
     sizes_thin  = ['25 nA, 100 nm,','25 nA, 100 nm,','25 nA, 100 nm,','25 nA, 100 nm,','1 µA, 500 nm,','1 µA, 500 nm,','1 µA, 500 nm,','1 µA, 500 nm,']
     sizes_thick = ['25 nA, 200 nm,','25 nA, 200 nm,','25 nA, 200 nm,','25 nA, 200 nm,','1 µA, 600 nm,','1 µA, 600 nm,','1 µA, 600 nm,','1 µA, 600 nm,']
-    thin_colors  = thin_colour_large_HSV
-    thick_colors = thick_colour_large_HSV
+    thin_colours  = thin_colour_large_HSV
+    thick_colours = thick_colour_large_HSV
 
-    for i, (data, color) in enumerate(zip(thin_sets, thin_colors)):
+    for i, (data, color) in enumerate(zip(thin_sets, thin_colours)):
         marker = markers[i % 4]
-        ax2_3.scatter(*unpack(data), marker=marker, color=color, s=80, label=f"Sparse {sizes_thin[i]} {labels[i % 4]}")
+        ax2_3.scatter(*unpack(data), marker=marker, color=color, s=80, label=f"Low-dose {sizes_thin[i]} {labels[i % 4]}")
 
-    for i, (data, color) in enumerate(zip(thick_sets, thick_colors)):
+    for i, (data, color) in enumerate(zip(thick_sets, thick_colours)):
         marker = markers[i % 4]
-        ax2_3.scatter(*unpack(data), marker=marker, color=color, s=80, label=f"Dense {sizes_thick[i]} {labels[i % 4]}")
-
+        ax2_3.scatter(*unpack(data), marker=marker, color=color, s=80, label=f"Medium-dose {sizes_thick[i]} {labels[i % 4]}")
+    
     ##ax2_3.set_xscale('log') # Log unnecessary
     ax2_3.set_ylim(-1, 55)
     ax2_3.set_xlim(-0.8, 32.8)
     ax2_3.grid(True, which="both", ls="--")
-    ax2_3.tick_params(axis='both', labelsize=23)
-    ax2_3.set_xlabel("Time since manufacture [days]", fontsize=33)
+    ax2_3.tick_params(axis='both', labelsize=26)
+    ax2_3.set_xlabel("Time since deposition [days]", fontsize=33)
     ax2_3.set_ylabel("Resistance increase [%]", fontsize=33)
     ax2_3.legend(fontsize=26, ncol=2, loc='upper right')
     
@@ -4698,7 +4910,6 @@ def compare_aging_vs_junction_sizes(
     plt.show()
     
 def plot_free_energy_vs_total_current_of_rf_squid():
-    
     # Assume zero externally applied magnetic field.
     
     fig, ax = plt.subplots(figsize=(12, 10))
@@ -4735,55 +4946,55 @@ def plot_free_energy_vs_total_current_of_rf_squid():
     plt.legend(fontsize=20)
     plt.show()
     
-def plot_dip_removed(
+def plot_drop_removed(
     savepath = ''
     ):
-    ''' Illustrate how much dip [s] was removed from the beginning of the active manipulation data traces.
+    ''' Illustrate how much drop [s] was removed from the beginning of the active manipulation data traces.
     '''
     
-    # Data: Dip removed vs. Voltage
+    # Data: Drop removed vs. Voltage
     datasets = [
-        {"voltages": [950, 900, 850, 800, 750], "dip_removed": [0, 0, 0, 0, 0]},
-        {"voltages": [950, 900, 850, 800, 750], "dip_removed": [3.856, 0, 0, 0, 0]},
-        {"voltages": [1000, 950, 925, 900, 850, 800], "dip_removed": [10.307, 7.097, 65.764, 30.316, 218.010, 146.505]},
-        {"voltages": [1000, 950, 925, 900, 850, 800], "dip_removed": [7.063, 65.427, 26.532, 52.200, 133.327, 143.178]},
-        {"voltages": [1050, 1000, 950, 900], "dip_removed": [0, 0, 0, 0]},
+        {"voltages": [950, 900, 850, 800, 750], "drop_removed": [0, 0, 0, 0, 0]},
+        {"voltages": [950, 900, 850, 800, 750], "drop_removed": [3.856, 0, 0, 0, 0]},
+        {"voltages": [1000, 950, 925, 900, 850, 800], "drop_removed": [10.307, 7.097, 65.764, 30.316, 218.010, 146.505]},
+        {"voltages": [1000, 950, 925, 900, 850, 800], "drop_removed": [7.063, 65.427, 26.532, 52.200, 133.327, 143.178]},
+        {"voltages": [1050, 1000, 950, 900], "drop_removed": [0, 0, 0, 0]},
     ]
     colours = ['#C41CEE', '#1C70EE', '#1CEE70', '#C4EE1C', '#EE1C1C']
     #labels = ["Set (a): 200x200 nm, soft", "Set (b): 300x300 nm, soft", "Set (c): 318x318 nm, hard", "Set (d): 354x354 nm, hard", "Set (e): 350x350 nm, medium"]
-    labels = ["Sparse 1", "Sparse 2", "Compact 1", "Compact 2", "Dense 1"]
+    labels = ["Low-dose 1", "Low-dose 2", "High-dose 1", "High-dose 2", "Medium-dose 1"]
 
-    # Data: dip removed vs. max resistance change
+    # Data: drop removed vs. max resistance change
     additional_dataset = [
-        {"max_res_change": [96.22063964205007, 44.99158976805173, 25.279942849287096, 12.360495955953477, 5.968368957966308], "dip_removed": [0, 0, 0, 0, 0]},
-        {"max_res_change": [76.9063451288274, 39.94898308378969, 16.76463788989173, 7.11048591268908, 3.934905378623821], "dip_removed": [3.856360673904419, 0, 0, 0, 0]},
-        {"max_res_change": [7.577167605507995, 2.899798807851095, 2.333199200214886, 2.00698761012863, 0.5836589957764815, 0.4579783734475429], "dip_removed": [10.307, 7.097, 65.764, 30.316, 218.010, 146.505]},
-        {"max_res_change": [7.604564690048288, 2.6164501359842163, 2.2059728006996515, 1.37511, 0.6087130768012594, 0.41831299658590115], "dip_removed": [7.063, 65.427, 26.532, 52.200, 133.327, 143.178]},
-        {"max_res_change": [20.241740738032178, 14.231358388694026, 7.15015084526569, 3.849712062876298], "dip_removed": [0, 0, 0, 0]},
+        {"max_res_change": [96.22063964205007, 44.99158976805173, 25.279942849287096, 12.360495955953477, 5.968368957966308], "drop_removed": [0, 0, 0, 0, 0]},
+        {"max_res_change": [76.9063451288274, 39.94898308378969, 16.76463788989173, 7.11048591268908, 3.934905378623821], "drop_removed": [3.856360673904419, 0, 0, 0, 0]},
+        {"max_res_change": [7.577167605507995, 2.899798807851095, 2.333199200214886, 2.00698761012863, 0.5836589957764815, 0.4579783734475429], "drop_removed": [10.307, 7.097, 65.764, 30.316, 218.010, 146.505]},
+        {"max_res_change": [7.604564690048288, 2.6164501359842163, 2.2059728006996515, 1.37511, 0.6087130768012594, 0.41831299658590115], "drop_removed": [7.063, 65.427, 26.532, 52.200, 133.327, 143.178]},
+        {"max_res_change": [20.241740738032178, 14.231358388694026, 7.15015084526569, 3.849712062876298], "drop_removed": [0, 0, 0, 0]},
     ]
     
     # Create 2-row subplot
     ##fig1, (ax1, ax2) = plt.subplots(nrows=2, figsize=(12.8, 9.81), sharey=False)
     fig1, (ax1, ax2) = plt.subplots(nrows=2, figsize=(12.8, 8.70), sharey=False)
 
-    # === First subplot: Dip removed vs. Voltage ===
+    # === First subplot: Drop removed vs. Voltage ===
     for i, data in enumerate(datasets):
-        ax1.scatter(data["voltages"], data["dip_removed"], s=80, color=colours[i], label=labels[i])
+        ax1.scatter(data["voltages"], data["drop_removed"], s=80, color=colours[i], label=labels[i])
 
     ax1.set_xlabel("Voltage [mV]", fontsize=33)
-    ax1.set_ylabel("Dip removed [s]", fontsize=33, labelpad=36.3)
+    ax1.set_ylabel("Drop removed [s]", fontsize=33, labelpad=36.3)
     ax1.set_xlim(-35, 1085)
     ax1.set_ylim(-10, 250)
     ax1.tick_params(axis='both', labelsize=30)
     ax1.legend(fontsize=26)
     ax1.grid()
 
-    # === Second subplot: Dip removed vs. Max resistance change ===
+    # === Second subplot: Drop removed vs. Max resistance change ===
     for i, data in enumerate(additional_dataset):
-        ax2.scatter(data["max_res_change"], data["dip_removed"], s=80, color=colours[i], label=labels[i])
+        ax2.scatter(data["max_res_change"], data["drop_removed"], s=80, color=colours[i], label=labels[i])
 
     ax2.set_xlabel("Max resistance change in plot [%]", fontsize=33, labelpad=18)
-    ax2.set_ylabel("Dip removed [s]", fontsize=33, labelpad=36.3)
+    ax2.set_ylabel("Drop removed [s]", fontsize=33, labelpad=36.3)
     ax2.set_xlim(-3.125, 103.125)
     ax2.set_ylim(-10, 250)
     ax2.tick_params(axis='both', labelsize=30)
@@ -4853,7 +5064,7 @@ def plot_dielectric_breakdown_data(
     '''
     
     # Set up a colour table given how many junction sizes there were.
-    # Define start and end hex colors
+    # Define start and end hex colours
     start_hex   = "#EE1C1C"
     end_hex     = "#C4EE1C"
     
@@ -4873,7 +5084,7 @@ def plot_dielectric_breakdown_data(
     start_hls = colorsys.rgb_to_hls(*start_rgb)
     end_hls   = colorsys.rgb_to_hls(*end_rgb)
     
-    # Generate 10 evenly spaced HSL-adjusted colors
+    # Generate 10 evenly spaced HSL-adjusted colours
     colours = []
     for i in range(number_of_junction_sizes_probed):
         t = i / (number_of_junction_sizes_probed-1)  # Interpolation factor
@@ -4996,6 +5207,7 @@ def plot_dielectric_breakdown_data(
         resistivities = [item[0] for item in group]
         voltages      = [item[1] for item in group]
         
+        print("No. resistivities found: "+str(len(resistivities)))
         mean_res = np.mean(resistivities)
         std_res  = np.std(resistivities)
 
@@ -5031,7 +5243,7 @@ def plot_dielectric_breakdown_data(
         )
     
     ax2.grid()
-    ax2.tick_params(axis='both', labelsize=23)
+    ax2.tick_params(axis='both', labelsize=26)
     ##ax2.set_xlabel("Mean resistivity-length [nΩ·m²]", fontsize=33)
     ax2.set_xlabel(r'$\overline{\mathrm{R} \!\cdot\! \mathrm{A}}$ [n$\Omega$·m$^2$]', fontsize=33)
     ax2.set_ylabel("Breakdown voltage [mV]", fontsize=33)
@@ -5041,7 +5253,7 @@ def plot_dielectric_breakdown_data(
     
     # Formatting for the regular breakdown voltage plot.
     ax1.grid()
-    ax1.tick_params(axis='both', labelsize=23)
+    ax1.tick_params(axis='both', labelsize=26)
     ax1.set_xlabel("Current [µA]", fontsize=33)
     ax1.set_ylabel("Voltage [mV]", fontsize=33)
     #ax1.set_title("Dielectric breakdown data")
@@ -5055,7 +5267,8 @@ def plot_dielectric_breakdown_data(
     plt.show()
 
 def plot_ln2_data(
-    file_path,
+    file_path_ln2,
+    file_path_G0T0,
     experimentally_found_G0 = (0.8824 + 0.8799 + 0.8751)/3, ## This number was found through Maurizio Toselli's 2024 experiments.
     experimentally_found_T0 = (783.1 + 792.9 + 762.4)/3,    ## This number was found through Maurizio Toselli's 2024 experiments.
     normalise_resistances = 0,
@@ -5080,11 +5293,11 @@ def plot_ln2_data(
     temperatures = []  # in K
 
     # Read and split into blocks by blank lines (works with CRLF too)
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path_ln2, 'r', encoding='utf-8') as f:
         content = f.read()
-
+    
     blocks = [b.strip() for b in re.split(r'\r?\n\s*\r?\n', content) if b.strip()]
-
+    
     for blk in blocks:
         lines = [ln.strip() for ln in blk.splitlines() if ln.strip()]
         I_vals = None
@@ -5158,7 +5371,7 @@ def plot_ln2_data(
     errors = np.array(errors, dtype=float)
     times_min = np.array(times_min, dtype=float)
     temperatures = np.array(temperatures, dtype=float)
-
+    
     # Store the initial resistance (before any normalization)
     res_initial = resistances[0] if resistances.size > 0 else np.nan
     
@@ -5170,21 +5383,33 @@ def plot_ln2_data(
     ## Simmon's model, and through the average of three fits (or more)
     ## one knows the temperature translation for that junction.
     ## Specifically, G_0 and T_0 for the equation.
-    def simmons_model( T, T_0, G_0 ):
+    """def simmons_model_OLD( T, T_0, G_0 ):
         ''' Convert the observed resistance for some temperature,
             into a room-temperature equivalent resistance.
             
             G(T) = G₀ · (1 + ( T / T₀ )^2)
+            ... where G(T) is the normalised conductance. That is, some number
+            between 1.0 and 0.0.
         '''
-        return G_0 * ( 1 + (T/T_0)**2 )
+        return G_0 * ( 1 + (T/T_0)**2 )"""
+    ## Update: Use the same def as MT himself used:
+    ## equivalent_resistances2 = equivalent_R_roomT(R = np.array(resistances2), T = np.array(temperatures2), T_0 = 779.45)
+    def simmons_model(T, T_0, R, room_temp = 297):
+        ''' MT used 294 as room-temp, CK uses 297 b/c that's the data for R(0).
+        '''
+        G = 1/R
+        return 1 / (G * ( 1 + (room_temp/T_0)**2 )/( 1 + (T/T_0)**2 ))
     
+    ## # Get the normalised conductance, and convert to normalised resistances.
+    ## normalised_G_temp = simmons_model_OLD(temperatures, experimentally_found_T0, experimentally_found_G0)
+    ## normalised_R_temp = 1/normalised_G_temp
+    ## resistances_T_adjusted_OLD = resistances / normalised_R_temp
+    resistances_T_adjusted = simmons_model( temperatures, experimentally_found_T0, resistances )
     
-    
-    
-
     # Normalise if requested (divide resistances and errors by res_initial)
     if normalise_resistances == 1 and not np.isnan(res_initial) and res_initial != 0:
         resistances = ((resistances / res_initial) - 1) * 100
+        resistances_T_adjusted = ((resistances_T_adjusted / resistances_T_adjusted[0]) - 1) * 100
         errors = (errors / res_initial) * 100
         ylabel_res = "Resistance increase [%]"
     elif normalise_resistances == 0:
@@ -5192,13 +5417,113 @@ def plot_ln2_data(
     else:
         raise ValueError("Unknown argument given for normalise_resistances: "+str(normalise_resistances))
     
+    ####################################################################
+    # Process data relating to the three cooldowns needed to establish #
+    #  the normalised conductance and the characteristic temperature   #
+    ####################################################################
+    
+    def get_output_file_name(input_file_name, plot_name):
+        base_name, extension = input_file_name.rsplit('.', 1)
+        output_file_name = f"{base_name}_{plot_name}"
+        return output_file_name
+    
+    # Define the linear model for conductance in terms of temperature squared
+    def linear_model(T_squared, m, c):
+        return m * T_squared + c
 
+    # List of input file names to process
+    input_file_names = [
+        "07-11-2024_13-04_LiquidNExperimentNoManipulationTest.csv",
+        "07-11-2024_15-32_LiquidNExperimentNoManipulationTest.csv",
+        "08-11-2024_17-55_LiquidNExperimentNoManipulation.csv"
+    ]
+
+    # Prepare the plot?
+    if plot:
+        # Weird and somewhat pre-emptive place to make the plot, but oh well.
+        fig, (ax1, ax3) = plt.subplots(1, 2, figsize=(25, 10), sharex=False)
+    plot_handles = []
+    colours = ["#EE1C1C", "#C4EE1C", "#1C70EE"]
+
+    # Lists to store fit parameters for legend display
+    fit_results = []  # Will store tuples of (G_0, T_0)
+
+    for i, input_file_name in enumerate(input_file_names):
+        output_file_name = get_output_file_name(input_file_name, "GvsT_all")
+
+        # Arrays to hold data from each file
+        times = []
+        measurements = []
+        resistances_G0T0 = []
+        temperatures_G0T0 = []
+
+        # Open and read the CSV file
+        with open(os.path.join(file_path_G0T0, "LogFiles", input_file_name), mode='r') as file:
+            reader = csv.reader(file, delimiter=';')
+
+            for row in reader:
+                if row and row[0] == "R [kOhm]":
+                    resistances_G0T0.append(float(row[1]))
+                elif row and "measurement" in row[0]:
+                    measurements.append(int(row[1]))
+                elif row and row[0] == "Time [s]":
+                    times.append(float(row[1]))
+                elif row and row[0] == "Temperature [K]":
+                    temperatures_G0T0.append(float(row[1]))
+
+        # Convert lists to numpy arrays
+        resistances_G0T0 = np.array(resistances_G0T0)
+        measurements = np.array(measurements)
+        times = np.array(times)
+        temperatures_G0T0 = np.array(temperatures_G0T0)
+
+        # Normalize resistance based on file name
+        if input_file_name == "08-11-2024_17-55_LiquidNExperimentNoManipulation.csv":
+            normalised_resistance = resistances_G0T0 / resistances_G0T0[-1]
+        else:
+            normalised_resistance = resistances_G0T0 / resistances_G0T0[0]
+
+        # Filter data
+        normalised_resistance_filtered = []
+        temperatures_filtered = []
+        
+        for j in measurements:
+            if (normalised_resistance[j] >= 1 - 0.5 / 100) and (normalised_resistance[j] <= 1 + 12.5 / 100):
+                normalised_resistance_filtered.append(normalised_resistance[j])
+                temperatures_filtered.append(temperatures_G0T0[j])
+
+        # Convert filtered lists to numpy arrays
+        temperatures_filtered = np.array(temperatures_filtered)
+        normalised_resistance_filtered = np.array(normalised_resistance_filtered)
+
+        # Fit data using Simmon's model
+        initial_guess = [0.9 / (790 ** 2), 0.9]
+        popt, pcov = curve_fit(linear_model, temperatures_filtered**2, 1 / normalised_resistance_filtered, p0=initial_guess)
+        m_fit, c_fit = popt
+
+        # Calculate the fit parameters
+        T_0 = np.sqrt(c_fit / m_fit)
+        G_0 = c_fit
+        fit_results.append((G_0, T_0))  # Append to results for legend
+
+        # Generate the fitted conductance curve
+        temperatures_fit = np.linspace(min(temperatures_filtered), max(temperatures_filtered), 500)
+        conductance_fit = linear_model(temperatures_fit**2, *popt)
+
+        # Plot data points and fit line
+        if plot:
+            handle_data = ax3.scatter((temperatures_filtered**2)/1e4, 1 / normalised_resistance_filtered, color=colours[i % len(colours)], marker='o', s=13, label=f'Data ({input_file_name})')
+            handle_fit, = ax3.plot((temperatures_fit**2)/1e4, conductance_fit, linewidth=2, color=colours[i % len(colours)], linestyle='--')
+        
+        plot_handles.append(handle_fit)
+    
     # Plotting
     if plot:
-        fig, ax1 = plt.subplots(figsize=(12.5, 10))
+        ##fig, ax1 = plt.subplots(figsize=(12.5, 10))
+        ##fig, (ax1, ax3) = plt.subplots(1, 2, figsize=(25, 10), sharex=False)  # Declared earlier!
 
         # Temperature on left y-axis (red)
-        ax1.plot(times_min, temperatures, '-', linewidth=2, color="#1CEE70", label="Temperature [K]")
+        ax1.plot(times_min, temperatures, '-', linewidth=2, color="#1CEE70", label="Temperature")
         ax1.set_xlabel("Time [min]", fontsize=33)
         ax1.set_ylabel("Temperature [K]", fontsize=33)##, color="#EE1C1C")
         ax1.set_ylim(bottom=-14.77625)
@@ -5206,27 +5531,48 @@ def plot_ln2_data(
 
         # Resistance on right y-axis (blue)
         ax2 = ax1.twinx()
+        ## Note that explicitly defining z-order here is mandatory for some reason.
         ax2.errorbar(times_min, resistances, yerr=errors,
-                     fmt='o-', markersize=6, ecolor="#EE1C1C", color="#EE1C1C",
-                     capsize=3, label=ylabel_res)
+                     fmt='o', markersize=6, ecolor="#EE1C1C", color="#EE1C1C",
+                     capsize=3, label="Measured resistance increase", zorder=1)
+        ax2.scatter(times_min, resistances_T_adjusted, s=13, color="#1C70EE", label="Temperature-corrected res. increase", zorder=2)
         ax2.set_ylabel(ylabel_res, fontsize=33)##, color="#1C70EE")
         ##ax2.tick_params(axis='y', labelcolor="#1C70EE")
         
         # Bump up ticks. Add grid.
-        ax1.tick_params(axis='both', labelsize=23)
-        ax2.tick_params(axis='both', labelsize=23)
+        ax1.tick_params(axis='both', labelsize=26)
+        ax2.tick_params(axis='both', labelsize=26)
         
         # Combined legend.
         lines1, labels1 = ax1.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         
         # Grid and legend.
-        plt.grid()
+        ax2.grid()
         ## Important: setting ax1.legend here,
         ## will make the grid very visible through the legend box.
         ## But using ax2.legend solves this problem, for now.
         ax2.legend(lines1 + lines2, labels1 + labels2, loc='lower right', fontsize=26)##, frameon=True, facecolor='white', framealpha=0.8)
         
+        ###############
+        # Second plot #
+        ###############
+        
+        # Legend setup for the second plot.
+        ax3.legend(
+            plot_handles,
+            [f"$G_0 = {G_0:.4f}$, $T_0 = {T_0:.1f}$" for G_0, T_0 in fit_results],
+            fontsize=26,
+            loc='best',
+            title="Fit to Simmon's model:\n"+r"$G(T) = G_0 \left(1 + \left(\frac{T}{T_0}\right)^2\right)$",
+            title_fontsize=28,
+        )
+        
+        ax3.tick_params(axis='both', labelsize=26)
+        ax3.set_xlabel("Temperature² [1000 K²]", fontsize=33)
+        ax3.set_ylabel("Normalized conductance", fontsize=33)
+        
+        ax3.grid()
         plt.tight_layout()
         if not (savepath == ''):
             fig.savefig(savepath, dpi=164, bbox_inches='tight')
@@ -5234,5 +5580,225 @@ def plot_ln2_data(
         plt.show()
 
     # Return (time[min], resistance[kΩ or normalised], error[same units], temperature[K], res_initial[kΩ])
-    return times_min, resistances, errors, temperatures, res_initial
+    return times_min, resistances, errors, temperatures, res_initial, resistances_G0T0, temperatures_G0T0
+
+def map_pearson_coefficient_in_active_manipulation(
+    alpha_list_ohm_per_second,
+    beta_list_ohm_per_second_squared,
+    name_of_sample = 'Hatmatilka',
+    ):
+    ''' Given a list of fitted parameters of electrical active resistance
+        manipulation, where the numbers have been fitted to
+        R(t) = α · t + β · t²
+        
+        ... then calculate the correlation thingies between α and β.
+    '''
     
+    print("Debug mode engaged: will overwrite alpha-list and beta-list with numbers hard-coded in the program.") # TODO
+    
+    # Voltages
+    millivolt_low_dose = [750, 800, 850, 900, 950] # mV
+    millivolt_medium_dose = [900, 950, 1000, 1050] # mV
+    millivolt_high_dose = [850, 900, 925, 950, 1000] # mV
+
+    # Low-dose devices
+    alpha_low_dose1     = [2.93, 6.42, 12.1, 22.6, 50.3]
+    err_alpha_low_dose1 = [0.15, 0.18, 0.6, 0.5, 0.4]
+    beta_low_dose1      = [-2.6, -5.7, -8.23, -16.5, -33.0]
+    err_beta_low_dose1  = [0.5, 0.8, 0.25, 2.1, 1.5]
+    
+    alpha_low_dose2     = [0.80, 1.56, 3.920, 8.48, 17.96]
+    err_alpha_low_dose2 = [0.05, 0.04, 0.017, 0.21, 0.12]
+    beta_low_dose2      = [-0.328, -1.00, -2.46, -4.66, -7.9]
+    err_beta_low_dose2  = [0.023, 0.17, 0.08, 0.08, 0.5]
+
+    # Medium-dose devices
+    alpha_medium_dose1     = [1.99, 3.46, 6.762, 10.449]
+    err_alpha_medium_dose1 = [0.05, 0.03, 0.023, 0.021]
+    beta_medium_dose1      = [-2.00, -3.09, -4.71, -4.87]
+    err_beta_medium_dose1  = [0.27, 0.12, 0.10, 0.09]
+
+    # High-dose devices
+    alpha_high_dose1     = [0.159, 0.543, 0.602, 0.78, 2.28]
+    err_alpha_high_dose1 = [0.0026, 0.019, 0.017, 0.015, 0.23, 0.16]
+    beta_high_dose1      = [0.259, -0.076, 0.153, -0.162, -0.95]
+    err_beta_high_dose1  = [0.011, 0.008, 0.008, 0.006, 0.014, 0.06]
+    
+    alpha_high_dose2     = [0.073, 0.255, 0.446, 0.632, 1.70]
+    err_alpha_high_dose2 = [0.015, 0.013, 0.011, 0.005, 0.010, 0.10]
+    beta_high_dose2      = [0.185, -0.035, 0.0266, -0.173, -0.217]
+    err_beta_high_dose2  = [0.007, 0.006, 0.004, 0.0013, 0.005, 0.005]
+    
+    low_dose_avg1 = []
+    low_dose_avg2 = []
+    medium_dose_avg1 = []
+    high_dose_avg1 = []
+    high_dose_avg2 = []
+    for ii in range(len(millivolt_low_dose)):
+        low_dose_avg1.append(alpha_low_dose1[ii]/beta_low_dose1[ii])
+        low_dose_avg2.append(alpha_low_dose2[ii]/beta_low_dose2[ii])
+    for ii in range(len(millivolt_medium_dose)):
+        medium_dose_avg1.append(alpha_medium_dose1[ii]/beta_medium_dose1[ii])
+    for ii in range(len(millivolt_high_dose)):
+        high_dose_avg1.append(alpha_high_dose1[ii]/beta_high_dose1[ii])
+        high_dose_avg2.append(alpha_high_dose2[ii]/beta_high_dose2[ii])
+    
+    print("Low-dose 1: "+str(low_dose_avg1))
+    print(np.mean(low_dose_avg1))
+    print("Low-dose 2: "+str(low_dose_avg2))
+    print(np.mean(low_dose_avg2))
+    print("Medium-dose 1: "+str(medium_dose_avg1))
+    print(np.mean(medium_dose_avg1))
+    print("High-dose 1: "+str(high_dose_avg1))
+    print(np.mean(high_dose_avg1))
+    print("High-dose 2: "+str(high_dose_avg2))
+    print(np.mean(high_dose_avg2))
+    
+    # Plot!
+    
+    fig, axs = plt.subplots(1, 3, figsize=(18, 5), sharey=True)
+
+    # Subplot (a) Low-dose
+    axs[0].plot(millivolt_low_dose, alpha_low_dose1, 'o-', label='Low-dose 1 α', color="#C4EE1C")
+    axs[0].plot(millivolt_low_dose, beta_low_dose1, 's--', label='Low-dose 1 β', color="#C4EE1C")
+    axs[0].plot(millivolt_low_dose, alpha_low_dose2, 'o-', label='Low-dose 2 α', color="#1C70EE")
+    axs[0].plot(millivolt_low_dose, beta_low_dose2, 's--', label='Low-dose 2 β', color="#1C70EE")
+    #axs[0].set_title('(a) Low-dose devices')
+    axs[0].set_xlabel('Voltage [mV]', fontsize=33)
+    axs[0].set_ylabel('α [Ω/s]\nβ [mΩ/s²]', fontsize=33)
+    axs[0].tick_params(axis='both', labelsize=24)
+    axs[0].set_xlim(625,1075)
+    axs[0].legend(fontsize=26, loc='upper left')
+
+    # Subplot (b) Medium-dose
+    axs[1].plot(millivolt_medium_dose, alpha_medium_dose1, 'o-', label='Medium-dose 1 α', color="#EE1C1C")
+    axs[1].plot(millivolt_medium_dose, beta_medium_dose1, 's--', label='Medium-dose 1 β', color="#EE1C1C")
+    #axs[1].set_title('(b) Medium-dose device')
+    axs[1].set_xlabel('Voltage [mV]', fontsize=33)
+    axs[1].tick_params(axis='both', labelsize=24)
+    axs[1].set_xlim(625,1075)
+    axs[1].legend(fontsize=26, loc='upper left')
+
+    # Subplot (c) High-dose
+    axs[2].plot(millivolt_high_dose, alpha_high_dose1, 'o-', label='High-dose 1 α', color="#1CEE70")
+    axs[2].plot(millivolt_high_dose, beta_high_dose1, 's--', label='High-dose 1 β', color="#1CEE70")
+    axs[2].plot(millivolt_high_dose, alpha_high_dose2, 'o-', label='High-dose 2 α', color="#C41CEE")
+    axs[2].plot(millivolt_high_dose, beta_high_dose2, 's--', label='High-dose 2 β', color="#C41CEE")
+    #axs[2].set_title('(c) High-dose devices', fontsize=33)
+    axs[2].set_xlabel('Voltage [mV]', fontsize=33)
+    axs[2].tick_params(axis='both', labelsize=24)
+    axs[2].set_xlim(625,1075)
+    axs[2].legend(fontsize=26, loc='upper left')
+
+    plt.tight_layout()
+    plt.show()
+    
+    from scipy.stats import pearsonr
+
+    # Function to calculate Pearson coefficient and print it
+    def print_pearson(alpha, beta, label):
+        corr, _ = pearsonr(alpha, beta)
+        print(f'Pearson coefficient for {label}: {corr:.3f}')
+
+    # Calculate Pearson coefficients for each trace
+    print_pearson(alpha_low_dose1, beta_low_dose1, 'Low-dose 1')
+    print_pearson(alpha_low_dose2, beta_low_dose2, 'Low-dose 2')
+    print_pearson(alpha_medium_dose1, beta_medium_dose1, 'Medium-dose 1')
+    print_pearson(alpha_high_dose1, beta_high_dose1, 'High-dose 1')
+    print_pearson(alpha_high_dose2, beta_high_dose2, 'High-dose 2')
+
+    # Create subplots
+    ## TODO do better figure management.
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+    # Set common xlim and ylim
+    xlim = (-5, max(alpha_low_dose1 + alpha_low_dose2 + alpha_medium_dose1 + alpha_high_dose1 + alpha_high_dose2))
+    ylim = (min(beta_low_dose1 + beta_low_dose2 + beta_medium_dose1 + beta_high_dose1 + beta_high_dose2), +2)
+    #        max(beta_low_dose1 + beta_low_dose2 + beta_medium_dose1 + beta_high_dose1 + beta_high_dose2)*1.05)
+
+    # Low-dose plot
+    axs[0].plot(alpha_low_dose1, beta_low_dose1, label="Low-dose 1", color="#C4EE1C", marker='o', linestyle='-')
+    axs[0].plot(alpha_low_dose2, beta_low_dose2, label="Low-dose 2", color="#1C70EE", marker='o', linestyle='-')
+    #axs[0].set_title('Low-dose devices')
+    axs[0].set_xlabel(r'$\alpha~[\Omega/$s$]$', fontsize=33)
+    axs[0].set_ylabel(r'$\beta~[$m$\Omega/$s${}^2]$', fontsize=33)
+    axs[0].legend(fontsize=26)
+    axs[0].tick_params(axis='both', labelsize=24)
+    axs[0].set_xlim(xlim)
+    axs[0].set_ylim(ylim)
+
+    # Medium-dose plot
+    axs[1].plot(alpha_medium_dose1, beta_medium_dose1, label="Medium-dose 1", color="#EE1C1C", marker='o', linestyle='-')
+    #axs[1].set_title('Medium-dose device')
+    axs[1].set_xlabel(r'$\alpha~[\Omega/$s$]$', fontsize=33)
+    axs[1].set_ylabel(r'$\beta~[$m$\Omega/$s${}^2]$', fontsize=33)
+    axs[1].legend(fontsize=26)
+    axs[1].tick_params(axis='both', labelsize=24)
+    axs[1].set_xlim(xlim)
+    axs[1].set_ylim(ylim)
+
+    # High-dose plot
+    axs[2].plot(alpha_high_dose1, beta_high_dose1, label="High-dose 1", color="#1CEE70", marker='o', linestyle='-')
+    axs[2].plot(alpha_high_dose2, beta_high_dose2, label="High-dose 2", color="#C41CEE", marker='o', linestyle='-')
+    #axs[2].set_title('High-dose devices')
+    axs[2].set_xlabel(r'$\alpha~[\Omega/$s$]$', fontsize=33)
+    axs[2].set_ylabel(r'$\beta~[$m$\Omega/$s${}^2]$', fontsize=33)
+    axs[2].legend(fontsize=26)
+    axs[2].tick_params(axis='both', labelsize=24)
+    axs[2].set_xlim(xlim)
+    axs[2].set_ylim(ylim)
+
+    # Layout adjustment
+    plt.tight_layout()
+    plt.show()
+
+def validate_second_or_third_order_polynomial():
+    ''' Using the residuals acquired from fitting to the second-order and
+        third order polynomial, analyse the RMSE acquired from both.
+        Then from the mean RMSE, establish whether the third- or second-order
+        polynomial is a better model.
+    '''
+    
+    # 2nd-order RMSE arrays
+    second_low1    = np.array([0.5435788903698674, 0.6906367827838787, 0.2185641226827453, 0.17975408607550908, 0.12140715728057479])
+    second_low2    = np.array([0.4224931398561787, 0.30712404088350104, 0.13903095908245294, 0.14882897990160818, 0.07893635029247786])
+    second_medium1 = np.array([0.12899911478059992, 0.12258723519038636, 0.09198758248640586, 0.07847907489438669])
+    second_high1   = np.array([0.12778871133630634, 0.10140555798298326, 0.08435368707868546, 0.07796627066582179, 0.07015128242597864, 0.07219376498554592])
+    second_high2   = np.array([0.0951672366929808, 0.08649234324301436, 0.08321069498057651, 0.08814376551090108, 0.0666364360271154, 0.06630354158804268])
+
+    # 3rd-order RMSE arrays
+    third_low1    = np.array([0.4547883673216632, 0.6863639714426755, 0.21406553111595414, 0.16173417758696748, 0.09736348642654973])
+    third_low2    = np.array([0.2810290259145776, 0.2557708548823828, 0.11887676308001224, 0.11179757730163585, 0.07243916472565719])
+    third_medium1 = np.array([0.12088184996419875, 0.07838672681005657, 0.08847923797622029, 0.07828562352238277])
+    third_high1   = np.array([0.1277764895384079, 0.09665049404423984, 0.07987339812104315, 0.07458773074291568, 0.06409819967559804, 0.06896571282839141])
+    third_high2   = np.array([0.09505739700259591, 0.08244318673688883, 0.08294473249795886, 0.08754839837621933, 0.06334988410018574, 0.06282052010268772])
+
+    # Group all device-wise means together
+    second_means = np.array([
+        np.mean(second_low1),
+        np.mean(second_low2),
+        np.mean(second_medium1),
+        np.mean(second_high1),
+        np.mean(second_high2)
+    ])
+
+    third_means = np.array([
+        np.mean(third_low1),
+        np.mean(third_low2),
+        np.mean(third_medium1),
+        np.mean(third_high1),
+        np.mean(third_high2)
+    ])
+    
+    # Compare models
+    diff = second_means - third_means
+    relative_improvement = diff / second_means * 100 # Units of '% improvement'
+
+    # Paired t-test
+    t_stat, p_value = ttest_rel(second_means, third_means)
+
+    print("Mean RMSE (2nd order):", np.mean(second_means))
+    print("Mean RMSE (3rd order):", np.mean(third_means))
+    print("Average improvement [% improvement]:", np.mean(relative_improvement))
+    print("Per-device improvement [% improvement]:", relative_improvement)
+    print("Paired t-test: t =", t_stat, ", p =", p_value)
