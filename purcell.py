@@ -76,7 +76,7 @@ def plot_qubit_quality_vs_t1_tp(
         return omega_q * T1
     
     # Create figure for plotting.
-    fig, ax1 = plt.subplots(1, figsize=(12.8, 11.083), sharey=False)
+    fig, ax1 = plt.subplots(1, figsize=(12.6, 11.083), sharey=False)
     
     # For plotting purposes, keep track of the highest Y value in the plot.
     highest_ylim = 0.0
@@ -199,7 +199,7 @@ def plot_qubit_quality_vs_t1_tp(
         ax1.set_xlabel("Qubit quality factor [$10^6$]", fontsize=33)
         ax1.set_ylim(-0.05, 1.05)
         ax1.set_xlim(-highest_ylim * 0.05, highest_ylim * 1.05)
-    ax1.tick_params(axis='both', labelsize=23)
+    ax1.tick_params(axis='both', labelsize=26)
     
     # Tight layout.    
     plt.tight_layout()
