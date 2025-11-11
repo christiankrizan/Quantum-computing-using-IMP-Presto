@@ -31,7 +31,8 @@ def fit_triple_decoherence_data_run(
     discard = [],
     no_entries = None,
     i_renamed_the_delay_arr_to = '',
-    overwrite_q_label = ''
+    overwrite_q_label = '',
+    skip_T2_asterisk = False,
     ):
     ''' Takes a Labber-formatted log file (.hdf5),
         or a list of files taken using the .h5 format from Indecorum,
@@ -226,17 +227,31 @@ def fit_triple_decoherence_data_run(
     measurement_time = []
     
     # For all entries:
-    if select_T1_T2_T2e == 'T1':
-        entry_offset = 0
-    elif select_T1_T2_T2e == 'T2':
-        entry_offset = 1
-    elif select_T1_T2_T2e == 'T2e':
-        entry_offset = 2
+    if skip_T2_asterisk:
+        # In this mode, we assume measurements alternate: T1 → T2e → T1 → T2e ...
+        if select_T1_T2_T2e == 'T1':
+            entry_offset = 0
+        elif select_T1_T2_T2e == 'T2e':
+            entry_offset = 1
+        elif select_T1_T2_T2e == 'T2':
+            raise AttributeError("Error! 'skip_T2_asterisk=True' means there are no T₂* measurements in this dataset.")
+        else:
+            raise AttributeError("Error! Illegal value for 'select_T1_T2_T2e'. Must be 'T1' or 'T2e' when skip_T2_asterisk=True.")
+        step_size = 2
     else:
-        raise AttributeError("Error! Somehow, the argument 'select_T1_T2_T2e' became illegal. Good job. The argument was: "+str(select_T1_T2_T2e))
+        # Normal case: T1 → T2* → T2e → T1 ...
+        if select_T1_T2_T2e == 'T1':
+            entry_offset = 0
+        elif select_T1_T2_T2e == 'T2':
+            entry_offset = 1
+        elif select_T1_T2_T2e == 'T2e':
+            entry_offset = 2
+        else:
+            raise AttributeError("Error! Illegal value for 'select_T1_T2_T2e'. Must be 'T1', 'T2', or 'T2e'.")
+        step_size = 3
     
-    # For all traces stored in the input file, stepped in steps of 3:
-    for i in range(0 + entry_offset, no_entries, 3):
+    # Iterate through traces according to pattern
+    for i in range(0 + entry_offset, no_entries, step_size):
         
         # Put 'NaN' into the T_dec_full entry for this fit, until
         # further notice. Note that T_dec_full will be len(file) / 3 long!
@@ -427,7 +442,7 @@ def fit_triple_decoherence_data_run(
     
     # Get figure name.
     if not isinstance(filepath, list):
-        plt.savefig(filepath.replace('.hdf5','')+'_'+q_label+'_'+select_T1_T2_T2e+'_time' + ".png", bbox_inches = 'tight', transparent = set_transparent)
+        plt.savefig(os.path.abspath(filepath.replace('.hdf5','')+'_'+q_label+'_'+select_T1_T2_T2e+'_time' + ".png"), bbox_inches = 'tight', transparent = set_transparent)
     else:
         # Extract an appropriate file date.
         match = re.search(r'(\d{2}-[A-Za-z]{3}-\d{4}_\(\d{2}_\d{2}_\d{2}\))', filepath[-1])
