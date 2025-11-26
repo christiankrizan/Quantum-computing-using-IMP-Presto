@@ -91,7 +91,8 @@ def ramsey01_ro0(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator.
@@ -139,7 +140,7 @@ def ramsey01_ro0(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -555,7 +556,8 @@ def ramsey01_ro0_virtual_z(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator.
@@ -600,7 +602,7 @@ def ramsey01_ro0_virtual_z(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1007,7 +1009,8 @@ def ramsey01_multiplexed_ro_DEPRECATED(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Ramsey spectroscopy on two qubits connected by a
         DC-tunable SQUID coupler. Readout is multiplexed on both qubits.
@@ -1042,7 +1045,7 @@ def ramsey01_multiplexed_ro_DEPRECATED(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1543,7 +1546,8 @@ def ramsey12_ro1(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Ramsey_12 spectroscopy on a given qubit with a connected
         resonator. Readout occurs in the excited state.
@@ -1591,7 +1595,7 @@ def ramsey12_ro1(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -2039,7 +2043,8 @@ def ramsey01_echo_ro0(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator, using a single refocusing pulse ("echo").
@@ -2085,7 +2090,7 @@ def ramsey01_echo_ro0(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         

@@ -108,7 +108,8 @@ def iswap_sweep_duration_and_detuning(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler, by fixing the gate amplitude and gate bias.
@@ -155,7 +156,7 @@ def iswap_sweep_duration_and_detuning(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -713,7 +714,8 @@ def iswap_sweep_duration_and_detuning_state_probability(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler, by fixing the gate amplitude and gate bias.
@@ -762,7 +764,7 @@ def iswap_sweep_duration_and_detuning_state_probability(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1330,7 +1332,8 @@ def iswap_sweep_duration_and_detuning_state_probability_DEPRECATED(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler, by fixing the gate amplitude and gate bias.
@@ -1368,7 +1371,7 @@ def iswap_sweep_duration_and_detuning_state_probability_DEPRECATED(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1955,7 +1958,8 @@ def iswap_sweep_duration_and_detuning_with_phases(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler, by fixing the gate amplitude and gate bias.
@@ -2021,7 +2025,7 @@ def iswap_sweep_duration_and_detuning_with_phases(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -2599,7 +2603,8 @@ def iswap_sweep_duration_and_amplitude(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune an iSWAP-interaction between two qubits, where it is known at
         what gate frequency the iSWAP interaction takes place (and at
@@ -2646,7 +2651,7 @@ def iswap_sweep_duration_and_amplitude(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -3194,7 +3199,8 @@ def iswap_sweep_amplitude_and_detuning(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune an iSWAP-interaction between two qubits using
         a tuneable coupler.
@@ -3245,7 +3251,7 @@ def iswap_sweep_amplitude_and_detuning(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -3786,7 +3792,8 @@ def iswap_tune_local_accumulated_phase(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune the phases of the individual qubits partaking in an iSWAP gate.
         Based on the methods from:
@@ -3867,7 +3874,7 @@ def iswap_tune_local_accumulated_phase(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -4507,7 +4514,8 @@ def iswap_tune_coupler_drive_phase(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune the phase of the iSWAP coupler drive ("AC flux driveline")
         that applies an iSWAP gate between two pairwise-coupled qubits.
@@ -4599,7 +4607,7 @@ def iswap_tune_coupler_drive_phase(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -5187,7 +5195,8 @@ def iswap_conditional_cross_ramsey(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a cross-Ramsey experiment between two qubits,
         using an iSWAP gate to transfer population between qubit A and B.
@@ -5263,7 +5272,7 @@ def iswap_conditional_cross_ramsey(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -5874,7 +5883,8 @@ def iswap_conditional_cross_ramsey_state_probability(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a cross-Ramsey experiment between two qubits,
         using an iSWAP gate to transfer population between qubit A and B.
@@ -5952,7 +5962,7 @@ def iswap_conditional_cross_ramsey_state_probability(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -6572,7 +6582,8 @@ def iswap_conditional_cross_ramsey_EXPERIMENTAL12(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a cross-Ramsey experiment between two qubits,
         using an iSWAP gate to transfer population between qubit A and B.
@@ -6648,7 +6659,7 @@ def iswap_conditional_cross_ramsey_EXPERIMENTAL12(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -7344,7 +7355,8 @@ def iswap_tune_frequency_until_pi_out_of_phase(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     raise NotImplementedError("Halted! Not finished at all.")
     ''' Tune the frequency of the CZ₂₀ gate until one qubit

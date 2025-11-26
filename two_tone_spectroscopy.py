@@ -87,7 +87,8 @@ def pulsed01_sweep_coupler(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         as a function of a swept pairwise coupler bias.
@@ -134,7 +135,7 @@ def pulsed01_sweep_coupler(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -552,7 +553,8 @@ def pulsed01_sweep_coupler_in_inner_loop(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         as a function of a swept pairwise coupler bias.
@@ -598,7 +600,7 @@ def pulsed01_sweep_coupler_in_inner_loop(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1010,7 +1012,8 @@ def pulsed01_sweep_coupler_multiplexed_ro(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         as a function of a swept pairwise coupler bias.
@@ -1056,7 +1059,7 @@ def pulsed01_sweep_coupler_multiplexed_ro(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1576,7 +1579,8 @@ def pulsed01_sweep_power(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |0>,
         while sweeping the applied qubit power.
@@ -1622,7 +1626,7 @@ def pulsed01_sweep_power(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -2030,7 +2034,8 @@ def pulsed12_sweep_coupler(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Find the optimal readout frequency for reading out qubits in state |1>,
         transitioning to |2>, as a function of a swept pairwise coupler bias.
@@ -2076,7 +2081,7 @@ def pulsed12_sweep_coupler(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         

@@ -96,7 +96,8 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform readout for whatever frequency, for gauging where in the
         real-imaginary-plane one finds the |g>, |e> and |f> states.
@@ -135,7 +136,7 @@ def get_complex_data_for_readout_optimisation_g_e_f(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -618,7 +619,8 @@ def get_complex_data_for_readout_optimisation_g_e(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform readout for whatever frequency, for gauging where in the
         real-imaginary-plane one finds the |g>, |e> states.
@@ -657,7 +659,7 @@ def get_complex_data_for_readout_optimisation_g_e(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1107,7 +1109,8 @@ def optimise_readout_frequency_g_e_f(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform complex domain readout optimisation. This function will
         generate one complex-plane dataset per resonator frequency step,
@@ -1692,7 +1695,8 @@ def optimise_integration_window_g_e_f(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform complex domain readout using swept integration window
         start and stop times. This function will generate one complex-plane
@@ -2122,7 +2126,8 @@ def get_time_traces_for_g_e_f(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Plot the time trace of |g>, |e> and |f>.
         
@@ -2156,7 +2161,7 @@ def get_time_traces_for_g_e_f(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -2537,7 +2542,8 @@ def get_wire_to_readout_delay(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Find the delay from sending a pulse to seeing it appearing
         in the scoped readout data.
@@ -2553,7 +2559,7 @@ def get_wire_to_readout_delay(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         

@@ -93,7 +93,8 @@ def s_dagger_gate_ramsey01_ro0_virtual_z(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator.
@@ -143,7 +144,7 @@ def s_dagger_gate_ramsey01_ro0_virtual_z(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -571,7 +572,8 @@ def s_gate_ramsey01_ro0_virtual_z(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator.
@@ -621,7 +623,7 @@ def s_gate_ramsey01_ro0_virtual_z(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         

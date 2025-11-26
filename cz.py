@@ -110,7 +110,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune a CZ20-interaction between two qubits using
         a tuneable coupler.
@@ -160,7 +161,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -702,7 +703,8 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune a CZ20-interaction between two qubits using
         a tuneable coupler.
@@ -754,7 +756,7 @@ def cz20_sweep_amplitude_and_detuning_for_t_half_state_probability(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1301,7 +1303,8 @@ def cz20_sweep_duration_and_detuning(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune the amplitude and duration of a CZ₂₀ interaction,
         with a set gate amplitude and applied magnetostatic coupler flux.
@@ -1342,7 +1345,7 @@ def cz20_sweep_duration_and_detuning(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1904,7 +1907,8 @@ def cz20_sweep_duration_and_detuning_state_probability(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune the amplitude and duration of a CZ₂₀ interaction,
         with a set gate amplitude and applied magnetostatic coupler flux.
@@ -1947,7 +1951,7 @@ def cz20_sweep_duration_and_detuning_state_probability(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -2524,7 +2528,8 @@ def cz20_tune_local_accumulated_phase(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' This method of tuning the local accumulated phase of qubit A (or B)
         follows closely that of Fig. (C3) in M. Ganzhorn et al.
@@ -2588,7 +2593,7 @@ def cz20_tune_local_accumulated_phase(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -3185,7 +3190,8 @@ def cz20_tune_local_accumulated_phase_state_probability(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' This method of tuning the local accumulated phase of qubit A (or B)
         follows closely that of Fig. (C3) in M. Ganzhorn et al.
@@ -3249,7 +3255,7 @@ def cz20_tune_local_accumulated_phase_state_probability(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -3854,7 +3860,8 @@ def cz20_conditional_cross_ramsey(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Create a Ramsey-styled interferometry while (not) transferring phase
         information from another qubit.
@@ -3928,7 +3935,7 @@ def cz20_conditional_cross_ramsey(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -4516,7 +4523,8 @@ def cz20_tune_frequency_until_pi_phase(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune the frequency of the CZ₂₀ gate until one qubit
         can conditionally infer a π phase shift on another qubit.
@@ -5116,7 +5124,8 @@ def cz20_tune_frequency_until_pi_phase_fixed_phase_compensation(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Tune the frequency of the CZ₂₀ gate until one qubit
         can conditionally infer a π phase shift on another qubit.

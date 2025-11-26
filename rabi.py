@@ -88,7 +88,8 @@ def amplitude_sweep_oscillation01_ro0(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Rabi oscillation experiment between states |0> and |1>.
         The energy is found by sweeping the amplitude, instead of
@@ -135,7 +136,7 @@ def amplitude_sweep_oscillation01_ro0(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -540,7 +541,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Rabi oscillation experiment between states |0> and |1>.
         The energy is found by sweeping the amplitude, instead of
@@ -584,7 +586,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1099,7 +1101,8 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Rabi oscillation experiment between states |0> and |1>.
         The energy is found by sweeping the amplitude, instead of
@@ -1141,7 +1144,7 @@ def amplitude_sweep_oscillation01_multiplexed_ro_state_probability(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1629,7 +1632,8 @@ def amplitude_sweep_oscillation12_ro0(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Rabi oscillation experiment between states |1> and |2>.
         The energy is found by sweeping the amplitude, instead of
@@ -1676,7 +1680,7 @@ def amplitude_sweep_oscillation12_ro0(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -2120,7 +2124,8 @@ def amplitude_sweep_oscillation12_ro1(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Rabi oscillation experiment between states |1> and |2>.
         The energy is found by sweeping the amplitude, instead of
@@ -2167,7 +2172,7 @@ def amplitude_sweep_oscillation12_ro1(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -2605,7 +2610,8 @@ def duration_sweep_oscillation01_ro0(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Rabi oscillation experiment between states |1> and |2>.
         The energy is found by sweeping the pulse duration, at some fixed
@@ -2649,7 +2655,7 @@ def duration_sweep_oscillation01_ro0(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -3084,7 +3090,8 @@ def duration_sweep_oscillation12_ro1(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Rabi oscillation experiment between states |1> and |2>.
         The energy is found by sweeping the pulse duration, at some fixed
@@ -3124,7 +3131,7 @@ def duration_sweep_oscillation12_ro1(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         

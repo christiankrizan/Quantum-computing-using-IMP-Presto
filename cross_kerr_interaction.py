@@ -101,7 +101,8 @@ def cross_kerr_interaction_vz_ramsey_ro0(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Perform a Ramsey spectroscopy on a given qubit with a connected
         resonator. Then, set a neighbouring qubit to |1⟩ and perform
@@ -152,7 +153,7 @@ def cross_kerr_interaction_vz_ramsey_ro0(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         

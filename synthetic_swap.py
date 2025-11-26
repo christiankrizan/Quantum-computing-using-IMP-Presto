@@ -124,7 +124,8 @@ def iswap_then_cz20_conditional_cross_ramsey(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Demonstrate that iSWAP followed by CZ₂₀ behaves like a SWAP gate.
         However, this statement does not hold for every input state.
@@ -246,7 +247,7 @@ def iswap_then_cz20_conditional_cross_ramsey(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
@@ -1149,7 +1150,8 @@ def synthetic_swap_prep_10_cross_Ramsey_DEPRECATED(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' Prepare |10>, run a cross-Ramsey experiment.
         The SWAP gate is made by running both the CZ and the iSWAP
@@ -1190,7 +1192,7 @@ def synthetic_swap_prep_10_cross_Ramsey_DEPRECATED(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G10, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         

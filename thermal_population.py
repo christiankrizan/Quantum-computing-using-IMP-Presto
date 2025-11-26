@@ -89,7 +89,8 @@ def acquire_thermal_population_from_12_rabi_ro1(
         "z_name":   'default',
         "z_scaler": 1.0,
         "z_unit":   'default',
-        }
+        },
+    perform_dry_run_of_measurement = False
     ):
     ''' This method follows the measurement methodology from
         https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.114.240501
@@ -153,7 +154,7 @@ def acquire_thermal_population_from_12_rabi_ro1(
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
         dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
-        dry_run      =   False
+        dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
         
