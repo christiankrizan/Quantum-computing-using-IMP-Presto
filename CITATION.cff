@@ -27,9 +27,9 @@ abstract: >-
 keywords:
   - Quantum computing
 license: CC-BY-NC-SA-4.0
-commit: 0c5fefe
-version: Indev 2025-11-11
-date-released: '2025-11-11'
+commit: de10731
+version: Indev 2025-11-26
+date-released: '2025-11-26'
 preferred-citation:
   type: software
   authors:
@@ -44,6 +44,6 @@ preferred-citation:
   format: 'Citation File Format'
   institution:
     name: 'Chalmers University of Technology'
-  version: 'Indev 2025-11-11'
+  version: 'Indev 2025-11-26'
   year: 2025
   url: 'https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto'
