@@ -502,7 +502,7 @@ def ramsey01_ro0(
     
     return string_arr_to_return
 
-def ramsey01_ro0_with_noise(
+def ramsey01_with_noise_ro0(
     ip_address,
     ext_clk_present,
     
