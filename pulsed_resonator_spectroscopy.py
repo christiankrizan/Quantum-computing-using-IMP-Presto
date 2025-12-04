@@ -138,8 +138,8 @@ def find_f_ro0_sweep_coupler(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed04, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
@@ -561,7 +561,7 @@ def find_f_ro0_sweep_coupler_in_inner_loop(
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
@@ -958,8 +958,8 @@ def find_f_ro0_sweep_power(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed04, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
@@ -1372,8 +1372,8 @@ def find_f_ro1_sweep_coupler(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed04, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
@@ -1838,7 +1838,7 @@ def find_f_ro1_sweep_power(
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
@@ -2310,8 +2310,8 @@ def find_f_ro2_sweep_coupler(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed04, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
@@ -2811,7 +2811,7 @@ def find_f_ro2_sweep_power(
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
         dac_mode     =   [DacMode.Mixed42, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")

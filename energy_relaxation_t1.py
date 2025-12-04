@@ -131,8 +131,8 @@ def t1_01_sweep_coupler(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed04, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
@@ -601,8 +601,8 @@ def t1_01_sweep_coupler_with_noise(
         ext_ref_clk  =   ext_clk_present,
         adc_mode     =   AdcMode.Mixed,  # Use mixers for downconversion
         adc_fsample  =   AdcFSample.G2,  # 2 GSa/s
-        dac_mode     =   [DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02, DacMode.Mixed02],
-        dac_fsample  =   [DacFSample.G10, DacFSample.G6, DacFSample.G6, DacFSample.G6],
+        dac_mode     =   [DacMode.Mixed04, DacMode.Mixed42, DacMode.Mixed02, DacMode.Mixed02],
+        dac_fsample  =   [DacFSample.G8, DacFSample.G8, DacFSample.G6, DacFSample.G6],
         dry_run      =   perform_dry_run_of_measurement
     ) as pls:
         print("Connected. Setting up...")
@@ -748,7 +748,7 @@ def t1_01_sweep_coupler_with_noise(
         noise_ns = int(round(noise_duration * pls.get_fs("dac")))
         noise_template = generate_noise_template(
             num_samples = noise_ns,
-            sample_rate = pls.get_fs("dac")
+            sample_rate = pls.get_fs("dac"),
             noise_type  = noise_type,
             rms         = noise_rms_relative_to_amp,
             bandwidth   = noise_bandwidth,
