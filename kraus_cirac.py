@@ -6,7 +6,8 @@
 #############################################################################################
 
 import numpy as np
-from scipy.linalg import fractional_matrix_power
+##from scipy.linalg import fractional_matrix_power
+from scipy.linalg import expm
 from datetime import datetime
 
 def check_equivalency_class( t_x, t_y, t_z ):
@@ -53,7 +54,7 @@ def check_equivalency_class( t_x, t_y, t_z ):
 
 def sanitise(
     matrix,
-    threshold = 1e-10
+    threshold = 1e-6 #1e-10
     ):
     ''' Take some matrix, and set obviously very small numbers to 0.
     '''
@@ -373,17 +374,19 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     K_4 = np.array([[1+0j,0+0j],[0+0j,1+0j]])
     
     # Define Pauli_XX, Pauli_YY, Pauli_ZZ matrices.
-    pauli_XX = np.array([[0, 0, 0,  1], [0,  0, 1, 0], [0, 1,  0, 0],  [1, 0, 0, 0]])
-    pauli_YY = np.array([[0, 0, 0, -1], [0,  0, 1, 0], [0, 1,  0, 0], [-1, 0, 0, 0]])
-    pauli_ZZ = np.array([[1, 0, 0,  0], [0, -1, 0, 0], [0, 0, -1, 0],  [0, 0, 0, 1]])
+    pauli_XX = np.array([[0, 0, 0,  1], [0,  0, 1, 0], [0, 1,  0, 0], [ 1, 0, 0, 0]], dtype=complex)
+    pauli_YY = np.array([[0, 0, 0, -1], [0,  0, 1, 0], [0, 1,  0, 0], [-1, 0, 0, 0]], dtype=complex)
+    pauli_ZZ = np.array([[1, 0, 0,  0], [0, -1, 0, 0], [0, 0, -1, 0], [ 0, 0, 0, 1]], dtype=complex)
     
     # Create the target Can( t_x, t_y, t_z ) gate in the Weyl chamber based on
     # the user-provided coordinates.
     ## Note here the usage of the sanitise function, defined above.
-    XX = fractional_matrix_power(pauli_XX, t_x)
+    '''XX = fractional_matrix_power(pauli_XX, t_x)
     YY = fractional_matrix_power(pauli_YY, t_y)
     ZZ = fractional_matrix_power(pauli_ZZ, t_z)
-    equivalency_class_canonical_gate = sanitise(np.dot(XX, np.dot(YY, ZZ)))
+    equivalency_class_canonical_gate = sanitise(np.dot(XX, np.dot(YY, ZZ)))'''
+    H = (t_x * pauli_XX + t_y * pauli_YY + t_z * pauli_ZZ)
+    equivalency_class_canonical_gate = sanitise(expm(-1j * np.pi / 2 * H))
     
     # Define lists of parameters that will be used when trying
     # to make the local operations.
