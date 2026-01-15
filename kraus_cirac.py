@@ -96,7 +96,7 @@ def check_if_local_gates_work(
 
 def check_if_gate_is_SU2(
     single_qubit_gate,
-    tolerance = 1e-10
+    tolerance = 1e-6 #1e-10
     ):
     ''' Verifies that a 1-qubit gate is in SU(2).
         For this to be true, it must be unitary, and its determinant = 1.
@@ -359,7 +359,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     ## Algorithm:
     ## Create the Canonical gate based on the provided exponents.
     
-    ## Generate K_i, check legality of K_i, proeed with K_{i+1} until K_4 = OK.
+    ## Generate K_i, check legality of K_i, proceed with K_{i+1} until K_4 = OK.
     ## Create the Kronecker products K_1 ⊗ K_2 and K_3 ⊗ K_4.
     ## Check whether TARGET = K_12 Can K_34. If yes, update success flag.
     
@@ -390,8 +390,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     ## Note that modifying this list, even though it's probably a good thing,
     ## will add a metric ass-tonne of computational complexity => time goes up!
     '''legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j]'''
-    legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j, (1+1j)/2, (1-1j)/2, 0.70710678118+0j, -0.70710678118+0j, 0+0.70710678118j, 0-0.70710678118j, 0.70710678118+0.70710678118j, 0.70710678118-0.70710678118j, -0.70710678118+0.70710678118j, -0.70710678118-0.70710678118j]
-    #legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j, (1+1j)/2, (1-1j)/2, 0.70710678118+0j, -0.70710678118+0j]
+    legal_values = [0+0j, 0-1j, 0+1j, -0.70710678118-0.70710678118j, -0.70710678118+0.70710678118j, 0+0.70710678118j, 0-0.70710678118j, 0.70710678118+0j, 0.70710678118+0.70710678118j, 0.70710678118+1j, 0.70710678118-0.70710678118j, 0.70710678118-1j, 1+0j, 1+0.70710678118j, 1+1j, 1-0.70710678118j, 1-1j, -0.70710678118+0j, -0.70710678118+1j, -0.70710678118-1j, -1+0j, -1+0.70710678118j, -1+1j, -1-0.70710678118j, -1-1j]
     
     # Define indices.
     K_1_00 = K_1_01 = K_1_10 = K_1_11 = 0+0j
