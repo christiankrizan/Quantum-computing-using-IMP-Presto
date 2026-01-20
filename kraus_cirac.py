@@ -91,9 +91,23 @@ def check_if_local_gates_work(
     gate = np.dot(K_34, np.dot(equivalency_class_canonical_gate, K_12))
     
     # Check if this gate is the target gate!
-    ## Here, we have tolerancy errors due to computational stuff.
-    ## Hence, we use np.allclose() instead.
-    return np.allclose(target_2q_gate, gate)
+    def equal_up_to_global_phase(A, B, tol=1e-6):
+        # Compute A * B†
+        M = A @ B.conj().T
+        
+        # This should be proportional to identity.
+        dim = A.shape[0]
+        identity = np.eye(dim, dtype=complex)
+        
+        # Extract phase from trace
+        phase = np.trace(M) / dim
+
+        return (np.allclose(M, phase * identity, atol=tol), phase)
+    
+    # Perform the check and return.
+    success_or_not, global_phase_rh = equal_up_to_global_phase(target_2q_gate, gate)
+    return (success_or_not, global_phase_rh)
+    
 
 def check_if_gate_is_SU2(
     single_qubit_gate,
@@ -157,6 +171,7 @@ def check_if_K_needs_sqrt(
     suspicious = False
     
     # Define legal gates.
+    gate_identity = np.array([[(1+0j), (0+0j)],[(0+0j), (1+0j)]])
     gate_v = np.array([[(1+1j)/2, (1-1j)/2],[(1-1j)/2, (1+1j)/2]])
     gate_inv_v = np.array([[(1-1j)/2, (1+1j)/2],[(1+1j)/2, (1-1j)/2]])
     gate_pseudo_h = np.array([[(1+0j)/np.sqrt(2), (1+0j)/np.sqrt(2)],[(-1+0j)/np.sqrt(2), (1+0j)/np.sqrt(2)]])
@@ -188,6 +203,16 @@ def check_if_K_needs_sqrt(
         (+1 + 1j) / 2,
         (-1 - 1j) / 2,
     }
+    
+    # Attempted identity?
+    if np.any(np.isclose(single_qubit_gate, gate_identity)):
+        # Some value reminds us of an identity gate.
+        if (np.all(np.isclose(single_qubit_gate, gate_identity))):
+            # The gate was identified as an identity gate.
+            return False
+        else:
+            # The gate is suspicious.
+            suspicious = True
     
     # Attempted sqrt(X)?
     if np.any(np.isclose(single_qubit_gate, gate_v)):
@@ -321,6 +346,20 @@ def check_if_K_needs_sqrt(
     # Finally, report suspicious gate?
     return suspicious
     
+def figure_out_global_phase(
+    global_phase_lh,
+    global_phase_rh
+    ):
+    ''' Given the calculated left-hand global phase, and the right-hand global
+        phase, figure out how to make the left-hand expression equal to
+        the right hand expression.
+        
+        That is,
+            ph_lh U_su_target = ph_rh K₁₂ Can K₃₄
+    '''
+    print("Left-hand global phase: "+str(global_phase_lh))
+    print("Right-hand global phase: "+str(global_phase_rh))
+    print("Global phase in RH expression becomes: "+str(global_phase_rh/global_phase_lh))
 
 def brute_force_local_gates_from_known_2q_equivalency_class(
     target_2q_gate,
@@ -351,8 +390,56 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     # Type conversion.
     target_2q_gate = np.array(target_2q_gate)
     
+    # Input check: ensure that the user has supplied a unitary matrix.
+    def is_unitary(U, tol=1e-6):
+        I = np.eye(U.shape[0], dtype=U.dtype)
+        return np.allclose(U.conj().T @ U, I, atol=tol)
+    if not (is_unitary(target_2q_gate)):
+        raise ValueError("Error: the supplied matrix input is not a unitary gate.")
+    
     # Alert user regarding the checked equivalency class.
     check_equivalency_class( t_x, t_y, t_z )
+    
+    # Now, factor out the global phase from the user-supplied matrix.
+    def project_to_su4(U, det_tol=1e-6):
+        ''' Factor out the global phase from a user-supplied 4x4 matrix so
+            that the result lies in SU(4).
+
+            Returns:
+                U_su  : matrix with det(U_su) = 1
+                phase : complex scalar such that U = phase * U_su
+        '''
+        U = np.asarray(U, dtype=np.complex128)
+        if U.shape != (4, 4):
+            raise ValueError("Error: the input must be a 4x4 matrix.")
+        
+        # Find the determinant.
+        detU = np.linalg.det(U)
+        det_abs = abs(detU)
+        if det_abs < det_tol:
+            raise ValueError(
+                f"The determinant in the input matrix is too close to zero (|det| = {det_abs}) to extract a global phase."
+            )
+        
+        # Extract only the argument.
+        # This extraction is safe even if |detU| != 1
+        theta = np.angle(detU)
+
+        # Global phase per matrix element.
+        phi = theta / 4.0
+        phase = np.exp(1j * phi)
+
+        # Remove the global phase
+        U_su = U / phase
+        
+        # Report to user.
+        print("The global phase of the input matrix was: "+str(phase))
+        print("The input matrix when projected to SU(4) is:\n"+str(U_su))
+        
+        return U_su, phase
+    
+    # Rework the user-supplied gate into SU(4) and some global phase.
+    U_su_target, global_phase_lh = project_to_su4(target_2q_gate)
     
     # Set initial flag.
     success = False
@@ -362,7 +449,9 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     
     ## Generate K_i, check legality of K_i, proceed with K_{i+1} until K_4 = OK.
     ## Create the Kronecker products K_1 ⊗ K_2 and K_3 ⊗ K_4.
+    ## Factor out global phase from this sandwich, ph K_12 Can K_34
     ## Check whether TARGET = K_12 Can K_34. If yes, update success flag.
+    ## Figure out global phases.
     
     ## If success, break!
     ## Else: if the last possible combination was tried, report failure.
@@ -381,12 +470,8 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     # Create the target Can( t_x, t_y, t_z ) gate in the Weyl chamber based on
     # the user-provided coordinates.
     ## Note here the usage of the sanitise function, defined above.
-    '''XX = fractional_matrix_power(pauli_XX, t_x)
-    YY = fractional_matrix_power(pauli_YY, t_y)
-    ZZ = fractional_matrix_power(pauli_ZZ, t_z)
-    equivalency_class_canonical_gate = sanitise(np.dot(XX, np.dot(YY, ZZ)))'''
     H = (t_x * pauli_XX + t_y * pauli_YY + t_z * pauli_ZZ)
-    equivalency_class_canonical_gate = sanitise(expm(-1j * np.pi / 2 * H))
+    equivalency_class_canonical_gate = sanitise(expm(-1j * (np.pi / 2) * H))
     
     # Define lists of parameters that will be used when trying
     # to make the local operations.
@@ -497,13 +582,13 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                                                                                     if K4_is_su2 and (not K4_has_sqrt_issues):
                                                                                     
                                                                                         # Verify!
-                                                                                        test_happens_here = check_if_local_gates_work(
+                                                                                        test_happens_here, global_phase_rh = check_if_local_gates_work(
                                                                                             equivalency_class_canonical_gate,
                                                                                             K_1,
                                                                                             K_2,
                                                                                             K_3,
                                                                                             K_4,
-                                                                                            target_2q_gate
+                                                                                            U_su_target
                                                                                             )
                                                                                         
                                                                                         # Increment counter
@@ -533,6 +618,9 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
                                                                                                 print("\nK_2 is:\n"+str(K_2))
                                                                                                 print("\nK_3 is:\n"+str(K_3))
                                                                                                 print("\nK_4 is:\n"+str(K_4))
+                                                                                            
+                                                                                            # Figure out global phases.
+                                                                                            figure_out_global_phase( global_phase_lh, global_phase_rh )
         else:
             # Quicker way to break the nestled-break hack.
             break
