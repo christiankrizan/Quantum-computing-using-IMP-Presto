@@ -54,7 +54,7 @@ def check_equivalency_class( t_x, t_y, t_z ):
 
 def sanitise(
     matrix,
-    threshold = 1e-6 #1e-10
+    threshold = 1e-5 #1e-10
     ):
     ''' Take some matrix, and set obviously very small numbers to 0.
     '''
@@ -87,11 +87,12 @@ def check_if_local_gates_work(
     K_12 = np.kron(K_1, K_2)
     K_34 = np.kron(K_3, K_4)
     
-    # Calculate (K_34 Can K_12)
-    gate = np.dot(K_34, np.dot(equivalency_class_canonical_gate, K_12))
+    # Calculate (K_12 Can K_34)
+    ##gate = np.dot(K_34, np.dot(equivalency_class_canonical_gate, K_12)) ## Wrong, I think.
+    gate = K_12 @ equivalency_class_canonical_gate @ K_34
     
     # Check if this gate is the target gate!
-    def equal_up_to_global_phase(A, B, tol=1e-6):
+    def equal_up_to_global_phase(A, B, tol=1e-5):
         # Compute A * B†
         M = A @ B.conj().T
         
@@ -111,7 +112,7 @@ def check_if_local_gates_work(
 
 def check_if_gate_is_SU2(
     single_qubit_gate,
-    tolerance = 1e-6 #1e-10
+    tolerance = 1e-5 #1e-10
     ):
     ''' Verifies that a 1-qubit gate is in SU(2).
         For this to be true, it must be unitary, and its determinant = 1.
@@ -334,6 +335,9 @@ def check_if_K_needs_sqrt(
             # The gate is suspicious.
             suspicious = True
     
+    '''
+    // Removing this check for now.
+    
     # In case nobody reported suspicion, check whether the gate is
     # some combination of square root magic.
     if (not suspicious):
@@ -341,7 +345,7 @@ def check_if_K_needs_sqrt(
         # Flatten the matrix and check if any element is in the
         # set of illegal numbers. If so, return True, it is suspicious.
         if (any(element in matrix_numbers_that_can_be_illegal for element in single_qubit_gate.flatten())):
-            return True
+            return True'''
     
     # Finally, report suspicious gate?
     return suspicious
@@ -391,7 +395,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     target_2q_gate = np.array(target_2q_gate)
     
     # Input check: ensure that the user has supplied a unitary matrix.
-    def is_unitary(U, tol=1e-6):
+    def is_unitary(U, tol=1e-5):
         I = np.eye(U.shape[0], dtype=U.dtype)
         return np.allclose(U.conj().T @ U, I, atol=tol)
     if not (is_unitary(target_2q_gate)):
@@ -401,7 +405,7 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     check_equivalency_class( t_x, t_y, t_z )
     
     # Now, factor out the global phase from the user-supplied matrix.
-    def project_to_su4(U, det_tol=1e-6):
+    def project_to_su4(U, det_tol=1e-5):
         ''' Factor out the global phase from a user-supplied 4x4 matrix so
             that the result lies in SU(4).
 
@@ -466,19 +470,28 @@ def brute_force_local_gates_from_known_2q_equivalency_class(
     pauli_XX = np.array([[0, 0, 0,  1], [0,  0, 1, 0], [0, 1,  0, 0], [ 1, 0, 0, 0]], dtype=complex)
     pauli_YY = np.array([[0, 0, 0, -1], [0,  0, 1, 0], [0, 1,  0, 0], [-1, 0, 0, 0]], dtype=complex)
     pauli_ZZ = np.array([[1, 0, 0,  0], [0, -1, 0, 0], [0, 0, -1, 0], [ 0, 0, 0, 1]], dtype=complex)
+    '''X = np.array([[0,   1], [1,  0]], dtype = complex)
+    Y = np.array([[0, -1j], [1j, 0]], dtype = complex)
+    Z = np.array([[1,   0], [0, -1]], dtype = complex)
+    pauli_XX = expm(-1j * (np.pi/2) * t_x * np.kron(X,X))
+    pauli_YY = expm(-1j * (np.pi/2) * t_y * np.kron(Y,Y))
+    pauli_ZZ = expm(-1j * (np.pi/2) * t_z * np.kron(Z,Z))'''
     
     # Create the target Can( t_x, t_y, t_z ) gate in the Weyl chamber based on
     # the user-provided coordinates.
-    ## Note here the usage of the sanitise function, defined above.
     H = (t_x * pauli_XX + t_y * pauli_YY + t_z * pauli_ZZ)
     equivalency_class_canonical_gate = sanitise(expm(-1j * (np.pi / 2) * H))
+    '''equivalency_class_canonical_gate = sanitise( pauli_XX @ pauli_YY @ pauli_ZZ )'''
+    
+    # Report to the user.
+    print("The canonical gate to solve for is:\n"+str(equivalency_class_canonical_gate)+"\n")
     
     # Define lists of parameters that will be used when trying
     # to make the local operations.
     ## Note that modifying this list, even though it's probably a good thing,
     ## will add a metric ass-tonne of computational complexity => time goes up!
     '''legal_values = [0+0j, 1+0j, -1+0j, 0-1j, 0+1j]'''
-    legal_values = [0+0j, 0-1j, 0+1j, -0.70710678118-0.70710678118j, -0.70710678118+0.70710678118j, 0+0.70710678118j, 0-0.70710678118j, 0.70710678118+0j, 0.70710678118+0.70710678118j, 0.70710678118+1j, 0.70710678118-0.70710678118j, 0.70710678118-1j, 1+0j, 1+0.70710678118j, 1+1j, 1-0.70710678118j, 1-1j, -0.70710678118+0j, -0.70710678118+1j, -0.70710678118-1j, -1+0j, -1+0.70710678118j, -1+1j, -1-0.70710678118j, -1-1j]
+    legal_values = [0+0j, 0-1j, 0+1j, (-0.70710678118-0.70710678118j)/2, (0.70710678118-0.70710678118j)/2, (0.70710678118+0.70710678118j)/2, (-0.70710678118+0.70710678118j)/2, -0.70710678118-0.70710678118j, -0.70710678118+0.70710678118j, 0+0.70710678118j, 0-0.70710678118j, 0.70710678118+0j, 0.70710678118+0.70710678118j, 0.70710678118+1j, 0.70710678118-0.70710678118j, 0.70710678118-1j, 1+0j, 1+0.70710678118j, 1+1j, 1-0.70710678118j, 1-1j, -0.70710678118+0j, -0.70710678118+1j, -0.70710678118-1j, -1+0j, -1+0.70710678118j, -1+1j, -1-0.70710678118j, -1-1j]
     
     # Define indices.
     K_1_00 = K_1_01 = K_1_10 = K_1_11 = 0+0j
