@@ -434,7 +434,7 @@ def fit_triple_decoherence_data_run(
     
     # ... continue as normal.
     plt.xticks(fontsize = 31)
-    plt.ylim(0,220)
+    plt.ylim(0,280)
     plt.yticks(fontsize = 31)
     
     # Set title.
