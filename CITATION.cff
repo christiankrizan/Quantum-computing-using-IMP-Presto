@@ -27,16 +27,16 @@ abstract: >-
 keywords:
   - Quantum computing
 license: CC-BY-NC-SA-4.0
-commit: de10731
-version: Indev 2025-11-26
-date-released: '2025-11-26'
+commit: 44d5316
+version: Indev 2026-04-15
+date-released: '2026-04-15'
 preferred-citation:
   type: software
   authors:
   - family-names: 'Križan'
     given-names: 'Christian'
     orcid: 'https://orcid.org/0000-0002-5059-7998'
-  month: 11
+  month: 04
   title: 'Indecorum'
   license: 'CC-BY-NC-SA-4.0'
   license-url: 'https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto/blob/master/LICENSE'
@@ -44,6 +44,6 @@ preferred-citation:
   format: 'Citation File Format'
   institution:
     name: 'Chalmers University of Technology'
-  version: 'Indev 2025-11-26'
-  year: 2025
+  version: 'Indev 2026-04-15'
+  year: 2026
   url: 'https://github.com/christiankrizan/Quantum-computing-using-IMP-Presto'
