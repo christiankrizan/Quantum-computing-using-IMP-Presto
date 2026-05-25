@@ -4697,7 +4697,7 @@ def cz20_tune_frequency_until_pi_phase(
                     success = True # Done
                 except ConnectionRefusedError:
                     if force_device_reboot_on_connection_error:
-                        force_system_restart_over_ssh("129.16.115.184")
+                        force_system_restart_over_ssh(ip_address)
             assert success, "Halted! Unrecoverable crash detected."
             untuned_cz20_results.append( cz_result[0] )
         
@@ -4847,7 +4847,7 @@ def cz20_tune_frequency_until_pi_phase(
                     success = True # Done
                 except ConnectionRefusedError:
                     if force_device_reboot_on_connection_error:
-                        force_system_restart_over_ssh("129.16.115.184")
+                        force_system_restart_over_ssh(ip_address)
             assert success, "Halted! Unrecoverable crash detected."
             
             tuned_conditional_cross_ramsey_results.append( \
@@ -5306,7 +5306,7 @@ def cz20_tune_frequency_until_pi_phase_fixed_phase_compensation(
                     success = True # Done
                 except ConnectionRefusedError:
                     if force_device_reboot_on_connection_error:
-                        force_system_restart_over_ssh("129.16.115.184")
+                        force_system_restart_over_ssh(ip_address)
             assert success, "Halted! Unrecoverable crash detected."
             
             tuned_conditional_cross_ramsey_results.append( \
